@@ -1,0 +1,32 @@
+# Chess Fairplay Analyzer Configuration
+
+chess_com:
+  api_base: "https://api.chess.com/pub/player"
+  request_delay: 1.0
+  max_games: 100
+  cache_enabled: true
+  cache_dir: "cache"
+
+analysis:
+  engine_depth: 18
+  # Your exact Stockfish file
+  engine_path: "stockfish/stockfish-windows-x86-64.exe"
+  threads: 2
+  hash_size: 256
+  
+  thresholds:
+    engine_correlation_red_flag: 92.0
+    avg_centipawn_loss_red_flag: 15.0
+    accuracy_fluctuation_red_flag: 25.0
+    min_games_for_analysis: 5
+
+report:
+  default_format: "html"
+  output_dir: "reports"
+  include_all_games_data: false
+  highlight_suspicious: true
+  save_analysis_data: true
+
+logging:
+  level: "INFO"
+  log_file: ""

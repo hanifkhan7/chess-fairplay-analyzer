@@ -1,0 +1,395 @@
+
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Chess Fairplay Analysis: {{ username }}</title>
+            <style>
+                :root {
+                    --primary-color: #2c3e50;
+                    --secondary-color: #3498db;
+                    --danger-color: #e74c3c;
+                    --warning-color: #f39c12;
+                    --success-color: #27ae60;
+                    --light-color: #ecf0f1;
+                    --dark-color: #2c3e50;
+                }
+                
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                body {
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    background-color: #f5f7fa;
+                    padding: 20px;
+                }
+                
+                .container {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    background: white;
+                    border-radius: 10px;
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                    padding: 30px;
+                }
+                
+                header {
+                    text-align: center;
+                    margin-bottom: 40px;
+                    padding-bottom: 20px;
+                    border-bottom: 2px solid var(--light-color);
+                }
+                
+                h1 {
+                    color: var(--primary-color);
+                    margin-bottom: 10px;
+                    font-size: 2.5em;
+                }
+                
+                .subtitle {
+                    color: #7f8c8d;
+                    font-size: 1.1em;
+                }
+                
+                .risk-badge {
+                    display: inline-block;
+                    padding: 5px 15px;
+                    border-radius: 20px;
+                    font-weight: bold;
+                    margin-left: 10px;
+                    font-size: 0.9em;
+                }
+                
+                .risk-high { background-color: var(--danger-color); color: white; }
+                .risk-moderate { background-color: var(--warning-color); color: white; }
+                .risk-low { background-color: var(--success-color); color: white; }
+                .risk-minimal { background-color: #95a5a6; color: white; }
+                
+                .summary-cards {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 20px;
+                    margin-bottom: 40px;
+                }
+                
+                .card {
+                    background: white;
+                    border-radius: 8px;
+                    padding: 20px;
+                    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+                    border-left: 4px solid var(--secondary-color);
+                }
+                
+                .card h3 {
+                    color: var(--primary-color);
+                    margin-bottom: 10px;
+                    font-size: 1.2em;
+                }
+                
+                .card .value {
+                    font-size: 2em;
+                    font-weight: bold;
+                    color: var(--dark-color);
+                }
+                
+                .card .label {
+                    color: #7f8c8d;
+                    font-size: 0.9em;
+                    margin-top: 5px;
+                }
+                
+                .score-bar {
+                    height: 20px;
+                    background: #ecf0f1;
+                    border-radius: 10px;
+                    margin: 10px 0;
+                    overflow: hidden;
+                }
+                
+                .score-fill {
+                    height: 100%;
+                    background: linear-gradient(90deg, var(--success-color), var(--warning-color), var(--danger-color));
+                    border-radius: 10px;
+                    width: {{ suspicion_score }}%;
+                }
+                
+                .section {
+                    margin-bottom: 40px;
+                }
+                
+                .section h2 {
+                    color: var(--primary-color);
+                    margin-bottom: 20px;
+                    padding-bottom: 10px;
+                    border-bottom: 1px solid var(--light-color);
+                }
+                
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }
+                
+                th, td {
+                    padding: 12px 15px;
+                    text-align: left;
+                    border-bottom: 1px solid #ddd;
+                }
+                
+                th {
+                    background-color: var(--light-color);
+                    color: var(--primary-color);
+                    font-weight: 600;
+                }
+                
+                tr:hover {
+                    background-color: #f9f9f9;
+                }
+                
+                .suspicious {
+                    background-color: #ffeaea;
+                }
+                
+                .pattern-list {
+                    list-style-type: none;
+                }
+                
+                .pattern-list li {
+                    padding: 10px;
+                    margin: 5px 0;
+                    background: #fff3cd;
+                    border-left: 4px solid var(--warning-color);
+                    border-radius: 4px;
+                }
+                
+                .pattern-list li.high {
+                    background: #f8d7da;
+                    border-left-color: var(--danger-color);
+                }
+                
+                .pattern-list li.low {
+                    background: #d4edda;
+                    border-left-color: var(--success-color);
+                }
+                
+                .recommendations {
+                    background: #e8f4fd;
+                    padding: 20px;
+                    border-radius: 8px;
+                    border-left: 4px solid var(--secondary-color);
+                }
+                
+                .recommendations li {
+                    margin: 10px 0;
+                }
+                
+                footer {
+                    margin-top: 40px;
+                    text-align: center;
+                    color: #7f8c8d;
+                    font-size: 0.9em;
+                    padding-top: 20px;
+                    border-top: 1px solid var(--light-color);
+                }
+                
+                .disclaimer {
+                    background: #fff3cd;
+                    padding: 15px;
+                    border-radius: 6px;
+                    margin: 20px 0;
+                    border-left: 4px solid var(--warning-color);
+                }
+                
+                @media (max-width: 768px) {
+                    .summary-cards {
+                        grid-template-columns: 1fr;
+                    }
+                    
+                    .container {
+                        padding: 15px;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <header>
+                    <h1>♟️ Chess Fairplay Analysis</h1>
+                    <p class="subtitle">Statistical analysis for fair play detection</p>
+                    <h2>{{ username }}
+                        <span class="risk-badge risk-{{ risk_level.lower().replace(' ', '-') }}">
+                            {{ risk_level }} RISK
+                        </span>
+                    </h2>
+                </header>
+                
+                <div class="disclaimer">
+                    <strong>⚠️ IMPORTANT DISCLAIMER:</strong>
+                    This report provides statistical indicators only, not proof of cheating. 
+                    Use results responsibly. Final judgment rests with Chess.com's Fair Play team.
+                </div>
+                
+                <div class="section">
+                    <h2>📊 Summary</h2>
+                    <div class="summary-cards">
+                        <div class="card">
+                            <h3>Suspicion Score</h3>
+                            <div class="value">{{ suspicion_score }}/100</div>
+                            <div class="score-bar">
+                                <div class="score-fill"></div>
+                            </div>
+                            <div class="label">Higher score indicates more suspicious patterns</div>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>Engine Correlation</h3>
+                            <div class="value">{{ avg_engine_correlation }}%</div>
+                            <div class="label">Average % of moves matching engine's top choice</div>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>Avg Centipawn Loss</h3>
+                            <div class="value">{{ avg_centipawn_loss }}</div>
+                            <div class="label">Lower values indicate stronger play (human avg: 20-50)</div>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>Games Analyzed</h3>
+                            <div class="value">{{ games_analyzed }}</div>
+                            <div class="label">{{ suspicious_games }} suspicious games detected</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h2>📈 Performance by Time Control</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time Control</th>
+                                <th>Games</th>
+                                <th>Avg Engine Correlation</th>
+                                <th>Avg CPL</th>
+                                <th>Consistency</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tc, stats in performance_by_tc.items() %}
+                            <tr>
+                                <td>{{ tc }}</td>
+                                <td>{{ stats.game_count }}</td>
+                                <td>{{ "%.1f"|format(stats.avg_engine_correlation) }}%</td>
+                                <td>{{ "%.1f"|format(stats.avg_cpl) }}</td>
+                                <td>{{ "%.1f"|format(stats.consistency) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if game_details %}
+                <div class="section">
+                    <h2>🎮 Recent Games Analysis</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Game</th>
+                                <th>Result</th>
+                                <th>Engine Correlation</th>
+                                <th>Avg CPL</th>
+                                <th>Time Control</th>
+                                <th>Suspicious</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for game in game_details %}
+                            <tr class="{{ 'suspicious' if game.is_suspicious else '' }}">
+                                <td>{{ game.game_number }}</td>
+                                <td>{{ game.result }}</td>
+                                <td>{{ "%.1f"|format(game.engine_correlation) }}%</td>
+                                <td>{{ "%.1f"|format(game.avg_cpl) }}</td>
+                                <td>{{ game.time_control }}</td>
+                                <td>{{ '⚠️ Yes' if game.is_suspicious else 'No' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+                
+                {% if suspicious_patterns %}
+                <div class="section">
+                    <h2>⚠️ Detected Patterns</h2>
+                    <ul class="pattern-list">
+                        {% for pattern in suspicious_patterns %}
+                        <li class="{{ pattern.severity }}">
+                            <strong>{{ pattern.pattern|replace('_', ' ')|title }}:</strong>
+                            {{ pattern.description }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                {% if recommendations %}
+                <div class="section">
+                    <h2>📋 Recommendations</h2>
+                    <div class="recommendations">
+                        <ul>
+                            {% for rec in recommendations %}
+                            <li>{{ rec }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="section">
+                    <h2>⚙️ Analysis Details</h2>
+                    <div class="card">
+                        <p><strong>Generated:</strong> {{ generated_at }}</p>
+                        <p><strong>Analysis Thresholds:</strong></p>
+                        <ul>
+                            <li>Engine Correlation Red Flag: {{ thresholds.engine_correlation_red_flag }}%</li>
+                            <li>Avg CPL Red Flag: {{ thresholds.avg_centipawn_loss_red_flag }}</li>
+                            <li>Accuracy Fluctuation Red Flag: {{ thresholds.accuracy_fluctuation_red_flag }}%</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <footer>
+                    <p>Generated by Chess Fairplay Analyzer v1.0.0</p>
+                    <p>This analysis is for informational purposes only.</p>
+                </footer>
+            </div>
+            
+            <script>
+                // Simple chart for suspicion score
+                document.addEventListener('DOMContentLoaded', function() {
+                    const scoreFill = document.querySelector('.score-fill');
+                    const suspicionScore = {{ suspicion_score }};
+                    
+                    // Color based on score
+                    if (suspicionScore >= 70) {
+                        scoreFill.style.background = '#e74c3c';
+                    } else if (suspicionScore >= 40) {
+                        scoreFill.style.background = '#f39c12';
+                    } else {
+                        scoreFill.style.background = '#27ae60';
+                    }
+                    
+                    // Add tooltips to suspicious games
+                    document.querySelectorAll('.suspicious').forEach(row => {
+                        row.title = 'This game shows suspicious patterns';
+                    });
+                });
+            </script>
+        </body>
+        </html>
+        
