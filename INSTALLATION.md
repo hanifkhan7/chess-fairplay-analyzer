@@ -4,7 +4,7 @@
 
 ### Windows
 ```powershell
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
 cd chess-fairplay-analyzer
 python -m venv venv
 venv\Scripts\activate
@@ -15,7 +15,7 @@ python -m chess_analyzer.cli hikaru --games 1
 
 ### macOS
 ```bash
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
 cd chess-fairplay-analyzer
 python3 -m venv venv
 source venv/bin/activate
@@ -26,7 +26,7 @@ python -m chess_analyzer.cli hikaru --games 1
 
 ### Linux/Ubuntu/Debian
 ```bash
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
 cd chess-fairplay-analyzer
 python3 -m venv venv
 source venv/bin/activate
@@ -88,11 +88,12 @@ sudo ln -s /usr/games/stockfish /usr/local/bin/stockfish 2>/dev/null || true
 ```bash
 # Clone to home directory
 cd ~
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
 cd chess-fairplay-analyzer
 
 # Or with SSH (if configured)
-# git clone git@github.com:yourusername/chess-fairplay-analyzer.git
+# git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
+cd chess-fairplay-analyzer
 ```
 
 #### Step 5: Setup Python Virtual Environment
@@ -214,7 +215,7 @@ chess_com:
 **Recommended: Non-root (safer)**
 ```bash
 # As regular user
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
 cd chess-fairplay-analyzer
 python3 -m venv venv
 source venv/bin/activate
@@ -225,7 +226,7 @@ pip install -r requirements.txt
 ```bash
 sudo su
 cd /root
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
 cd chess-fairplay-analyzer
 python3 -m venv venv
 source venv/bin/activate
