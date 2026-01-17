@@ -388,7 +388,7 @@ Contributions are welcome! Fork, create a feature branch, commit your changes, a
 ## 📞 Support
 
 - **Issues**: Report bugs on [GitHub Issues](https://github.com/hanifkhan7/chess-fairplay-analyzer/issues)
-- **Email**: hanifkhan7@gmail.com
+- **Email**: hnfitsme@gmail.com
 
 ---
 
