@@ -1,351 +1,413 @@
-# ♟️ Chess Fairplay Analyzer
+# ♟️ Chess Fairplay Analyzer v2.0
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Chess.com API](https://img.shields.io/badge/API-Chess.com-orange)](https://www.chess.com/news/view/published-data-api)
+[![Stockfish](https://img.shields.io/badge/Engine-Stockfish%2016-red)](https://stockfishchess.org/)
 
-A modern forensic analysis tool for detecting potential computer assistance in chess games using advanced statistical techniques similar to Chess.com's Fair Play detection system.
+A comprehensive, production-ready forensic analysis tool for detecting potential computer assistance in chess games using advanced statistical techniques similar to Chess.com's Fair Play detection system.
 
-⚠️ **IMPORTANT**: This tool provides statistical indicators only, not proof of cheating. Final judgment always rests with Chess.com's Fair Play team.
+> ⚠️ **IMPORTANT**: This tool provides statistical indicators only, not proof of cheating. Final judgment always rests with Chess.com's Fair Play team and relevant authorities.
 
-## ✨ Features
+---
 
-- **📥 Game Fetching**: Retrieve player's complete public game history from Chess.com API
-- **🤖 Engine Analysis**: Integrates with Stockfish for move-by-move analysis
-- **📊 Statistical Detection**: Calculates key cheating indicators:
-  - Engine Move Correlation (% of moves matching Stockfish's top choice)
-  - Average Centipawn Loss (ACPL)
-  - Performance Consistency Analysis
-  - Time Control Performance Comparison
-- **📄 Multi-Format Reports**: Generate HTML, text, or JSON reports
-- **⚡ Parallel Processing**: Analyze multiple games simultaneously
-- **🔒 Ethical Design**: No automated reporting - analysis only for human review
+## 🎯 What's New in v2.0
 
-## 📸 Screenshots
+### ✨ Complete Menu-Driven Interface
+- **8-Option Interactive Menu** with comprehensive chess player analysis
+- Intuitive navigation with real-time feedback
+- Progress indicators and estimated time calculations
 
-### HTML Report Preview
-![HTML Report](https://via.placeholder.com/800x400.png?text=HTML+Report+with+Charts+and+Visualizations)
+### 🎮 6 Powerful Analysis Features
 
-### Command Line Interface
-```bash
-chess-analyzer magnuscarlsen --games 50 --format html
-```
+#### 1. **Analyze Player** - Detect Suspicious Activity
+- Comprehensive cheating detection across 50+ games
+- Three analysis speed options: Fast (depth 12), Standard (depth 14), Thorough (depth 16)
+- Exports suspicious games to PGN and ZIP formats
+- Statistical thresholds customizable in settings
+- Real-time progress tracking
 
-## 🚀 Quick Start
+#### 2. **Download All Games** - Export Game History
+- Export complete player game history in 4 formats:
+  - **Individual PGN** - Each game as separate file
+  - **Combined PGN** - All games in single file
+  - **CSV** - Spreadsheet-compatible analysis data
+  - **ZIP Archive** - All formats combined
+- Choose: Most recent games OR oldest first
+- Choose: All games OR specific count
+- Automatic timestamp naming for organization
+
+#### 3. **PlayerBrain** - Player Profile & Style Analysis
+- Comprehensive player personality assessment
+- Opening repertoire analysis with ECO codes
+- Win rate tracking by opening
+- **Phase Strength Analysis**: Opening, Middlegame, Endgame performance
+- Overall statistics: Wins/Losses/Draws with percentages
+- Playing style classification and recommendations
+
+#### 4. **Strength Profile** - Skill Level Analysis
+- Estimated skill level classification (Super-GM to Beginner)
+- Performance metrics by time control (Blitz, Rapid, Classical, etc.)
+- Average opponent strength assessment
+- Consistency rating across formats
+- Playing style insights and recommendations
+
+#### 5. **Accuracy Report** - Move Accuracy & Consistency
+- Comprehensive move accuracy analysis (30+ games)
+- Accuracy by game phase, result, and opponent strength
+- Error analysis: Blunders vs inaccuracies
+- Consistency trends and improvement tracking
+- AI-generated recommendations
+
+#### 6. **View Reports** - Report Management
+- Browse and manage all generated reports
+- Quick access to HTML and JSON analysis
+- Report organization and filtering
+
+#### 7. **Settings** - Full Configuration Menu
+- Engine configuration, cache management, report settings
+- Chess.com API customization
+- View current configuration and reset to defaults
+
+---
+
+## 📊 Features Overview
+
+### Core Capabilities
+- ✅ **Game Analysis**: Move-by-move Stockfish evaluation (depth 12-16)
+- ✅ **Statistical Detection**: Engine correlation, ACPL, consistency metrics
+- ✅ **Multi-Format Export**: PGN, CSV, JSON, ZIP archives
+- ✅ **Player Profiling**: 5 unique analysis perspectives per player
+- ✅ **Real-time Feedback**: Progress bars, time estimates, live results
+- ✅ **Configurable Analysis**: Speed presets, customizable thresholds
+- ✅ **Cache System**: Automatic game caching to speed up repeated analysis
+
+---
+
+## 🚀 Installation & Setup
 
 ### Prerequisites
-- Python 3.8 or higher
-- Stockfish chess engine
-- Chess.com account (for accessing public games)
+- **Python 3.8+**
+- **Stockfish 16** (included)
+- **Chess.com Account** (for public game data)
 
-### Installation
+### Quick Start (Windows)
 
-#### Windows
 ```powershell
-# Clone the repository
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
+# 1. Clone repository
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
 cd chess-fairplay-analyzer
 
-# Install Python dependencies
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# Install Stockfish (download from https://stockfishchess.org/download/)
-# Extract to C:\Users\YourUsername\stockfish\
-
-# Install the analyzer package
-pip install -e .
+# 3. Run the menu
+python run_menu.py
 ```
 
-#### Linux/macOS
+### macOS/Linux
+
 ```bash
-# Install system dependencies
-sudo apt-get install stockfish  # Debian/Ubuntu
-# or
-brew install stockfish          # macOS
+# 1. Clone repository
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
+cd chess-fairplay-analyzer
 
-# Install Python package
-pip install -e .
+# 2. Install dependencies
+pip3 install -r requirements.txt
+
+# 3. Run the menu
+python3 run_menu.py
 ```
 
-## 📖 Usage
+---
 
-### Basic Analysis
+## 📖 Usage Guide
+
+### Running the Application
+
 ```bash
-# Analyze a player's recent games
-chess-analyzer magnuscarlsen --games 50
-
-# Specify output format
-chess-analyzer hikaru --games 100 --format html --output report_hikaru
-
-# Increase analysis depth
-chess-analyzer your_username --games 30 --depth 22 --verbose
+python run_menu.py
 ```
 
-### Command Line Options
+### Main Menu Options
+
 ```
-Usage: chess-analyzer [OPTIONS] [USERNAME]
-
-Arguments:
-  USERNAME  Chess.com username to analyze
-
-Options:
-  --games, -g INTEGER        Maximum games to analyze (default: 50)
-  --format, -f [html|text|json|all]
-                             Output format (default: html)
-  --output, -o TEXT          Output file/directory name
-  --config, -c PATH          Path to configuration file
-  --depth, -d INTEGER        Stockfish analysis depth (overrides config)
-  --verbose, -v              Enable verbose logging
-  --list-formats             List available output formats
-  --check-stockfish          Check Stockfish installation
-  --help                     Show this message and exit
-  --version                  Show version information
+MAIN MENU
+==================================================
+1. Analyze Player (Detect Suspicious Activity)
+2. Download All Games (Export Game History)
+3. PlayerBrain (Player Profile & Style Analysis)
+4. Strength Profile (Skill Level Analysis)
+5. Accuracy Report (Move Accuracy & Consistency)
+6. View Reports
+7. Settings
+8. Exit
+==================================================
 ```
 
-## 🔧 Configuration
+### Usage Examples
 
-Edit `config.yaml` to customize analysis parameters:
+#### Example 1: Analyze Player for Suspicious Activity
+```
+Select option (1-8): 1
+Enter Chess.com username: magnuscarlsen
+Games to analyze (default 50): 50
+
+[Analyzing... Progress: 50/50]
+✓ Analysis complete!
+
+SUSPICIOUS INDICATORS FOUND:
+- Engine Correlation: 94.2% (⚠️ Red Flag)
+- ACPL Difference: 18.5 (⚠️ Red Flag)
+
+Suspicious games exported to: exports/suspicious_magnuscarlsen.pgn
+```
+
+#### Example 2: Download Player's Games
+```
+Select option (1-8): 2
+Enter Chess.com username: hansniemann
+
+Choose export format:
+1. Individual PGN files
+2. Combined PGN file
+3. CSV spreadsheet
+4. ZIP archive (all formats)
+Choose (1-4): 4
+
+✓ Retrieved 150 games
+✓ Exported to: exports/hansniemann_games_20260117.zip
+```
+
+#### Example 3: PlayerBrain Analysis
+```
+Select option (1-8): 3
+Enter Chess.com username: penguingm
+
+PLAYERBRAIN ANALYSIS
+==================================================
+
+📊 OVERALL STATISTICS (30 games)
+  Wins: 18 (60.0%)
+  Losses: 8 (26.7%)
+  Draws: 4 (13.3%)
+
+💪 PHASE STRENGTH
+  Opening: 72.5% accuracy
+  Middlegame: 68.3% accuracy
+  Endgame: 75.1% accuracy
+
+🎯 OPENING REPERTOIRE
+  1. Sicilian Defense (C99): 6 games, 66.7% win rate
+  2. French Defense (C11): 4 games, 75.0% win rate
+  3. Ruy Lopez (C80): 3 games, 100.0% win rate
+```
+
+#### Example 4: Strength Profile
+```
+Select option (1-8): 4
+Enter Chess.com username: alireza2003
+
+🏆 ESTIMATED SKILL LEVEL: Super-GM (2700+)
+
+📊 OVERALL METRICS
+  Average Opponent ELO: 2485
+  Overall Win Rate: 68.4%
+
+⏱️  PERFORMANCE BY TIME CONTROL
+  Blitz: 62.1% win rate
+  Rapid: 71.3% win rate
+  Classical: 75.8% win rate
+```
+
+#### Example 5: Accuracy Report
+```
+Select option (1-8): 5
+Enter Chess.com username: levon_aronian
+
+🎯 OVERALL ACCURACY
+  Average Accuracy: 76.3%
+  Best Game: 92.5%
+  Worst Game: 48.1%
+  Rating: ✓ Very Good
+
+📊 ACCURACY BY GAME PHASE
+  OPENING: 82.1%
+  MIDDLEGAME: 74.5%
+  ENDGAME: 72.8%
+```
+
+---
+
+## ⚙️ Configuration
+
+### config.yaml
 
 ```yaml
-analysis:
-  engine_depth: 18           # Stockfish analysis depth
-  thresholds:
-    engine_correlation_red_flag: 95.0    # % of moves matching engine
-    avg_centipawn_loss_red_flag: 15.0    # Lower = stronger play
-    accuracy_fluctuation_red_flag: 30.0   # Consistency threshold
-
 chess_com:
-  request_delay: 0.5         # Delay between API requests (seconds)
-  max_games: 100             # Maximum games to fetch (0 = all)
+  api_base: "https://api.chess.com/pub/player"
+  request_delay: 1.0
+  max_games: 100
+  cache_enabled: true
+  cache_dir: "cache"
+
+analysis:
+  use_lichess: false
+  engine_depth: 14
+  engine_path: "stockfish/stockfish-windows-x86-64.exe"
+  threads: 2
+  hash_size: 256
+  thresholds:
+    engine_correlation_red_flag: 92.0
+    avg_centipawn_loss_red_flag: 15.0
+    accuracy_fluctuation_red_flag: 25.0
+    min_games_for_analysis: 5
+
+report:
+  default_format: "html"
+  output_dir: "reports"
+  highlight_suspicious: true
+  save_analysis_data: true
 ```
+
+---
 
 ## 📁 Project Structure
 
 ```
 chess-fairplay-analyzer/
 ├── chess_analyzer/
-│   ├── __init__.py          # Package definition
-│   ├── cli.py              # Command-line interface
-│   ├── fetcher.py          # Chess.com API client
-│   ├── engine.py           # Stockfish integration
-│   ├── analyzer.py         # Core analysis logic
-│   ├── reporter.py         # Report generation
-│   ├── stats.py           # Statistical functions
+│   ├── analyzer.py           # Core analysis engine
+│   ├── engine.py             # Stockfish integration
+│   ├── fetcher.py            # Chess.com API client
+│   ├── menu.py               # Interactive menu system ⭐ v2.0
+│   ├── reporter.py           # Report generation
+│   ├── stats.py              # Statistical calculations
 │   └── utils/
-│       ├── __init__.py
-│       └── helpers.py      # Utility functions
-├── templates/
-│   └── report_template.html # HTML report template
-├── config.yaml             # Configuration file
-├── requirements.txt        # Python dependencies
-├── setup.py               # Package installation
-├── install.ps1            # Windows installer
-└── README.md              # This file
+│       └── helpers.py        # Utility functions
+├── stockfish/
+│   └── stockfish-windows-x86-64.exe
+├── config.yaml               # Configuration
+├── run_menu.py               # ⭐ v2.0 Menu launcher
+├── requirements.txt          # Dependencies
+└── README.md                 # This file
 ```
-
-## 📊 Analysis Methodology
-
-The analyzer evaluates several key metrics:
-
-### 1. Engine Move Correlation
-Percentage of player's moves that match Stockfish's top recommendation at depth 18+. Human players typically achieve 50-80% correlation; consistent scores above 90% are suspicious.
-
-### 2. Average Centipawn Loss (ACPL)
-Measures how many "centipawns" (1/100th of a pawn) are lost per move on average. Strong human players maintain 20-50 ACPL; consistently below 15 is suspicious.
-
-### 3. Performance Consistency
-Standard deviation of accuracy across games. Inconsistent performance (wild fluctuations) can indicate selective assistance.
-
-### 4. Time Control Analysis
-Compares performance across different time controls (blitz, rapid, classical). Unnatural consistency across time controls is suspicious.
-
-## ⚠️ Ethical Considerations
-
-This tool is designed with strict ethical boundaries:
-
-1. **No Automated Reporting**: The tool only provides analysis; human judgment is required for any action.
-2. **Rate Limiting**: Built-in delays respect Chess.com's servers.
-3. **Transparency**: Clear disclaimer in all reports emphasizing statistical nature.
-4. **Privacy**: Only accesses publicly available game data.
-
-**Remember**: Statistical anomalies do not equal proof of cheating. Many legitimate factors can influence these metrics.
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### Stockfish Not Found
-```bash
-# On Windows, ensure Stockfish is in the correct location
-# Default: C:\Users\YourUsername\stockfish\stockfish.exe
-
-# Update config.yaml with the correct path:
-# engine_path: "C:\\Users\\YourUsername\\stockfish\\stockfish.exe"
-```
-
-#### API Rate Limiting
-If you encounter rate limits, increase the delay in `config.yaml`:
-```yaml
-chess_com:
-  request_delay: 1.0  # Increase to 1 second between requests
-```
-
-#### Module Import Errors
-```bash
-# Reinstall requirements
-pip install --upgrade -r requirements.txt
-
-# Or install specific missing packages
-pip install numpy python-chess requests
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Development Setup
-```bash
-# Clone and setup
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
-cd chess-fairplay-analyzer
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -e ".[dev]"
-```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [Chess.com](https://www.chess.com) for their public API
-- [Stockfish](https://stockfishchess.org/) chess engine
-- [python-chess](https://python-chess.readthedocs.io/) library
-- The chess community for fair play advocacy
-
-## 📞 Support
-
-For issues and questions:
-1. Check the [Troubleshooting](#-troubleshooting) section
-2. Open an [Issue](https://github.com/yourusername/chess-fairplay-analyzer/issues)
-3. Provide your configuration and error logs
 
 ---
 
-**Disclaimer**: This tool is for educational and analytical purposes only. The authors are not responsible for any misuse. Always respect Chess.com's Terms of Service.
+## 🔧 Development
+
+### Setting Up Development Environment
+
+```bash
+# Clone repository
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
+cd chess-fairplay-analyzer
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run tests
+python test_syntax.py
 ```
 
-## **Additional Files You Should Create:**
+### Testing
 
-### **1. LICENSE File** (Create as `LICENSE` in root)
-```text
-MIT License
+```bash
+# Test imports and basic functionality
+python test_syntax.py
 
-Copyright (c) 2025 Muhammad Hanif
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+# Test specific features
+python test_quick.py           # Quick analysis test
+python test_multi_game.py      # Multi-game analysis
+python test_menu.py            # Menu interface test
 ```
 
-### **2. .gitignore** (If not already created)
-```gitignore
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-env/
-.venv/
-*.egg-info/
-dist/
-build/
+---
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+## ⚙️ Analysis Details
 
-# OS
-.DS_Store
-Thumbs.db
+### Detection Metrics
 
-# Output
-*.log
-*.report.html
-*.report.json
-*.report.txt
-reports/
-cache/
-tmp/
+1. **Engine Move Correlation**: % of moves matching Stockfish's top choice
+2. **Average Centipawn Loss (ACPL)**: Average evaluation loss per move
+3. **Performance Consistency**: Standard deviation of accuracy across games
+4. **Time Control Analysis**: Performance across different time controls
 
-# Config overrides
-config.local.yaml
-secrets.yaml
-```
+### Performance Metrics
 
-### **3. CHANGELOG.md** (Optional but recommended)
-```markdown
-# Changelog
+- **Fast Mode (Depth 12)**: ~40 seconds per game
+- **Standard Mode (Depth 14)**: ~60-90 seconds per game
+- **Thorough Mode (Depth 16)**: ~120-180 seconds per game
 
-## [1.0.0] - 2025-01-14
-### Added
-- Initial release of Chess Fairplay Analyzer
-- Chess.com API integration with rate limiting
-- Stockfish engine integration
-- Statistical analysis engine (ACPL, correlation, consistency)
-- Multi-format reporting (HTML, text, JSON)
-- Command-line interface with progress bars
-- Configuration system with YAML support
-- Windows installer script
-- Comprehensive documentation
+---
 
-### Features
-- Fetch up to 1000 games per player
-- Analyze games in parallel
-- Generate interactive HTML reports
-- Respectful API usage with delays
-- Ethical design - analysis only, no auto-reporting
-```
+## 🐛 Troubleshooting
 
-## **Next Steps After Installation:**
+### Issue: Stockfish Not Found
+**Solution**: 
+- Ensure `stockfish-windows-x86-64.exe` exists in `stockfish/` directory
+- Or set `engine_path` in `config.yaml`
 
-Once `numpy` finishes installing, run:
+### Issue: Chess.com API Rate Limiting
+**Solution**:
+- Increase `request_delay` in `config.yaml`
+- Wait a few minutes and retry
 
-```powershell
-# 1. Test the installation
-python -m chess_analyzer.cli --check-stockfish
+### Issue: Out of Memory
+**Solution**:
+- Reduce `hash_size` in `config.yaml`
+- Analyze fewer games at once
 
-# 2. Try a quick analysis (just 2 games to test)
-python -m chess_analyzer.cli magnuscarlsen --games 2 --verbose
+---
 
-# 3. If successful, push to GitHub:
-git add .
-git commit -m "Initial commit: Chess Fairplay Analyzer v1.0"
-git remote add origin https://github.com/YOUR_USERNAME/chess-fairplay-analyzer.git
-git push -u origin main
-```
+## 📝 License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+## 🙏 Credits
+
+- **Stockfish**: Chess engine by Tord Romstad, Marco Costalba, Joona Kiiski, Gary Linscott
+- **Chess.com**: Public API for game data
+- **python-chess**: Python chess library
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Fork, create a feature branch, commit your changes, and open a Pull Request.
+
+---
+
+## 📞 Support
+
+- **Issues**: Report bugs on [GitHub Issues](https://github.com/hanifkhan7/chess-fairplay-analyzer/issues)
+- **Email**: hanifkhan7@gmail.com
+
+---
+
+## ⚖️ Legal & Ethical Statement
+
+This tool is designed for:
+- ✅ Personal chess analysis and improvement
+- ✅ Research and educational purposes
+- ✅ Supporting Chess.com's Fair Play investigations (with authorization)
+
+This tool should NOT be used for:
+- ❌ Harassing or defaming chess players
+- ❌ Making unfounded public accusations
+- ❌ Circumventing Chess.com's terms of service
+
+**Remember**: Statistical indicators are not proof. Always respect the integrity of chess and the rights of all players.
+
+---
+
+**Last Updated**: January 17, 2026  
+**Version**: 2.0.0  
+**Status**: Production Ready ✅

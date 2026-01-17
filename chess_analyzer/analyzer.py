@@ -189,7 +189,22 @@ class ChessAnalyzer:
             config: Configuration dictionary
         """
         self.config = config or {}
-        self.engine_manager = StockfishManager(config)
+        
+        # Try Lichess first (fast), fall back to Stockfish if needed
+        use_lichess = self.config.get('analysis', {}).get('use_lichess', True)
+        
+        if use_lichess:
+            try:
+                from .lichess_analyzer import LichessAnalyzer
+                self.engine_manager = LichessAnalyzer(config)
+                logger.info("Using Lichess API for analysis (fast mode)")
+            except Exception as e:
+                logger.warning(f"Lichess initialization failed: {e}, falling back to Stockfish")
+                self.engine_manager = StockfishManager(config)
+        else:
+            self.engine_manager = StockfishManager(config)
+            logger.info("Using local Stockfish for analysis")
+        
         self.thresholds = self.config.get('analysis', {}).get('thresholds', {})
         
         logger.info("ChessAnalyzer initialized")
@@ -216,6 +231,7 @@ class ChessAnalyzer:
         # Analyze each game
         for i, game in enumerate(games, 1):
             logger.info(f"Analyzing game {i}/{len(games)}")
+            print(f"  [{i}/{len(games)}] Analyzing...", end="\r")
             
             try:
                 game_analysis = self._analyze_single_game(game)
@@ -226,9 +242,16 @@ class ChessAnalyzer:
                 logger.info(f"  Game {i}: {game_analysis.engine_correlation:.1f}% engine correlation, "
                            f"{game_analysis.avg_centipawn_loss:.1f} avg CPL")
                 
+            except KeyboardInterrupt:
+                print(f"\n\nAnalysis interrupted by user.")
+                logger.warning(f"Analysis interrupted at game {i}")
+                break
             except Exception as e:
                 logger.error(f"Failed to analyze game {i}: {e}")
+                print(f"  [{i}/{len(games)}] Error: {str(e)[:30]}")
                 continue
+        
+        print()  # Clear the progress line
         
         # Aggregate results
         if analyzed_count > 0:
@@ -271,145 +294,194 @@ class ChessAnalyzer:
         import time
         start_time = time.time()
         
-        # Get game metadata
-        metadata = self._extract_game_metadata(game)
-        
-        # Analyze with engine
-        engine_analysis = self.engine_manager.analyze_game(game)
-        
-        # Calculate statistics
-        engine_correlation = engine_analysis.get('engine_correlation', 0.0)
-        
-        # Calculate average CPL from positions
-        positions = engine_analysis.get('positions', [])
-        cpl_values = []
-        previous_score = None
-        blunder_count = 0
-        
-        for pos in positions:
-            score_cp = pos.get('score_cp')
-            if score_cp is not None:
-                if previous_score is not None:
-                    cpl = abs(score_cp - previous_score)
-                    cpl_values.append(cpl)
-                    # Count blunders (loss of >200 centipawns)
-                    if cpl > 200:
-                        blunder_count += 1
-                previous_score = -score_cp  # Negate for opponent's perspective
-        
-        avg_cpl = statistics.mean(cpl_values) if cpl_values else 999.0
-        
-        # Calculate accuracy (simplified)
-        accuracy = 100 - min(avg_cpl / 2, 100) if avg_cpl < 200 else 50.0
-        accuracy = max(0.0, min(100.0, accuracy))
-        
-        # ENHANCED: Analyze by game phases
-        board = game.board()
-        move_count = 0
-        opening_moves = []
-        middlegame_moves = []
-        endgame_moves = []
-        critical_moves = []
-        
-        for pos in positions:
-            move_count = pos.get('move_number', move_count)
+        try:
+            # Get game metadata
+            metadata = self._extract_game_metadata(game)
             
-            # Phase detection
-            piece_count = len(board.pieces(chess.PAWN, chess.WHITE)) + len(board.pieces(chess.PAWN, chess.BLACK))
-            piece_count += len(board.pieces(chess.KNIGHT, chess.WHITE)) + len(board.pieces(chess.KNIGHT, chess.BLACK))
-            piece_count += len(board.pieces(chess.BISHOP, chess.WHITE)) + len(board.pieces(chess.BISHOP, chess.BLACK))
-            piece_count += len(board.pieces(chess.ROOK, chess.WHITE)) + len(board.pieces(chess.ROOK, chess.BLACK))
+            # Analyze with engine
+            engine_analysis = self.engine_manager.analyze_game(game)
             
-            if move_count <= 10:
-                opening_moves.append(pos)
-            elif piece_count <= 6:
-                endgame_moves.append(pos)
-            else:
-                middlegame_moves.append(pos)
+            # Check if analysis failed
+            if 'error' in engine_analysis:
+                logger.warning(f"Engine analysis failed, returning minimal analysis: {engine_analysis.get('error')}")
+                # Return a minimal analysis with default values
+                return self._create_default_game_analysis(game, metadata, start_time)
             
-            # Detect critical positions (large score swings)
-            score_cp = pos.get('score_cp', 0)
-            if abs(score_cp) > 300:
-                critical_moves.append(pos)
+            # Calculate statistics
+            engine_correlation = engine_analysis.get('engine_correlation', 0.0)
+            
+            # Calculate average CPL from positions
+            positions = engine_analysis.get('positions', [])
+            cpl_values = []
+            previous_score = None
+            blunder_count = 0
+            
+            for pos in positions:
+                score_cp = pos.get('score_cp')
+                if score_cp is not None:
+                    if previous_score is not None:
+                        cpl = abs(score_cp - previous_score)
+                        cpl_values.append(cpl)
+                        # Count blunders (loss of >200 centipawns)
+                        if cpl > 200:
+                            blunder_count += 1
+                    previous_score = -score_cp  # Negate for opponent's perspective
+            
+            avg_cpl = statistics.mean(cpl_values) if cpl_values else 999.0
+            
+            # Calculate accuracy (simplified)
+            accuracy = 100 - min(avg_cpl / 2, 100) if avg_cpl < 200 else 50.0
+            accuracy = max(0.0, min(100.0, accuracy))
+            
+            # ENHANCED: Analyze by game phases - safely reconstruct board state
+            opening_moves = []
+            middlegame_moves = []
+            endgame_moves = []
+            critical_moves = []
+            
+            # Reconstruct board and map positions to moves
+            board_test = game.board()
+            move_index = 0
+            
+            for move in game.mainline_moves():
+                if move_index < len(positions):
+                    pos = positions[move_index]
+                    move_number = (move_index // 2) + 1
+                    
+                    # Phase detection based on move number and piece count
+                    piece_count = len(board_test.pieces(chess.PAWN, chess.WHITE)) + len(board_test.pieces(chess.PAWN, chess.BLACK))
+                    piece_count += len(board_test.pieces(chess.KNIGHT, chess.WHITE)) + len(board_test.pieces(chess.KNIGHT, chess.BLACK))
+                    piece_count += len(board_test.pieces(chess.BISHOP, chess.WHITE)) + len(board_test.pieces(chess.BISHOP, chess.BLACK))
+                    piece_count += len(board_test.pieces(chess.ROOK, chess.WHITE)) + len(board_test.pieces(chess.ROOK, chess.BLACK))
+                    
+                    if move_number <= 10:
+                        opening_moves.append(pos)
+                    elif piece_count <= 6:
+                        endgame_moves.append(pos)
+                    else:
+                        middlegame_moves.append(pos)
+                    
+                    # Detect critical positions (large score swings)
+                    score_cp = pos.get('score_cp', 0)
+                    if abs(score_cp) > 300:
+                        critical_moves.append(pos)
+                
+                board_test.push(move)
+                move_index += 1
+            
+            # Calculate phase-specific accuracies
+            opening_accuracy = self._calculate_phase_accuracy(opening_moves)
+            middlegame_accuracy = self._calculate_phase_accuracy(middlegame_moves)
+            endgame_accuracy = self._calculate_phase_accuracy(endgame_moves)
+            critical_move_accuracy = self._calculate_phase_accuracy(critical_moves)
+            
+            # ENHANCED: Identify suspicious moves
+            suspicious_moves = []
+            for pos in positions:
+                if pos.get('player_moved_best', False):
+                    score_cp = pos.get('score_cp', 0)
+                    if abs(score_cp) < 200:  # Complex position
+                        suspicious_moves.append({
+                            'move_number': pos.get('move_number', 0),
+                            'move': pos.get('move', ''),
+                            'best_move': pos.get('best_move', ''),
+                            'score_cp': score_cp
+                        })
+            
+            # Time control info
+            time_controls = {
+                'time_class': metadata.get('time_class', 'unknown'),
+                'time_control': metadata.get('time_control', 'unknown'),
+                'rated': metadata.get('rated', False)
+            }
+            
+            # MODERN DETECTION: Calculate move time consistency (engine-like timing)
+            move_times = engine_analysis.get('move_times', [])
+            move_time_consistency = self._calculate_move_time_consistency(move_times)
+            
+            # MODERN DETECTION: Calculate probability correlation
+            # This is the likelihood of finding the best moves consistently
+            probability_correlation = self._calculate_probability_correlation(
+                engine_correlation, positions, critical_moves
+            )
+            
+            # MODERN DETECTION: Extract game result and calculate win/draw/loss
+            result = metadata.get('result', '?')
+            win_rate = 1.0 if result == '1-0' else (0.5 if result == '1/2-1/2' else 0.0)
+            draw_rate = 1.0 if result == '1/2-1/2' else 0.0
+            loss_rate = 1.0 if result == '0-1' else 0.0
+            
+            # MODERN DETECTION: Superhuman performance indicator
+            # Check if performance matches IM+ level (2400+) at lower rating
+            superhuman_score = self._calculate_superhuman_indicator(
+                opening_accuracy, middlegame_accuracy, endgame_accuracy,
+                critical_move_accuracy, engine_correlation
+            )
+            
+            # Time pressure accuracy (if game went to endgame with low time)
+            time_pressure_accuracy = endgame_accuracy  # Proxy for time pressure
+            
+            analysis_time = time.time() - start_time
+            
+            game_analysis = GameAnalysis(
+                game=game,
+                engine_correlation=engine_correlation,
+                avg_centipawn_loss=avg_cpl,
+                accuracy_score=accuracy,
+                suspicious_moves=suspicious_moves[:10],  # Limit to 10
+                time_controls=time_controls,
+                analysis_time=analysis_time,
+                metadata=metadata,
+                opening_accuracy=opening_accuracy,
+                middlegame_accuracy=middlegame_accuracy,
+                endgame_accuracy=endgame_accuracy,
+                blunder_count=blunder_count,
+                critical_move_accuracy=critical_move_accuracy,
+                time_pressure_accuracy=time_pressure_accuracy,
+                move_time_consistency=move_time_consistency,
+                probability_correlation=probability_correlation,
+                win_loss_rate=win_rate,
+                draw_rate=draw_rate,
+                loss_rate=loss_rate,
+                superhuman_score=superhuman_score
+            )
+            
+            return game_analysis
         
-        # Calculate phase-specific accuracies
-        opening_accuracy = self._calculate_phase_accuracy(opening_moves)
-        middlegame_accuracy = self._calculate_phase_accuracy(middlegame_moves)
-        endgame_accuracy = self._calculate_phase_accuracy(endgame_moves)
-        critical_move_accuracy = self._calculate_phase_accuracy(critical_moves)
-        
-        # ENHANCED: Identify suspicious moves
-        suspicious_moves = []
-        for pos in positions:
-            if pos.get('player_moved_best', False):
-                score_cp = pos.get('score_cp', 0)
-                if abs(score_cp) < 200:  # Complex position
-                    suspicious_moves.append({
-                        'move_number': pos.get('move_number', 0),
-                        'move': pos.get('move', ''),
-                        'best_move': pos.get('best_move', ''),
-                        'score_cp': score_cp
-                    })
-        
-        # Time control info
-        time_controls = {
-            'time_class': metadata.get('time_class', 'unknown'),
-            'time_control': metadata.get('time_control', 'unknown'),
-            'rated': metadata.get('rated', False)
-        }
-        
-        # MODERN DETECTION: Calculate move time consistency (engine-like timing)
-        move_times = engine_analysis.get('move_times', [])
-        move_time_consistency = self._calculate_move_time_consistency(move_times)
-        
-        # MODERN DETECTION: Calculate probability correlation
-        # This is the likelihood of finding the best moves consistently
-        probability_correlation = self._calculate_probability_correlation(
-            engine_correlation, positions, critical_moves
-        )
-        
-        # MODERN DETECTION: Extract game result and calculate win/draw/loss
-        result = metadata.get('result', '?')
-        win_rate = 1.0 if result == '1-0' else (0.5 if result == '1/2-1/2' else 0.0)
-        draw_rate = 1.0 if result == '1/2-1/2' else 0.0
-        loss_rate = 1.0 if result == '0-1' else 0.0
-        
-        # MODERN DETECTION: Superhuman performance indicator
-        # Check if performance matches IM+ level (2400+) at lower rating
-        superhuman_score = self._calculate_superhuman_indicator(
-            opening_accuracy, middlegame_accuracy, endgame_accuracy,
-            critical_move_accuracy, engine_correlation
-        )
-        
-        # Time pressure accuracy (if game went to endgame with low time)
-        time_pressure_accuracy = endgame_accuracy  # Proxy for time pressure
-        
+        except Exception as e:
+            logger.error(f"Error analyzing game: {e}", exc_info=True)
+            return self._create_default_game_analysis(game, {}, start_time)
+    
+    def _create_default_game_analysis(self, game: chess.pgn.Game, metadata: Dict, start_time: float) -> GameAnalysis:
+        """Create a default minimal game analysis when engine analysis fails."""
+        import time
         analysis_time = time.time() - start_time
         
-        game_analysis = GameAnalysis(
+        return GameAnalysis(
             game=game,
-            engine_correlation=engine_correlation,
-            avg_centipawn_loss=avg_cpl,
-            accuracy_score=accuracy,
-            suspicious_moves=suspicious_moves[:10],  # Limit to 10
-            time_controls=time_controls,
+            engine_correlation=0.0,
+            avg_centipawn_loss=999.0,
+            accuracy_score=0.0,
+            suspicious_moves=[],
+            time_controls=metadata.get('time_controls', {}),
             analysis_time=analysis_time,
             metadata=metadata,
-            opening_accuracy=opening_accuracy,
-            middlegame_accuracy=middlegame_accuracy,
-            endgame_accuracy=endgame_accuracy,
-            blunder_count=blunder_count,
-            critical_move_accuracy=critical_move_accuracy,
-            time_pressure_accuracy=time_pressure_accuracy,
-            move_time_consistency=move_time_consistency,
-            probability_correlation=probability_correlation,
-            win_loss_rate=win_rate,
-            draw_rate=draw_rate,
-            loss_rate=loss_rate,
-            superhuman_score=superhuman_score
+            opening_accuracy=0.0,
+            middlegame_accuracy=0.0,
+            endgame_accuracy=0.0,
+            opening_book_depth=0,
+            blunder_count=0,
+            critical_move_accuracy=0.0,
+            time_pressure_accuracy=0.0,
+            performance_vs_rating=0.0,
+            move_time_consistency=0.0,
+            probability_correlation=0.0,
+            win_loss_rate=0.0,
+            draw_rate=0.0,
+            loss_rate=0.0,
+            superhuman_score=0.0,
+            rating_differential_score=0.0
         )
-        
-        return game_analysis
     
     def _calculate_phase_accuracy(self, positions: List[Dict]) -> float:
         """Calculate accuracy for a specific game phase."""

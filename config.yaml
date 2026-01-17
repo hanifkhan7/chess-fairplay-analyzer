@@ -7,9 +7,15 @@ chess_com:
   cache_enabled: true
   cache_dir: "cache"
 
+lichess:
+  api_token: ""  # Set your Lichess API token here if using Lichess analysis
+  username: ""   # Set your Lichess username here
+  enabled: false  # Set to true to use Lichess API
+
 analysis:
-  engine_depth: 18
-  # Your exact Stockfish file
+  use_lichess: false          # Using reliable local Stockfish
+  engine_depth: 14            # Stockfish analysis depth (adjustable via menu)
+  # Your exact Stockfish file (fallback only)
   engine_path: "stockfish/stockfish-windows-x86-64.exe"
   threads: 2
   hash_size: 256

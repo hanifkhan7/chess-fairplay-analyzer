@@ -203,3 +203,17 @@ def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error loading config {config_path}: {e}")
         return default_config
+
+
+def save_config(config: Dict[str, Any], config_path: str = "config.yaml") -> bool:
+    """Save configuration to YAML file."""
+    import yaml
+    
+    try:
+        with open(config_path, 'w', encoding='utf-8') as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+        logger.info(f"Configuration saved to {config_path}")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving config {config_path}: {e}")
+        return False

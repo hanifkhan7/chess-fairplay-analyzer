@@ -13,9 +13,11 @@ from .fetcher import fetch_player_games
 from .analyzer import ChessAnalyzer
 from .reporter import ReportGenerator, generate_report
 from .engine import StockfishManager, EngineResult
+from .menu import main as menu_main
 
 __all__ = [
     'main',
+    'menu_main',
     'fetch_player_games',
     'ChessAnalyzer',
     'ReportGenerator',

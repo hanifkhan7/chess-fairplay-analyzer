@@ -246,8 +246,9 @@ class StockfishManager:
                 analysis = engine.analyse(board, chess.engine.Limit(depth=self.engine_depth))
                 
                 # Check if player's move matches engine's best move
-                best_move = analysis.get('pv', [board.peek()])[0] if analysis.get('pv') else None
-                player_moved_best = (best_move == move)
+                pv_list = analysis.get('pv', [])
+                best_move = pv_list[0] if pv_list else None
+                player_moved_best = (best_move == move) if best_move else False
                 
                 position_data = {
                     'move_number': move_count,
