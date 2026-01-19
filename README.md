@@ -1,4 +1,4 @@
-# ♟️ Chess Detective v2.2
+# ♟️ Chess Detective v2.2.1
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -11,15 +11,27 @@ A comprehensive, production-ready forensic analysis tool for detecting potential
 
 ---
 
-## 🎯 What's New in v2.2
+## 🎯 What's New in v2.2.1
 
-### Advanced Analytics & Network Analysis
-- **Multi-Player Comparison**: Compare statistics across multiple players simultaneously
-- **Fatigue Detection**: Detect performance degradation and fatigue patterns over sessions
-- **Network Analysis**: Analyze opponent networks, detect playing circles, and suspicious patterns
-- **Visual Dashboard**: Generate publication-quality charts and graphs for analysis
+### Major Enhancement: "Exploit Your Opponent" Feature ⭐
+Completely rewritten with **300+ lines** of detailed analysis code:
 
-**See [README_v2.2.md](README_v2.2.md) for complete documentation**
+- **Comprehensive Opening Analysis**: Detailed breakdown of all openings (ECO codes) with win rates
+- **Weakness Detection**: Automatically identifies exploitable weaknesses (< 30-40% win rate)
+- **Phase-Based Strategies**: Opening, Middlegame, Endgame strength analysis with tactical recommendations
+- **Time Control Exploitation**: Identifies which time controls expose player weaknesses
+- **Color-Based Strategy**: Shows which color the player struggles with
+- **Severity Classification**: Marks weaknesses as CRITICAL (< 30%), WEAK (< 40%), or VULNERABLE
+- **Specific Exploitation Strategies**: Tactical advice for each identified weakness
+
+### All Other Features - Improved for v2.2.1
+- Enhanced Multi-Player Comparison with better outlier detection
+- Improved Fatigue Detection with more granular metrics
+- Advanced Network Analysis with pattern detection
+- Upgraded Visual Dashboard for better insights
+- Additional Account Metrics and behavioral analysis
+
+**See [README_v2.2.1.md](README_v2.2.1.md) for complete documentation**
 
 #### 1. **Analyze Player** - Detect Suspicious Activity
 - Comprehensive cheating detection across 50+ games

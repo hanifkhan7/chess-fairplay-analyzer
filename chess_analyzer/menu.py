@@ -17,7 +17,7 @@ def main():
     """Entry point for menu UI"""
     
     print("\n" + "="*60)
-    print("   CHESS DETECTIVE v2.1")
+    print("   CHESS DETECTIVE v2.2.1")
     print("   Forensic Analysis of Player Behavior")
     print("="*60 + "\n")
     
@@ -305,17 +305,14 @@ def _download_games():
 
 
 def _player_brain():
-    """Analyze player profile: openings, strengths, playing style."""
-    print("\n" + "-"*50)
-    print("PLAYERBRAIN - PLAYER PROFILE ANALYSIS")
-    print("-"*50)
+    """Analyze player profile: openings, strengths, playing style - EXPLOIT YOUR OPPONENT."""
     
-    username = input("\nEnter Chess.com username: ").strip()
+    username = input("\n\n🎯 EXPLOIT YOUR OPPONENT\n" + "-"*50 + "\nEnter Chess.com username: ").strip()
     if not username:
         return
     
     try:
-        games_count = int(input("Games to analyze (default 30): ") or "30")
+        games_count = int(input("Games to analyze (default 50): ") or "50")
         
         print(f"\nFetching {games_count} games for {username}...")
         games = fetch_player_games(username, max_games=games_count)
@@ -326,176 +323,10 @@ def _player_brain():
             input("Press Enter to continue...")
             return
         
-        # Determine player's color (most played)
-        white_count = sum(1 for g in games if g.headers.get("White", "").lower() == username.lower())
-        black_count = len(games) - white_count
-        player_as_white = white_count >= black_count
+        # Use enhanced exploit analyzer
+        from .exploit import display_exploit_analysis
+        display_exploit_analysis(games, username)
         
-        # Analyze openings
-        openings = {}
-        phases = {"opening_early": [], "opening": [], "middlegame": [], "endgame": []}
-        total_wins = total_losses = total_draws = 0
-        
-        for game in games:
-            white = game.headers.get("White", "").lower()
-            black = game.headers.get("Black", "").lower()
-            result = game.headers.get("Result", "*")
-            eco = game.headers.get("ECO", "Unknown")
-            opening = game.headers.get("Opening", "Unknown")
-            move_count = len(list(game.mainline_moves()))
-            
-            # Determine if player won/lost/drew
-            is_player_white = white == username.lower()
-            if result == "1-0":
-                outcome = "win" if is_player_white else "loss"
-            elif result == "0-1":
-                outcome = "loss" if is_player_white else "win"
-            else:
-                outcome = "draw"
-            
-            # Count outcomes
-            if outcome == "win":
-                total_wins += 1
-            elif outcome == "loss":
-                total_losses += 1
-            else:
-                total_draws += 1
-            
-            # Track opening stats
-            opening_key = f"{eco}: {opening}"
-            if opening_key not in openings:
-                openings[opening_key] = {"wins": 0, "losses": 0, "draws": 0, "count": 0}
-            
-            openings[opening_key]["count"] += 1
-            if outcome == "win":
-                openings[opening_key]["wins"] += 1
-            elif outcome == "loss":
-                openings[opening_key]["losses"] += 1
-            else:
-                openings[opening_key]["draws"] += 1
-            
-            # Better game phase detection based on move count
-            # Typical game phases: Opening (1-12), Middlegame (13-40), Endgame (40+)
-            # Short games (< 8 moves) = premature ending (opening surprise/blunder)
-            if move_count <= 8:
-                phase = "opening_early"  # Early mistake or quick opening win/loss
-            elif move_count <= 20:
-                phase = "opening"
-            elif move_count <= 40:
-                phase = "middlegame"
-            else:
-                phase = "endgame"
-            
-            phases[phase].append(outcome)
-        
-        # Calculate phase strengths
-        phase_stats = {}
-        for phase, outcomes in phases.items():
-            if outcomes:
-                wins = outcomes.count("win")
-                losses = outcomes.count("loss")
-                draws = outcomes.count("draw")
-                total = len(outcomes)
-                win_rate = (wins / total * 100) if total > 0 else 0
-                phase_stats[phase] = {
-                    "wins": wins,
-                    "losses": losses,
-                    "draws": draws,
-                    "win_rate": win_rate
-                }
-        
-        # Calculate overall stats
-        total_games = total_wins + total_losses + total_draws
-        overall_win_rate = (total_wins / total_games * 100) if total_games > 0 else 0
-        
-        # Display results
-        print("\n" + "="*70)
-        print(f"PLAYERBRAIN ANALYSIS for {username.upper()}")
-        print("="*70)
-        
-        print(f"\n📊 OVERALL STATISTICS ({len(games)} games)")
-        print("-" * 70)
-        print(f"  Total Games: {total_games}")
-        print(f"  Wins: {total_wins} ({total_wins/total_games*100:.1f}%)" if total_games > 0 else f"  Wins: {total_wins}")
-        print(f"  Losses: {total_losses} ({total_losses/total_games*100:.1f}%)" if total_games > 0 else f"  Losses: {total_losses}")
-        print(f"  Draws: {total_draws} ({total_draws/total_games*100:.1f}%)" if total_games > 0 else f"  Draws: {total_draws}")
-        print(f"  Win Rate: {overall_win_rate:.1f}%")
-        
-        # Phase analysis
-        print(f"\n🎯 PHASE STRENGTH ANALYSIS")
-        print("-" * 70)
-        
-        # Consolidate early opening into opening
-        if "opening_early" in phase_stats:
-            if "opening" in phase_stats:
-                # Merge early opening into opening
-                phase_stats["opening"]["wins"] += phase_stats["opening_early"]["wins"]
-                phase_stats["opening"]["losses"] += phase_stats["opening_early"]["losses"]
-                phase_stats["opening"]["draws"] += phase_stats["opening_early"]["draws"]
-                phase_stats["opening"]["win_rate"] = (phase_stats["opening"]["wins"] / 
-                    (phase_stats["opening"]["wins"] + phase_stats["opening"]["losses"] + phase_stats["opening"]["draws"]) * 100) \
-                    if (phase_stats["opening"]["wins"] + phase_stats["opening"]["losses"] + phase_stats["opening"]["draws"]) > 0 else 0
-            del phase_stats["opening_early"]
-        
-        for phase in ["opening", "middlegame", "endgame"]:
-            if phase in phase_stats:
-                stats = phase_stats[phase]
-                print(f"  {phase.upper()}:")
-                print(f"    Win Rate: {stats['win_rate']:.1f}% ({stats['wins']}-{stats['losses']}-{stats['draws']})")
-        
-        # Find strongest and weakest phases
-        if phase_stats:
-            strongest_phase = max(phase_stats.items(), key=lambda x: x[1]['win_rate'])
-            weakest_phase = min(phase_stats.items(), key=lambda x: x[1]['win_rate'])
-            print(f"\n  💪 Strongest: {strongest_phase[0].upper()} ({strongest_phase[1]['win_rate']:.1f}%)")
-            print(f"  📉 Weakest: {weakest_phase[0].upper()} ({weakest_phase[1]['win_rate']:.1f}%)")
-        
-        # Top openings
-        print(f"\n🏛️  OPENINGS PLAYED ({len(openings)} different)")
-        print("-" * 70)
-        sorted_openings = sorted(openings.items(), key=lambda x: x[1]['count'], reverse=True)
-        
-        # Show all openings if fewer than 10, otherwise show top 10
-        display_openings = sorted_openings[:10] if len(sorted_openings) > 10 else sorted_openings
-        
-        for i, (eco_name, stats) in enumerate(display_openings, 1):
-            total = stats['count']
-            win_rate = (stats['wins'] / total * 100) if total > 0 else 0
-            plays = "play" if total == 1 else "plays"
-            print(f"  {i}. {eco_name}")
-            print(f"     {total}x | W-L-D: {stats['wins']}-{stats['losses']}-{stats['draws']} | Win Rate: {win_rate:.1f}%")
-        
-        if not display_openings:
-            print("  (No opening data available)")
-        
-        # Player style summary
-        print(f"\n📈 PLAYER STYLE SUMMARY")
-        print("-" * 70)
-        if overall_win_rate > 55:
-            print(f"  ✓ Strong player with {overall_win_rate:.1f}% win rate")
-        elif overall_win_rate > 45:
-            print(f"  ✓ Balanced player with {overall_win_rate:.1f}% win rate")
-        else:
-            print(f"  ! Developing player with {overall_win_rate:.1f}% win rate")
-        
-        if "opening" in phase_stats and "endgame" in phase_stats:
-            opening_wr = phase_stats["opening"]["win_rate"]
-            endgame_wr = phase_stats["endgame"]["win_rate"]
-            if opening_wr > endgame_wr + 10:
-                print(f"  ✓ Opening specialist (strong opening play)")
-            elif endgame_wr > opening_wr + 10:
-                print(f"  ✓ Endgame specialist (strong closing play)")
-            else:
-                print(f"  ✓ Balanced player (consistent across phases)")
-        
-        if len(openings) > 20:
-            print(f"  ✓ Versatile - plays {len(openings)} different openings")
-        elif len(openings) < 8:
-            print(f"  ! Focused - specializes in {len(openings)} openings")
-        else:
-            print(f"  ✓ Moderate repertoire - {len(openings)} regular openings")
-        
-        print("\n" + "="*70)
         
     except KeyboardInterrupt:
         print("\n\nAnalysis cancelled.")
@@ -505,6 +336,7 @@ def _player_brain():
         traceback.print_exc()
     
     input("\nPress Enter to continue...")
+
 
 
 def _strength_profile():

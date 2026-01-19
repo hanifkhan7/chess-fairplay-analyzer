@@ -8,7 +8,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="chess-detective",
-    version="2.1.0",
+    version="2.2.1",
     author="Your Name",
     author_email="your.email@example.com",
     description="Chess Detective - Forensic analysis tool for detecting computer assistance in chess games",
