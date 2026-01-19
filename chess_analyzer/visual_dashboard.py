@@ -226,24 +226,112 @@ class VisualDashboard:
 
 def display_visual_dashboard(games, username: str, save_to_file: bool = True):
     """
-    Display visual dashboard.
+    Display enhanced visual dashboard with detailed metrics and chart generation.
     
     Args:
         games: List of chess games
         username: Player username
         save_to_file: Whether to save charts to file or display
     """
-    print("\n" + "="*80)
+    print("\n" + "="*90)
     print(f"  VISUAL DASHBOARD - {username.upper()}")
-    print("="*80 + "\n")
+    print("="*90 + "\n")
     
     dashboard = VisualDashboard(username, games)
     
+    # Collect statistics for display
+    ratings = []
+    time_controls = {}
+    openings = {}
+    wins = losses = draws = 0
+    
+    for game in games:
+        headers = game.headers
+        white = headers.get("White", "").lower()
+        black = headers.get("Black", "").lower()
+        is_player_white = white == username.lower()
+        
+        # Rating
+        player_elo = headers.get("WhiteElo" if is_player_white else "BlackElo")
+        try:
+            if player_elo:
+                ratings.append(int(player_elo))
+        except:
+            pass
+        
+        # Result
+        result = headers.get('Result', '*')
+        if result == '1-0':
+            if is_player_white:
+                wins += 1
+            else:
+                losses += 1
+        elif result == '0-1':
+            if is_player_white:
+                losses += 1
+            else:
+                wins += 1
+        else:
+            draws += 1
+        
+        # Time Control
+        tc = headers.get('TimeControl', 'Unknown')
+        if tc not in time_controls:
+            time_controls[tc] = 0
+        time_controls[tc] += 1
+        
+        # Opening
+        opening = headers.get('Opening', 'Unknown')
+        if opening not in openings:
+            openings[opening] = 0
+        openings[opening] += 1
+    
+    # Display Statistics Summary
+    print("-"*90)
+    print("  STATISTICS SUMMARY")
+    print("-"*90)
+    
+    total_games = wins + losses + draws
+    print(f"\n  Total Games: {total_games}")
+    print(f"  Record: {wins}-{draws}-{losses}")
+    print(f"  Win Rate: {(wins/total_games*100 if total_games > 0 else 0):.1f}%")
+    
+    if ratings:
+        print(f"\n  Rating Statistics:")
+        print(f"    Average: {sum(ratings)/len(ratings):.0f}")
+        print(f"    Highest: {max(ratings)}")
+        print(f"    Lowest: {min(ratings)}")
+        print(f"    Range: {max(ratings) - min(ratings)}")
+    
+    # Time Control Distribution
+    print(f"\n  Time Control Distribution:")
+    for tc, count in sorted(time_controls.items(), key=lambda x: x[1], reverse=True)[:5]:
+        pct = (count / total_games * 100) if total_games > 0 else 0
+        print(f"    • {tc}: {count} games ({pct:.1f}%)")
+    
+    # Top Openings
+    if openings:
+        print(f"\n  Top 5 Openings:")
+        sorted_openings = sorted(openings.items(), key=lambda x: x[1], reverse=True)[:5]
+        for opening, count in sorted_openings:
+            pct = (count / total_games * 100) if total_games > 0 else 0
+            print(f"    • {opening}: {count} games ({pct:.1f}%)")
+    
+    # Chart Generation
+    print("\n" + "-"*90)
+    print("  CHART GENERATION")
+    print("-"*90 + "\n")
+    
     if save_to_file:
-        print("Generating charts...")
+        print("Generating publication-quality charts...")
+        print("  • Rating trend visualization")
+        print("  • Win rate distribution")
+        print("  • Opening variety analysis")
+        print("  • Time control performance\n")
         dashboard.save_all_charts()
+        print("\n✓ Charts saved to reports/")
     else:
-        print("Displaying charts (close windows to continue)...")
+        print("Displaying interactive charts (close windows to continue)...")
         dashboard.show_all_charts()
     
-    print("\n" + "="*80 + "\n")
+    print("\n" + "="*90 + "\n")

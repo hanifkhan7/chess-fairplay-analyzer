@@ -241,15 +241,15 @@ class FatigueDetector:
 
 def display_fatigue_analysis(games, username: str):
     """
-    Display fatigue analysis results.
+    Display enhanced fatigue analysis results with detailed degradation scoring.
     
     Args:
         games: List of chess games
         username: Player username
     """
-    print("\n" + "="*80)
+    print("\n" + "="*90)
     print(f"  FATIGUE DETECTION ANALYSIS - {username.upper()}")
-    print("="*80 + "\n")
+    print("="*90 + "\n")
     
     detector = FatigueDetector(games, username)
     report = detector.get_fatigue_report()
@@ -259,12 +259,13 @@ def display_fatigue_analysis(games, username: str):
     
     # Session Analysis
     if report['session_analysis']:
-        print("-"*80)
+        print("-"*90)
         print("  SESSION FATIGUE ANALYSIS")
-        print("-"*80)
+        print("-"*90)
         fatigued_sessions = 0
         total_degradation = 0
         num_valid_sessions = 0
+        critical_sessions = 0
         
         for session_idx, session_data in report['session_analysis'].items():
             games_count = session_data['games_in_session']
@@ -274,49 +275,92 @@ def display_fatigue_analysis(games, username: str):
             if is_fatigued:
                 fatigued_sessions += 1
             
+            if degradation > 30:
+                critical_sessions += 1
+            
             total_degradation += abs(degradation)
             num_valid_sessions += 1
             
-            status = "⚠️  FATIGUED" if is_fatigued else "✓ Normal"
+            # Enhanced status with severity
+            if degradation > 30:
+                status = "🔴 CRITICAL FATIGUE"
+            elif degradation > 15:
+                status = "🟡 MODERATE FATIGUE"
+            elif is_fatigued:
+                status = "🟠 MILD FATIGUE"
+            else:
+                status = "✓ STABLE"
+            
             print(f"\n  Session {session_idx + 1}: {games_count} games")
             print(f"    Performance Degradation: {degradation:.1f}% {status}")
-            print(f"    Early Session Avg Moves: {session_data['early_avg_moves']:.1f}")
-            print(f"    Late Session Avg Moves: {session_data['late_avg_moves']:.1f}")
+            print(f"    Early Games Avg Moves: {session_data['early_avg_moves']:.1f}")
+            print(f"    Late Games Avg Moves: {session_data['late_avg_moves']:.1f}")
         
         if num_valid_sessions > 0:
             fatigue_rate = (fatigued_sessions / num_valid_sessions * 100)
-            print(f"\n  Session Fatigue Rate: {fatigue_rate:.1f}% ({fatigued_sessions}/{num_valid_sessions} sessions)")
+            avg_degradation = total_degradation / num_valid_sessions
+            
+            print(f"\n  SESSION SUMMARY:")
+            print(f"    Fatigue Rate: {fatigue_rate:.1f}% ({fatigued_sessions}/{num_valid_sessions} sessions)")
+            print(f"    Avg Degradation: {avg_degradation:.1f}%")
+            print(f"    Critical Sessions: {critical_sessions}")
+            
+            if critical_sessions > 0:
+                print(f"    ⚠️  ALERT: {critical_sessions} sessions with severe fatigue detected")
     
     # Progression Analysis
     if not report['progression_analysis'].get('insufficient_data', False):
-        print("\n" + "-"*80)
-        print("  OVERALL FATIGUE PROGRESSION")
-        print("-"*80)
+        print("\n" + "-"*90)
+        print("  OVERALL FATIGUE PROGRESSION (BY QUARTER)")
+        print("-"*90)
         prog = report['progression_analysis']
         
-        print(f"\n  Quarter 1 Avg: {prog['quarter_1_avg']:.1f}")
-        print(f"  Quarter 2 Avg: {prog['quarter_2_avg']:.1f}")
-        print(f"  Quarter 3 Avg: {prog['quarter_3_avg']:.1f}")
-        print(f"  Quarter 4 Avg: {prog['quarter_4_avg']:.1f}")
-        print(f"\n  Overall Trend: {prog['overall_trend']:.1f}%")
+        quarters = [
+            ('Q1', prog['quarter_1_avg']),
+            ('Q2', prog['quarter_2_avg']),
+            ('Q3', prog['quarter_3_avg']),
+            ('Q4', prog['quarter_4_avg'])
+        ]
+        
+        print(f"\n  Quarterly Performance Trend:")
+        for q_label, q_avg in quarters:
+            print(f"    {q_label}: {q_avg:.1f} avg moves", end="")
+            if q_avg < 15:
+                print(" 📉 (possible fatigue)", end="")
+            print()
+        
+        print(f"\n  Overall Trend: {prog['overall_trend']:.1f}% change")
         print(f"  Direction: {prog['trend_direction'].upper()}")
         
         if prog['is_fatigued']:
-            print(f"  Status: ⚠️  SIGNIFICANT FATIGUE DETECTED")
+            severity = "SEVERE" if abs(prog['overall_trend']) > 25 else "MODERATE"
+            print(f"  Status: 🔴 {severity} FATIGUE DETECTED")
+            print(f"     (Performance declining over time)")
         else:
-            print(f"  Status: ✓ No significant fatigue")
+            print(f"  Status: ✓ No significant fatigue pattern detected")
     
     # Consistency Analysis
     if not report['consistency_analysis'].get('insufficient_data', False):
         cons = report['consistency_analysis']
-        print("\n" + "-"*80)
-        print("  PERFORMANCE CONSISTENCY")
-        print("-"*80)
-        print(f"\n  Sudden Performance Drops Detected: {cons['num_drops']}")
+        print("\n" + "-"*90)
+        print("  PERFORMANCE CONSISTENCY & DROPS")
+        print("-"*90)
+        print(f"\n  Sudden Performance Drops: {cons['num_drops']}")
         print(f"  Drop Rate: {cons['drop_rate']:.1f}%")
         
+        if cons['drop_rate'] > 20:
+            print(f"  🔴 SEVERE: Frequent sudden drops in performance")
+        elif cons['drop_rate'] > 10:
+            print(f"  🟡 MODERATE: Regular performance inconsistencies")
+        elif cons['num_drops'] > 0:
+            print(f"  🟠 MILD: Occasional performance fluctuations")
+        else:
+            print(f"  ✓ STABLE: Consistent performance throughout")
+        
         if cons['num_drops'] > 0:
-            print(f"  ⚠️  Player shows {cons['num_drops']} sudden performance drops")
-            print(f"     (This may indicate fatigue, tilt, or external factors)")
+            print(f"\n  ⚠️  Interpretation:")
+            print(f"     • {cons['num_drops']} instances of >20% performance drop")
+            print(f"     • May indicate: Fatigue, tilt, or external disruptions")
+            print(f"     • Monitor play patterns for consistency")
     
-    print("\n" + "="*80 + "\n")
+    print("\n" + "="*90 + "\n")

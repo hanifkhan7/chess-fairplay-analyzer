@@ -203,7 +203,7 @@ class PlayerComparison:
     
     def detect_anomalies(self) -> Dict[str, List[Tuple[str, float]]]:
         """
-        Detect statistical anomalies and outliers.
+        Detect statistical anomalies and outliers with enhanced sensitivity.
         
         Returns:
             Dictionary with anomalies detected for each player
@@ -214,32 +214,62 @@ class PlayerComparison:
         ratings = self.get_rating_comparison()
         winrates = self.get_winrate_comparison()
         volatility = self.get_rating_volatility_comparison()
+        openings = self.get_opening_comparison()
+        time_mgmt = self.get_time_management_comparison()
         
         # Calculate averages for baseline
         avg_rating = sum([d['avg_rating'] for d in ratings.values()]) / len(ratings) if ratings else 0
         avg_winrate = sum([d['win_rate'] for d in winrates.values()]) / len(winrates) if winrates else 50
         avg_volatility = sum([d['volatility_score'] for d in volatility.values()]) / len(volatility) if volatility else 0
+        avg_diversity = sum([d['diversity'] for d in openings.values()]) / len(openings) if openings else 50
+        
+        # Calculate standard deviations for better outlier detection
+        if ratings and len(ratings) > 1:
+            import statistics
+            rating_values = [d['avg_rating'] for d in ratings.values()]
+            rating_std = statistics.stdev(rating_values) if len(rating_values) > 1 else 0
+        else:
+            rating_std = 100
         
         for username in self.usernames:
             anomalies[username] = []
             
-            # Rating anomaly
+            # Enhanced Rating anomaly (2+ standard deviations)
             if username in ratings:
                 rating_diff = ratings[username]['avg_rating'] - avg_rating
-                if abs(rating_diff) > 100:
+                if rating_std > 0 and abs(rating_diff) > 2 * rating_std:
+                    anomalies[username].append(('Extreme Rating Difference', abs(rating_diff)))
+                elif abs(rating_diff) > 150:
                     anomalies[username].append(('Unusual Rating', abs(rating_diff)))
             
-            # Win rate anomaly
+            # Enhanced Win rate anomaly
             if username in winrates:
                 winrate_diff = abs(winrates[username]['win_rate'] - avg_winrate)
-                if winrate_diff > 10:
+                if winrate_diff > 15:
+                    severity = "CRITICAL" if winrate_diff > 25 else "HIGH"
+                    anomalies[username].append((f'Extreme Win Rate [{severity}]', winrate_diff))
+                elif winrate_diff > 10:
                     anomalies[username].append(('Unusual Win Rate', winrate_diff))
             
-            # Volatility anomaly
+            # Enhanced Volatility anomaly
             if username in volatility:
                 vol_diff = abs(volatility[username]['volatility_score'] - avg_volatility)
-                if vol_diff > 20:
+                if vol_diff > 30:
+                    anomalies[username].append(('CRITICAL Volatility', volatility[username]['volatility_score']))
+                elif vol_diff > 20:
                     anomalies[username].append(('High Volatility', volatility[username]['volatility_score']))
+            
+            # Opening diversity anomaly
+            if username in openings:
+                div_diff = abs(openings[username]['diversity'] - avg_diversity)
+                if div_diff > 30:
+                    anomalies[username].append(('Unusual Opening Diversity', openings[username]['diversity']))
+            
+            # Single time control focus anomaly
+            if username in time_mgmt:
+                primary_pct = time_mgmt[username]['primary_tc_pct']
+                if primary_pct > 70:
+                    anomalies[username].append(('Extreme Time Control Focus', primary_pct))
             
             # Sort by severity
             anomalies[username].sort(key=lambda x: x[1], reverse=True)
@@ -266,15 +296,15 @@ class PlayerComparison:
 
 def compare_players_display(usernames: List[str], max_games: int = 100):
     """
-    Display multi-player comparison results.
+    Display multi-player comparison results with enhanced anomaly detection.
     
     Args:
         usernames: List of usernames to compare
         max_games: Maximum games to fetch per player
     """
-    print("\n" + "="*80)
+    print("\n" + "="*90)
     print(f"  MULTI-PLAYER COMPARISON - {len(usernames)} Players")
-    print("="*80 + "\n")
+    print("="*90 + "\n")
     
     # Initialize comparison
     comparison = PlayerComparison(usernames, max_games)
@@ -291,67 +321,74 @@ def compare_players_display(usernames: List[str], max_games: int = 100):
     summary = comparison.get_summary()
     
     # Display Rating Comparison
-    print("-"*80)
+    print("-"*90)
     print("  RATING COMPARISON")
-    print("-"*80)
+    print("-"*90)
     ratings = summary['rating_comparison']
     if ratings:
         avg_ratings = sorted(ratings.items(), key=lambda x: x[1]['avg_rating'], reverse=True)
-        print(f"  {'Player':<20} {'Avg Rating':<15} {'Min':<10} {'Max':<10} {'Games':<10}")
-        print("  " + "-"*75)
+        print(f"  {'Player':<20} {'Avg Rating':<15} {'Range':<20} {'Games':<10}")
+        print("  " + "-"*85)
         for player, data in avg_ratings:
-            print(f"  {player:<20} {data['avg_rating']:<15.0f} {data['min_rating']:<10} {data['max_rating']:<10} {data['games_with_rating']:<10}")
+            rating_range = f"{data['min_rating']}-{data['max_rating']}"
+            print(f"  {player:<20} {data['avg_rating']:<15.0f} {rating_range:<20} {data['games_with_rating']:<10}")
     
     # Display Win Rate Comparison
-    print("\n" + "-"*80)
+    print("\n" + "-"*90)
     print("  WIN RATE COMPARISON")
-    print("-"*80)
+    print("-"*90)
     winrates = summary['winrate_comparison']
     if winrates:
         sorted_wr = sorted(winrates.items(), key=lambda x: x[1]['win_rate'], reverse=True)
-        print(f"  {'Player':<20} {'Win %':<12} {'Wins':<8} {'Draws':<8} {'Losses':<8} {'Games':<8}")
-        print("  " + "-"*75)
+        print(f"  {'Player':<20} {'Win %':<12} {'Record (W-D-L)':<20} {'Score':<10}")
+        print("  " + "-"*85)
         for player, data in sorted_wr:
-            print(f"  {player:<20} {data['win_rate']:<12.1f}% {data['wins']:<8} {data['draws']:<8} {data['losses']:<8} {data['total_games']:<8}")
+            record = f"{data['wins']}-{data['draws']}-{data['losses']}"
+            print(f"  {player:<20} {data['win_rate']:<12.1f}% {record:<20} {data['score']:<10.1f}")
     
     # Display Rating Volatility
-    print("\n" + "-"*80)
-    print("  RATING VOLATILITY COMPARISON")
-    print("-"*80)
+    print("\n" + "-"*90)
+    print("  RATING VOLATILITY & TREND ANALYSIS")
+    print("-"*90)
     volatility = summary['volatility_comparison']
     if volatility:
         sorted_vol = sorted(volatility.items(), key=lambda x: x[1]['volatility_score'], reverse=True)
-        print(f"  {'Player':<20} {'Volatility':<15} {'Trend':<15} {'Direction':<15}")
-        print("  " + "-"*75)
+        print(f"  {'Player':<20} {'Volatility':<15} {'Std Dev':<12} {'Trend':<12} {'Direction':<12}")
+        print("  " + "-"*85)
         for player, data in sorted_vol:
-            print(f"  {player:<20} {data['volatility_score']:<15.1f} {data['rating_trend']:<15} {data['trend_direction']:<15}")
+            trend_indicator = "📈" if data['trend_direction'] == 'Upward' else "📉" if data['trend_direction'] == 'Downward' else "➡️"
+            print(f"  {player:<20} {data['volatility_score']:<15.1f} {data['std_deviation']:<12.1f} {data['rating_trend']:<12} {trend_indicator}")
     
     # Display Opening Analysis
-    print("\n" + "-"*80)
+    print("\n" + "-"*90)
     print("  OPENING REPERTOIRE COMPARISON")
-    print("-"*80)
+    print("-"*90)
     openings = summary['opening_comparison']
     if openings:
         sorted_open = sorted(openings.items(), key=lambda x: x[1]['diversity'], reverse=True)
-        print(f"  {'Player':<20} {'# Openings':<15} {'Diversity':<15} {'Type':<15}")
-        print("  " + "-"*75)
+        print(f"  {'Player':<20} {'# Openings':<15} {'Diversity':<15} {'Type':<20}")
+        print("  " + "-"*85)
         for player, data in sorted_open:
-            print(f"  {player:<20} {data['num_openings']:<15} {data['diversity']:<15.1f}% {data['repertoire_type']:<15}")
+            print(f"  {player:<20} {data['num_openings']:<15} {data['diversity']:<15.1f}% {data['repertoire_type']:<20}")
     
-    # Display Anomalies
-    print("\n" + "-"*80)
-    print("  DETECTED ANOMALIES & OUTLIERS")
-    print("-"*80)
+    # Display Anomalies with Enhanced Detection
+    print("\n" + "-"*90)
+    print("  DETECTED ANOMALIES & OUTLIERS (ENHANCED)")
+    print("-"*90)
     anomalies = summary['anomalies']
     has_anomalies = False
-    for player, anom_list in anomalies.items():
+    
+    for player in sorted(anomalies.keys()):
+        anom_list = anomalies[player]
         if anom_list:
             has_anomalies = True
-            print(f"\n  {player}:")
-            for anomaly_type, severity in anom_list:
-                print(f"    • {anomaly_type}: {severity:.1f}")
+            severity_icon = "🚨" if any("CRITICAL" in a[0] for a in anom_list) else "⚠️"
+            print(f"\n  {severity_icon} {player}:")
+            for anomaly_type, severity in anom_list[:5]:  # Show top 5 anomalies
+                severity_color = "CRITICAL" if severity > 30 else "HIGH" if severity > 20 else "MODERATE"
+                print(f"     • {anomaly_type}: {severity:.1f}")
     
     if not has_anomalies:
-        print("\n  ✓ No significant anomalies detected")
+        print("\n  ✓ No significant anomalies detected - players appear consistent")
     
-    print("\n" + "="*80 + "\n")
+    print("\n" + "="*90 + "\n")

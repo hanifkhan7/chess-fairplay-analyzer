@@ -233,32 +233,33 @@ class NetworkAnalyzer:
 
 def display_network_analysis(games, username: str):
     """
-    Display network analysis results.
+    Display enhanced network analysis results with detailed pattern detection.
     
     Args:
         games: List of chess games
         username: Player username
     """
-    print("\n" + "="*80)
+    print("\n" + "="*90)
     print(f"  NETWORK ANALYSIS - {username.upper()}")
-    print("="*80 + "\n")
+    print("="*90 + "\n")
     
     analyzer = NetworkAnalyzer(games, username)
     summary = analyzer.get_network_summary()
     
     print(f"Total Games: {summary['total_games']}")
-    print(f"Unique Opponents: {summary['unique_opponents']}\n")
+    print(f"Unique Opponents: {summary['unique_opponents']}")
+    print(f"Avg Games per Opponent: {summary['total_games']/max(1, summary['unique_opponents']):.1f}\n")
     
     # Top Opponents
-    print("-"*80)
-    print("  TOP OPPONENTS")
-    print("-"*80)
+    print("-"*90)
+    print("  TOP OPPONENTS (Most Frequent)")
+    print("-"*90)
     top_opponents = summary['top_opponents']
     opponent_stats = summary['opponent_stats']
     
     if top_opponents:
-        print(f"  {'Rank':<6} {'Opponent':<20} {'Games':<10} {'W-D-L':<20} {'Win %':<10}")
-        print("  " + "-"*75)
+        print(f"  {'Rank':<6} {'Opponent':<20} {'Games':<10} {'Record':<15} {'Win %':<10}")
+        print("  " + "-"*85)
         
         for rank, (opponent, game_count) in enumerate(top_opponents, 1):
             stats = opponent_stats.get(opponent, {})
@@ -267,45 +268,70 @@ def display_network_analysis(games, username: str):
             l = stats.get('losses', 0)
             wr = stats.get('win_rate', 0)
             
-            print(f"  {rank:<6} {opponent:<20} {game_count:<10} {w}-{d}-{l:<18} {wr:<10.1f}%")
+            record = f"{w}-{d}-{l}"
+            pct_of_games = (game_count / summary['total_games'] * 100) if summary['total_games'] > 0 else 0
+            
+            print(f"  {rank:<6} {opponent:<20} {game_count:<10} {record:<15} {wr:<10.1f}%")
     
     # Playing Circles
-    print("\n" + "-"*80)
-    print("  PLAYING CIRCLES (by Time Control)")
-    print("-"*80)
+    print("\n" + "-"*90)
+    print("  PLAYING CIRCLES ANALYSIS (by Time Control)")
+    print("-"*90)
     circles = summary['playing_circles']
     
     for time_control, circle_data in circles.items():
+        concentration = circle_data['concentration_level'].upper()
+        concern_level = "🔴 CRITICAL" if concentration == "VERY HIGH" else "🟡 HIGH" if concentration == "HIGH" else "✓ NORMAL"
+        
         print(f"\n  {time_control}:")
-        print(f"    Opponents: {circle_data['num_opponents']}")
-        print(f"    Concentration: {circle_data['concentration_level'].upper()}")
+        print(f"    Unique Opponents: {circle_data['num_opponents']}")
+        print(f"    Concentration: {concentration} {concern_level}")
     
     # Suspicious Patterns
     patterns = summary['suspicious_patterns']
     if patterns:
-        print("\n" + "-"*80)
-        print("  SUSPICIOUS PATTERNS DETECTED")
-        print("-"*80)
+        print("\n" + "-"*90)
+        print("  SUSPICIOUS PATTERNS DETECTED (Enhanced Analysis)")
+        print("-"*90)
+        
+        pattern_found = False
         
         # High concentration
-        if 'high_concentration' in patterns:
-            print("\n  ⚠️  High Concentration (too many games vs same opponent):")
+        if 'high_concentration' in patterns and patterns['high_concentration']:
+            pattern_found = True
+            print("\n  🔴 High Opponent Concentration:")
             for item in patterns['high_concentration'][:5]:
-                print(f"    • {item['opponent']}: {item['games']} games ({item['percentage']:.1f}%) [{item['severity'].upper()}]")
+                severity_icon = "🚨" if item['severity'] == "CRITICAL" else "⚠️"
+                print(f"    {severity_icon} {item['opponent']}: {item['games']} games ({item['percentage']:.1f}%)")
+                print(f"       └─ Severity: {item['severity'].upper()}")
         
         # Unusual win rates
-        if 'unusual_win_rate' in patterns:
-            print("\n  ⚠️  Unusual Win Rates:")
+        if 'unusual_win_rate' in patterns and patterns['unusual_win_rate']:
+            pattern_found = True
+            print("\n  🟡 Unusual Win Rates (vs Individual Opponents):")
             for item in patterns['unusual_win_rate'][:5]:
-                print(f"    • {item['opponent']}: {item['win_rate']:.1f}% ({item['games']} games) [{item['severity'].upper()}]")
+                if item['win_rate'] > 70:
+                    desc = f"Extremely high win rate ({item['win_rate']:.1f}%)"
+                elif item['win_rate'] < 30:
+                    desc = f"Extremely low win rate ({item['win_rate']:.1f}%)"
+                else:
+                    desc = f"Unusual win rate ({item['win_rate']:.1f}%)"
+                print(f"    • {item['opponent']}: {desc} ({item['games']} games)")
         
         # Limited circle
-        if 'limited_circle' in patterns:
-            print("\n  ⚠️  Limited Playing Circle:")
+        if 'limited_circle' in patterns and patterns['limited_circle']:
+            pattern_found = True
+            print("\n  🔴 Limited Playing Circle:")
             for item in patterns['limited_circle']:
-                print(f"    • Only {item['unique_opponents']} opponents in {item['total_games']} games")
-                print(f"    • Average {item['ratio']:.1f} games per opponent [HIGH]")
+                print(f"    • Only {item['unique_opponents']} opponents across {item['total_games']} games")
+                print(f"    • Avg {item['ratio']:.1f} games per opponent (HIGHLY CONCENTRATED)")
+        
+        if not pattern_found:
+            print("\n  ✓ No suspicious patterns detected")
     else:
-        print("\n  ✓ No suspicious patterns detected")
+        print("\n" + "-"*90)
+        print("  PATTERN ANALYSIS")
+        print("-"*90)
+        print("\n  ✓ No suspicious patterns detected - healthy network diversity")
     
-    print("\n" + "="*80 + "\n")
+    print("\n" + "="*90 + "\n")
