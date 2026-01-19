@@ -91,9 +91,14 @@ def _analyze_player():
         depth_map = {"1": 12, "2": 14, "3": 16}
         custom_depth = depth_map.get(speed, 14)
         
-        print(f"Fetching {games} games for {username}...")
+        print(f"\nFetching up to {games} games for {username}...")
         player_games = fetch_player_games(username, max_games=games)
-        print(f"Retrieved {len(player_games)} games")
+        actual_count = len(player_games)
+        status = "✓" if actual_count > 0 else "❌"
+        msg = f"{status} Retrieved {actual_count} games"
+        if actual_count < games:
+            msg += f" (player has fewer than {games} total)"
+        print(msg)
         
         from .analyzer import ChessAnalyzer
         from .utils.helpers import load_config
@@ -191,8 +196,13 @@ def _download_games():
         print("4. ZIP archive (PGN + JSON)")
         fmt_choice = input("Choose (1-4, default 1): ").strip() or "1"
         
-        print(f"\nFetching games for {username}...")
+        print(f"\nFetching up to {max_games} games for {username}...")
         games = fetch_player_games(username, max_games=max_games)
+        actual_count = len(games)
+        msg = f"✓ Retrieved {actual_count} games"
+        if actual_count < max_games:
+            msg += f" (player has fewer than {max_games} total)"
+        print(msg)
         print(f"✓ Retrieved {len(games)} games")
         
         if not games:
@@ -314,9 +324,13 @@ def _player_brain():
     try:
         games_count = int(input("Games to analyze (default 50): ") or "50")
         
-        print(f"\nFetching {games_count} games for {username}...")
+        print(f"\nFetching up to {games_count} games for {username}...")
         games = fetch_player_games(username, max_games=games_count)
-        print(f"✓ Retrieved {len(games)} games\n")
+        actual_count = len(games)
+        msg = f"✓ Retrieved {actual_count} games"
+        if actual_count < games_count:
+            msg += f" (player has fewer than {games_count} total)"
+        print(msg + "\n")
         
         if not games:
             print("No games found")
@@ -352,9 +366,13 @@ def _strength_profile():
     try:
         games_count = int(input("Games to analyze (default 50): ") or "50")
         
-        print(f"\nFetching {games_count} games for {username}...")
+        print(f"\nFetching up to {games_count} games for {username}...")
         games = fetch_player_games(username, max_games=games_count)
-        print(f"✓ Retrieved {len(games)} games\n")
+        actual_count = len(games)
+        msg = f"✓ Retrieved {actual_count} games"
+        if actual_count < games_count:
+            msg += f" (player has fewer than {games_count} total)"
+        print(msg + "\n")
         
         if not games:
             print("No games found")
@@ -560,9 +578,13 @@ def _accuracy_report():
     try:
         games_count = int(input("Games to analyze (default 30): ") or "30")
         
-        print(f"\nFetching {games_count} games for {username}...")
+        print(f"\nFetching up to {games_count} games for {username}...")
         games = fetch_player_games(username, max_games=games_count)
-        print(f"✓ Retrieved {len(games)} games")
+        actual_count = len(games)
+        msg = f"✓ Retrieved {actual_count} games"
+        if actual_count < games_count:
+            msg += f" (player has fewer than {games_count} total)"
+        print(msg)
         print("Running accuracy analysis...")
         
         if not games:
@@ -831,8 +853,13 @@ def _account_metrics_dashboard():
         game_count = 100
     
     try:
-        print(f"\nFetching {game_count} games for {username}...")
+        print(f"\nFetching up to {game_count} games for {username}...")
         player_games = fetch_player_games(username, max_games=game_count)
+        actual_count = len(player_games)
+        msg = f"✓ Retrieved {actual_count} games"
+        if actual_count < game_count:
+            msg += f" (player has fewer than {game_count} total)"
+        print(msg + "\n")
         
         if not player_games:
             print(f"No games found for {username}")
@@ -903,15 +930,19 @@ def _fatigue_detection():
         game_count = 100
     
     try:
-        print(f"\nFetching {game_count} games for {username}...")
+        print(f"\nFetching up to {game_count} games for {username}...")
         player_games = fetch_player_games(username, max_games=game_count)
+        actual_count = len(player_games)
         
         if not player_games:
             print(f"No games found for {username}")
             input("\nPress Enter to continue...")
             return
         
-        print(f"Retrieved {len(player_games)} games. Analyzing...")
+        msg = f"Retrieved {actual_count} games"
+        if actual_count < game_count:
+            msg += f" (player has fewer than {game_count} total)"
+        print(msg + ". Analyzing...")
         
         from .fatigue import display_fatigue_analysis
         display_fatigue_analysis(player_games, username)
@@ -941,15 +972,19 @@ def _network_analysis():
         game_count = 100
     
     try:
-        print(f"\nFetching {game_count} games for {username}...")
+        print(f"\nFetching up to {game_count} games for {username}...")
         player_games = fetch_player_games(username, max_games=game_count)
+        actual_count = len(player_games)
         
         if not player_games:
             print(f"No games found for {username}")
             input("\nPress Enter to continue...")
             return
         
-        print(f"Retrieved {len(player_games)} games. Analyzing...")
+        msg = f"Retrieved {actual_count} games"
+        if actual_count < game_count:
+            msg += f" (player has fewer than {game_count} total)"
+        print(msg + ". Analyzing...")
         
         from .network import display_network_analysis
         display_network_analysis(player_games, username)
