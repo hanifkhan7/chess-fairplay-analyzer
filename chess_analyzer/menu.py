@@ -17,8 +17,8 @@ def main():
     """Entry point for menu UI"""
     
     print("\n" + "="*60)
-    print("   CHESS FAIRPLAY ANALYZER v2.0")
-    print("   Modern Detection of Computer Assistance in Chess")
+    print("   CHESS DETECTIVE v2.1")
+    print("   Forensic Analysis of Player Behavior")
     print("="*60 + "\n")
     
     while True:
@@ -26,15 +26,19 @@ def main():
         print("="*50)
         print("1. Analyze Player (Detect Suspicious Activity)")
         print("2. Download All Games (Export Game History)")
-        print("3. PlayerBrain (Player Profile & Style Analysis)")
+        print("3. Exploit your opponent (Opening & Style Analysis)")
         print("4. Strength Profile (Skill Level Analysis)")
         print("5. Accuracy Report (Move Accuracy & Consistency)")
-        print("6. View Reports")
-        print("7. Settings")
-        print("8. Exit")
+        print("6. Account Metrics Dashboard (Quick View)")
+        print("7. Multi-Player Comparison")
+        print("8. Fatigue Detection")
+        print("9. Network Analysis")
+        print("10. View Reports")
+        print("11. Settings")
+        print("12. Exit")
         print("="*50 + "\n")
         
-        choice = input("Select option (1-8): ").strip()
+        choice = input("Select option (1-12): ").strip()
         
         if choice == "1":
             _analyze_player()
@@ -47,10 +51,18 @@ def main():
         elif choice == "5":
             _accuracy_report()
         elif choice == "6":
-            _view_reports()
+            _account_metrics_dashboard()
         elif choice == "7":
-            _settings()
+            _multi_player_comparison()
         elif choice == "8":
+            _fatigue_detection()
+        elif choice == "9":
+            _network_analysis()
+        elif choice == "10":
+            _view_reports()
+        elif choice == "11":
+            _settings()
+        elif choice == "12":
             print("\nGoodbye!\n")
             break
         else:
@@ -970,6 +982,154 @@ def _accuracy_report():
     input("\nPress Enter to continue...")
 
 
+def _account_metrics_dashboard():
+    """Display Account Metrics Dashboard"""
+    print("\n" + "-"*50)
+    print("ACCOUNT METRICS DASHBOARD")
+    print("-"*50)
+    
+    username = input("Enter Chess.com username: ").strip()
+    if not username:
+        return
+    
+    game_count = input("How many games to analyze? (default 100): ").strip()
+    try:
+        game_count = int(game_count) if game_count else 100
+    except:
+        game_count = 100
+    
+    try:
+        print(f"\nFetching {game_count} games for {username}...")
+        player_games = fetch_player_games(username, max_games=game_count)
+        
+        if not player_games:
+            print(f"No games found for {username}")
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"Retrieved {len(player_games)} games. Analyzing...")
+        
+        from .dashboard import display_dashboard_from_games
+        display_dashboard_from_games(player_games, username)
+        
+    except Exception as e:
+        print(f"\nError: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    input("\nPress Enter to continue...")
+
+
+def _multi_player_comparison():
+    """Compare statistics across multiple players"""
+    print("\n" + "-"*50)
+    print("MULTI-PLAYER COMPARISON")
+    print("-"*50)
+    
+    print("\nEnter player usernames (comma-separated):")
+    usernames_input = input("Usernames: ").strip()
+    if not usernames_input:
+        return
+    
+    usernames = [u.strip() for u in usernames_input.split(',')]
+    if len(usernames) < 2:
+        print("❌ Please enter at least 2 usernames")
+        input("\nPress Enter to continue...")
+        return
+    
+    game_count = input("Games per player to analyze? (default 100): ").strip()
+    try:
+        game_count = int(game_count) if game_count else 100
+    except:
+        game_count = 100
+    
+    try:
+        from .comparison import compare_players_display
+        compare_players_display(usernames, max_games=game_count)
+    except Exception as e:
+        print(f"\nError: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    input("\nPress Enter to continue...")
+
+
+def _fatigue_detection():
+    """Analyze fatigue patterns in a player's games"""
+    print("\n" + "-"*50)
+    print("FATIGUE DETECTION ANALYSIS")
+    print("-"*50)
+    
+    username = input("Enter Chess.com username: ").strip()
+    if not username:
+        return
+    
+    game_count = input("Games to analyze? (default 100): ").strip()
+    try:
+        game_count = int(game_count) if game_count else 100
+    except:
+        game_count = 100
+    
+    try:
+        print(f"\nFetching {game_count} games for {username}...")
+        player_games = fetch_player_games(username, max_games=game_count)
+        
+        if not player_games:
+            print(f"No games found for {username}")
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"Retrieved {len(player_games)} games. Analyzing...")
+        
+        from .fatigue import display_fatigue_analysis
+        display_fatigue_analysis(player_games, username)
+        
+    except Exception as e:
+        print(f"\nError: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    input("\nPress Enter to continue...")
+
+
+def _network_analysis():
+    """Analyze player connection networks and opponent patterns"""
+    print("\n" + "-"*50)
+    print("NETWORK ANALYSIS")
+    print("-"*50)
+    
+    username = input("Enter Chess.com username: ").strip()
+    if not username:
+        return
+    
+    game_count = input("Games to analyze? (default 100): ").strip()
+    try:
+        game_count = int(game_count) if game_count else 100
+    except:
+        game_count = 100
+    
+    try:
+        print(f"\nFetching {game_count} games for {username}...")
+        player_games = fetch_player_games(username, max_games=game_count)
+        
+        if not player_games:
+            print(f"No games found for {username}")
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"Retrieved {len(player_games)} games. Analyzing...")
+        
+        from .network import display_network_analysis
+        display_network_analysis(player_games, username)
+        
+    except Exception as e:
+        print(f"\nError: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    input("\nPress Enter to continue...")
+
+
 def _view_reports():
     print("\n" + "-"*50)
     print("VIEW REPORTS")
@@ -1447,3 +1607,54 @@ def _export_suspicious_games(results, username, all_games):
 
 if __name__ == "__main__":
     main()
+def _account_metrics():
+    print("\n" + "-"*50)
+    print("ACCOUNT METRICS - BEHAVIORAL ANALYSIS")
+    print("-"*50)
+
+    username = input("\nEnter Chess.com username: ").strip()
+    if not username:
+        return
+
+    from .fetcher import fetch_player_games
+    from .account_metrics import analyze_account_behavior
+
+    games = fetch_player_games(username, max_games=100)
+
+    if not games:
+        print("No games found.")
+        input("Press Enter to continue...")
+        return
+
+    metrics = analyze_account_behavior(games, username)
+
+    print("\n" + "="*60)
+    print(f"ACCOUNT METRICS FOR {username.upper()}")
+    print("="*60)
+
+    rp = metrics.get("rating_progression")
+    if rp:
+        print(f"\n📈 Rating Volatility:")
+        print(f"  Avg Change: {rp['avg_change']:.1f}")
+        print(f"  Max Change: {rp['max_change']}")
+        print(f"  Suspicious Jumps: {'YES' if rp['suspicious'] else 'NO'}")
+
+    tp = metrics.get("time_patterns")
+    if tp:
+        print(f"\n⏱️ Move Time Patterns:")
+        print(f"  CV: {tp['coefficient_variation']:.1f}%")
+        print(f"  Repeated Timing: {tp['common_time_percentage']:.1f}%")
+        print(f"  Suspicious Consistency: {'YES' if tp['is_suspicious'] else 'NO'}")
+
+    oa = metrics.get("opponent_strength_anomaly")
+    if oa:
+        print(f"\n🎯 Opponent Strength Anomaly Score: {oa:.1f}/100")
+
+    gc = metrics.get("game_clustering")
+    if gc:
+        print(f"\n📆 Game Clustering:")
+        print(f"  Max Games/Day: {gc['max_games_per_day']}")
+        print(f"  Clustered: {'YES' if gc['is_clustered'] else 'NO'}")
+
+    print("\n" + "="*60)
+    input("\nPress Enter to continue...")

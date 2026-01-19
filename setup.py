@@ -7,11 +7,11 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = fh.read().splitlines()
 
 setup(
-    name="chess-fairplay-analyzer",
-    version="1.0.0",
+    name="chess-detective",
+    version="2.1.0",
     author="Your Name",
     author_email="your.email@example.com",
-    description="A forensic tool for statistical analysis of chess games",
+    description="Chess Detective - Forensic analysis tool for detecting computer assistance in chess games",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/chess-fairplay-analyzer",

@@ -259,3 +259,242 @@ def calculate_opponent_strength_anomaly(player_ratings: List[int], opponent_rati
     anomaly = min(100, max(0, (abs(avg_diff) - 50) / 50 * 100)) if avg_diff != 0 else 0
     
     return anomaly
+
+def calculate_rating_volatility(ratings: List[int]) -> Dict[str, float]:
+    """
+    Analyze rating volatility and stability.
+    
+    Args:
+        ratings: List of ratings over time (in order)
+    
+    Returns:
+        Dictionary with volatility metrics
+    """
+    if len(ratings) < 2:
+        return {
+            'volatility_score': 0.0,
+            'standard_deviation': 0.0,
+            'coefficient_of_variation': 0.0,
+            'rating_trend': 'stable',
+            'trend_direction': 'neutral'
+        }
+    
+    stdev = statistics.stdev(ratings)
+    mean_rating = statistics.mean(ratings)
+    cv = (stdev / mean_rating * 100) if mean_rating > 0 else 0  # Coefficient of variation
+    
+    # Check trend: compare first half to second half
+    mid = len(ratings) // 2
+    first_half_mean = statistics.mean(ratings[:mid])
+    second_half_mean = statistics.mean(ratings[mid:])
+    trend_diff = second_half_mean - first_half_mean
+    
+    if abs(trend_diff) < 20:
+        trend_direction = 'stable'
+    elif trend_diff > 0:
+        trend_direction = 'improving'
+    else:
+        trend_direction = 'declining'
+    
+    # Volatility classification
+    if cv < 2:
+        rating_trend = 'very_stable'
+    elif cv < 5:
+        rating_trend = 'stable'
+    elif cv < 10:
+        rating_trend = 'moderate'
+    else:
+        rating_trend = 'volatile'
+    
+    return {
+        'volatility_score': min(100, cv * 10),  # 0-100 scale
+        'standard_deviation': stdev,
+        'coefficient_of_variation': cv,
+        'rating_trend': rating_trend,
+        'trend_direction': trend_direction,
+        'trend_value': trend_diff
+    }
+
+def analyze_time_management(games) -> Dict[str, any]:
+    """
+    Analyze time management and time control distribution.
+    
+    Args:
+        games: List of chess game objects
+    
+    Returns:
+        Dictionary with time management metrics
+    """
+    time_controls = {}
+    time_control_results = {}
+    avg_time_per_move = {}
+    
+    for game in games:
+        headers = game.headers
+        time_control = headers.get('TimeControl', 'Unknown')
+        result = headers.get('Result', '*')
+        
+        if time_control not in time_controls:
+            time_controls[time_control] = 0
+            time_control_results[time_control] = {'wins': 0, 'draws': 0, 'losses': 0}
+            avg_time_per_move[time_control] = []
+        
+        time_controls[time_control] += 1
+        
+        # Track results by time control
+        if result == '1-0':
+            time_control_results[time_control]['wins'] += 1
+        elif result == '0-1':
+            time_control_results[time_control]['losses'] += 1
+        else:
+            time_control_results[time_control]['draws'] += 1
+        
+        # Estimate time per move from time control
+        try:
+            # Parse time control format: "minutes+increment" or "minutes"
+            tc_parts = time_control.split('+')
+            if len(tc_parts) >= 1:
+                base_time = int(tc_parts[0])
+                increment = int(tc_parts[1]) if len(tc_parts) > 1 else 0
+                
+                # Estimate avg time per move
+                moves_estimate = 40  # Average game length
+                estimated_time_per_move = (base_time / moves_estimate) + increment
+                avg_time_per_move[time_control].append(estimated_time_per_move)
+        except:
+            pass
+    
+    # Calculate time management metrics
+    total_games = len(games) if games else 1
+    num_time_controls = len(time_controls)
+    
+    # Find primary time control
+    primary_tc = max(time_controls.items(), key=lambda x: x[1]) if time_controls else ('Unknown', 0)
+    primary_tc_percentage = (primary_tc[1] / total_games * 100) if total_games > 0 else 0
+    
+    # Time control diversity
+    if num_time_controls > 3:
+        time_control_type = 'very_diverse'
+    elif num_time_controls > 2:
+        time_control_type = 'diverse'
+    elif num_time_controls > 1:
+        time_control_type = 'mixed'
+    else:
+        time_control_type = 'focused'
+    
+    # Calculate win rates by time control
+    time_control_performance = {}
+    for tc, results in time_control_results.items():
+        total = results['wins'] + results['draws'] + results['losses']
+        if total > 0:
+            win_rate = (results['wins'] / total * 100)
+            draw_rate = (results['draws'] / total * 100)
+            loss_rate = (results['losses'] / total * 100)
+            
+            time_control_performance[tc] = {
+                'win_rate': win_rate,
+                'draw_rate': draw_rate,
+                'loss_rate': loss_rate,
+                'games': total
+            }
+    
+    return {
+        'time_control_distribution': time_controls,
+        'primary_time_control': primary_tc[0],
+        'primary_tc_percentage': primary_tc_percentage,
+        'time_control_variety': time_control_type,
+        'num_time_controls': num_time_controls,
+        'time_control_performance': time_control_performance
+    }
+
+def analyze_opening_variety(games) -> Dict[str, any]:
+    """
+    Analyze opening variety and repertoire.
+    
+    Args:
+        games: List of chess game objects
+    
+    Returns:
+        Dictionary with opening diversity metrics
+    """
+    openings = {}  # Format: "ECO - Opening Name"
+    eco_codes = {}
+    time_controls = {}
+    results_by_opening = {}
+    
+    for game in games:
+        headers = game.headers
+        eco = headers.get('ECO', 'Unknown')
+        opening = headers.get('Opening', 'Unknown')
+        time_control = headers.get('TimeControl', 'Unknown')
+        
+        # Create opening key combining ECO and name
+        if eco != 'Unknown' and opening != 'Unknown':
+            opening_key = f"{eco} - {opening}"
+        elif eco != 'Unknown':
+            opening_key = eco
+        else:
+            opening_key = opening
+        
+        # Track opening frequency
+        if opening_key not in openings:
+            openings[opening_key] = 0
+            eco_codes[opening_key] = eco
+            results_by_opening[opening_key] = {'wins': 0, 'draws': 0, 'losses': 0}
+        openings[opening_key] += 1
+        
+        # Track time control
+        time_controls[time_control] = time_controls.get(time_control, 0) + 1
+        
+        # Track results
+        result = headers.get('Result', '*')
+        white = headers.get('White', '').lower()
+        black = headers.get('Black', '').lower()
+        
+        # Determine if player is white or black (use first game to infer)
+        # This is a simplification - ideally we'd have username
+        is_white = True  # Default assumption
+        
+        if result == '1-0':
+            winner = 'white'
+        elif result == '0-1':
+            winner = 'black'
+        else:
+            winner = 'draw'
+        
+        if winner == 'draw':
+            results_by_opening[opening_key]['draws'] += 1
+        elif (winner == 'white' and is_white) or (winner == 'black' and not is_white):
+            results_by_opening[opening_key]['wins'] += 1
+        else:
+            results_by_opening[opening_key]['losses'] += 1
+    
+    # Calculate diversity metrics
+    num_openings = len(openings)
+    total_games = len(games) if games else 1
+    opening_diversity = (num_openings / total_games * 100) if total_games > 0 else 0
+    
+    # Find most played opening
+    most_played = max(openings.items(), key=lambda x: x[1]) if openings else ('None', 0)
+    most_played_percentage = (most_played[1] / total_games * 100) if total_games > 0 else 0
+    
+    # Opening concentration (are they playing a limited repertoire?)
+    if opening_diversity > 50:
+        repertoire_type = 'very_diverse'
+    elif opening_diversity > 30:
+        repertoire_type = 'diverse'
+    elif opening_diversity > 15:
+        repertoire_type = 'moderate'
+    else:
+        repertoire_type = 'limited'
+    
+    return {
+        'num_openings': num_openings,
+        'opening_diversity_percent': opening_diversity,
+        'most_played_opening': most_played[0],
+        'most_played_count': most_played[1],
+        'most_played_percentage': most_played_percentage,
+        'repertoire_type': repertoire_type,
+        'time_control_distribution': time_controls,
+        'opening_stats': results_by_opening
+    }

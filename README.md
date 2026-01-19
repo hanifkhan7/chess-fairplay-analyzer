@@ -1,24 +1,25 @@
-# ♟️ Chess Fairplay Analyzer v2.0
+# ♟️ Chess Detective v2.2
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Chess.com API](https://img.shields.io/badge/API-Chess.com-orange)](https://www.chess.com/news/view/published-data-api)
 [![Stockfish](https://img.shields.io/badge/Engine-Stockfish%2016-red)](https://stockfishchess.org/)
 
-A comprehensive, production-ready forensic analysis tool for detecting potential computer assistance in chess games using advanced statistical techniques similar to Chess.com's Fair Play detection system.
+A comprehensive, production-ready forensic analysis tool for detecting potential computer assistance in chess games and analyzing player behavior using advanced statistical techniques similar to Chess.com's Fair Play detection system.
 
 > ⚠️ **IMPORTANT**: This tool provides statistical indicators only, not proof of cheating. Final judgment always rests with Chess.com's Fair Play team and relevant authorities.
 
 ---
 
-## 🎯 What's New in v2.0
+## 🎯 What's New in v2.2
 
-### ✨ Complete Menu-Driven Interface
-- **8-Option Interactive Menu** with comprehensive chess player analysis
-- Intuitive navigation with real-time feedback
-- Progress indicators and estimated time calculations
+### Advanced Analytics & Network Analysis
+- **Multi-Player Comparison**: Compare statistics across multiple players simultaneously
+- **Fatigue Detection**: Detect performance degradation and fatigue patterns over sessions
+- **Network Analysis**: Analyze opponent networks, detect playing circles, and suspicious patterns
+- **Visual Dashboard**: Generate publication-quality charts and graphs for analysis
 
-### 🎮 6 Powerful Analysis Features
+**See [README_v2.2.md](README_v2.2.md) for complete documentation**
 
 #### 1. **Analyze Player** - Detect Suspicious Activity
 - Comprehensive cheating detection across 50+ games

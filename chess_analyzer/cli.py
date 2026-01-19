@@ -24,7 +24,7 @@ def print_banner():
     """Print the tool banner."""
     banner = """
     ╔═══════════════════════════════════════════════════════╗
-    ║      ♟️ CHESS FAIRPLAY ANALYZER v1.0.0 ♟️            ║
+    ║      ♟️ CHESS DETECTIVE v2.1.0 ♟️            ║
     ║      Forensic analysis for chess fair play           ║
     ╚═══════════════════════════════════════════════════════╝
     """
