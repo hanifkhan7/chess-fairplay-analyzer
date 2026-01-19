@@ -2,7 +2,7 @@
 
 **Enhanced Forensic Analysis Tool for Detecting Computer Assistance in Chess Games**
 
-Version: 2.2.1 | Last Updated: January 2025
+Version: 2.2.1 | Last Updated: January 2026
 
 ---
 
@@ -606,5 +606,5 @@ This tool teaches:
 **Chess Detective v2.2.1**  
 *Making chess fairer, one analysis at a time.*
 
-Last updated: January 2025  
+Last updated: January 2026  
 Current version: 2.2.1
