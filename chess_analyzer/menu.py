@@ -67,13 +67,14 @@ def main():
         print("7. Multi-Player Comparison")
         print("8. Fatigue Detection")
         print("9. Network Analysis")
-        print("10. Opening Repertoire Inspector (NEW!)")
-        print("11. View Reports")
-        print("12. Settings")
-        print("13. Exit")
+        print("10. Opening Repertoire Inspector")
+        print("11. Tournament Forensics (NEW!)")
+        print("12. View Reports")
+        print("13. Settings")
+        print("14. Exit")
         print("="*50 + "\n")
         
-        choice = input("Select option (1-13): ").strip()
+        choice = input("Select option (1-14): ").strip()
         
         if choice == "1":
             _analyze_player()
@@ -96,10 +97,12 @@ def main():
         elif choice == "10":
             _opening_repertoire_inspector()
         elif choice == "11":
-            _view_reports()
+            _tournament_forensics()
         elif choice == "12":
-            _settings()
+            _view_reports()
         elif choice == "13":
+            _settings()
+        elif choice == "14":
             print("\nGoodbye!\n")
             break
         else:
@@ -1169,6 +1172,94 @@ def _opening_repertoire_inspector():
     else:
         print("Reports directory not found")
     input("Press Enter to continue...")
+
+
+def _tournament_forensics():
+    """Analyze concluded tournaments for suspicious activity patterns."""
+    
+    print("\n" + "="*60)
+    print("TOURNAMENT FORENSICS ANALYSIS")
+    print("="*60)
+    print("\nAnalyze concluded tournaments to detect suspicious patterns:")
+    print("  - ELO-based probability violations")
+    print("  - Unexpected upsets and underperformance")
+    print("  - Statistical anomalies")
+    print("  - Performance consistency analysis")
+    print("\n")
+    
+    # Get tournament input (can be URL or ID)
+    tournament_input = input("\nEnter Tournament URL or ID: ").strip()
+    
+    if not tournament_input:
+        print("Tournament URL/ID required!")
+        input("\nPress Enter to continue...")
+        return
+    
+    try:
+        from .tournament_forensics import analyze_tournament
+        from .utils.helpers import load_config
+        
+        config = load_config()
+        
+        print(f"\n[TOURNAMENT] Analyzing tournament: {tournament_input}")
+        report = analyze_tournament(tournament_input, config)
+        
+        if report.get('error'):
+            print(f"[ERROR] {report.get('error')}")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Display results
+        print(f"\n{report.get('tournament_name', 'Unknown')} Analysis")
+        print("="*60)
+        print(f"Total Players: {report.get('total_players', 0)}")
+        
+        summary = report.get('summary', {})
+        print(f"\nAverage ELO: {summary.get('average_elo', 'N/A')}")
+        
+        # Display anomalies
+        anomalies = report.get('anomalies', [])
+        if anomalies:
+            print(f"\n[⚠️  ANOMALIES DETECTED: {len(anomalies)}]")
+            print("-" * 60)
+            
+            for anomaly in anomalies[:15]:  # Top 15 anomalies
+                severity = anomaly.get('severity', 'UNKNOWN')
+                emoji = '🚩' if severity == 'HIGH' else '⚠️'
+                
+                print(f"\n{emoji} #{anomaly.get('rank')}: {anomaly.get('player')} (ELO: {anomaly.get('elo')})")
+                print(f"   Type: {anomaly.get('type')}")
+                print(f"   {anomaly.get('description')}")
+                
+                if anomaly.get('probability_pct'):
+                    print(f"   Win Probability: {anomaly.get('probability_pct'):.1f}%")
+                if anomaly.get('win_rate'):
+                    print(f"   Win Rate: {anomaly.get('win_rate'):.1f}%")
+        else:
+            print("\n[✓] No significant statistical anomalies detected")
+        
+        # Save report
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_filename = f"reports/tournament_{timestamp}.json"
+        
+        try:
+            import os
+            os.makedirs("reports", exist_ok=True)
+            
+            with open(report_filename, 'w') as f:
+                json.dump(report, f, indent=2, default=str)
+            
+            print(f"\n[SAVED] Report: {report_filename}")
+        except Exception as e:
+            print(f"[WARNING] Could not save report: {e}")
+        
+        input("\nPress Enter to continue...")
+        
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        import traceback
+        traceback.print_exc()
+        input("\nPress Enter to continue...")
 
 
 def _settings():
