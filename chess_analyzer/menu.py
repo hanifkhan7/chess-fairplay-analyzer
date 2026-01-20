@@ -33,12 +33,13 @@ def main():
         print("7. Multi-Player Comparison")
         print("8. Fatigue Detection")
         print("9. Network Analysis")
-        print("10. View Reports")
-        print("11. Settings")
-        print("12. Exit")
+        print("10. Opening Repertoire Inspector (NEW!)")
+        print("11. View Reports")
+        print("12. Settings")
+        print("13. Exit")
         print("="*50 + "\n")
         
-        choice = input("Select option (1-12): ").strip()
+        choice = input("Select option (1-13): ").strip()
         
         if choice == "1":
             _analyze_player()
@@ -59,10 +60,12 @@ def main():
         elif choice == "9":
             _network_analysis()
         elif choice == "10":
-            _view_reports()
+            _opening_repertoire_inspector()
         elif choice == "11":
-            _settings()
+            _view_reports()
         elif choice == "12":
+            _settings()
+        elif choice == "13":
             print("\nGoodbye!\n")
             break
         else:
@@ -997,7 +1000,47 @@ def _network_analysis():
     input("\nPress Enter to continue...")
 
 
-def _view_reports():
+def _opening_repertoire_inspector():
+    """Analyze opponent's opening repertoire and vulnerabilities"""
+    print("\n" + "-"*50)
+    print("🎯 OPENING REPERTOIRE INSPECTOR")
+    print("-"*50)
+    print("\nVisualize opponent's opening repertoire, patterns, and vulnerabilities")
+    
+    username = input("\nEnter Chess.com username: ").strip()
+    if not username:
+        return
+    
+    game_count = input("Games to analyze? (default 100, recommended 50-200): ").strip()
+    try:
+        game_count = int(game_count) if game_count else 100
+    except:
+        game_count = 100
+    
+    try:
+        print(f"\nFetching up to {game_count} games for {username}...")
+        player_games = fetch_player_games(username, max_games=game_count)
+        actual_count = len(player_games)
+        
+        if not player_games:
+            print(f"No games found for {username}")
+            input("\nPress Enter to continue...")
+            return
+        
+        msg = f"Retrieved {actual_count} games"
+        if actual_count < game_count:
+            msg += f" (player has fewer than {game_count} total)"
+        print(msg + ". Building opening tree...\n")
+        
+        from .opening_tree import display_opening_tree_analysis
+        display_opening_tree_analysis(player_games, username)
+        
+    except Exception as e:
+        print(f"\nError: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    input("\nPress Enter to continue...")
     print("\n" + "-"*50)
     print("VIEW REPORTS")
     print("-"*50)
