@@ -1182,15 +1182,15 @@ def _tournament_forensics():
     print("="*60)
     print("\nBrowse top players from different platforms:")
     print("  • Lichess - Free API with country filtering")
-    print("  • Chess.com - Free API with global leaderboard")
-    print("  • FIDE - Manual browsing (analysis if player has online account)")
+    print("  • Chess.com - Global leaderboard (all countries)")
+    print("  • FIDE - Top international ratings")
     print("\n")
     
     # Select platform
     print("Select Platform:")
-    print("1. Lichess")
-    print("2. Chess.com")
-    print("3. FIDE (Info only)")
+    print("1. Lichess (By Country & Speed)")
+    print("2. Chess.com (Global)")
+    print("3. FIDE (International)")
     platform_choice = input("\nChoose (1-3): ").strip()
     
     try:
@@ -1222,15 +1222,63 @@ def _tournament_forensics():
             # FIDE
             result = fetch_leaderboard('fide')
             
-            print("\n" + "="*60)
-            print(result['info']['note'])
-            print("\nFIDE Leaderboard: " + result['info']['url'])
-            print("\nNote: While FIDE leaderboard must be browsed manually,")
-            print("you can analyze FIDE players if they have:")
-            print("  • Chess.com account")
-            print("  • Lichess account")
-            print("="*60)
-            input("\nPress Enter to continue...")
+            # If FIDE API worked, display the leaderboard
+            if result.get('players') and len(result['players']) > 0:
+                analyzer.display_leaderboard(result['players'], result['platform'])
+                
+                # Ask about analysis
+                print("\n" + "="*60)
+                analyze_choice = input("Would you like to analyze a player? (y/n): ").strip().lower()
+                
+                if analyze_choice == 'y':
+                    rank = input("Enter player rank (1-50): ").strip()
+                    
+                    try:
+                        rank_num = int(rank)
+                        if 1 <= rank_num <= len(result['players']):
+                            player = result['players'][rank_num - 1]
+                            username = player.get('username')
+                            
+                            print(f"\n[INFO] FIDE player found: {username}")
+                            print(f"[INFO] Checking Chess.com and Lichess for this player...")
+                            
+                            # Try to find and analyze
+                            platforms = prompt_platform_selection(username, config)
+                            
+                            if not platforms:
+                                print(f"[ERROR] '{username}' not found on Chess.com or Lichess")
+                                input("\nPress Enter to continue...")
+                                return
+                            
+                            games, counts = _fetch_games(username, 20, platforms, config)
+                            
+                            if games:
+                                print(f"\n✓ Fetched {len(games)} games")
+                                print(f"  Platform breakdown: {counts}")
+                                print(f"\nPlayer: {username}")
+                                print(f"Rating: {player.get('rating')} ELO")
+                                print(f"Title: {player.get('title', 'None')}")
+                            else:
+                                print("[ERROR] Could not fetch games")
+                        else:
+                            print("Invalid rank!")
+                    except ValueError:
+                        print("Invalid rank number!")
+                
+                input("\nPress Enter to continue...")
+            else:
+                # FIDE API not available, show manual browsing option
+                print("\n" + "="*60)
+                print("FIDE LEADERBOARD (Manual Browsing)")
+                print("="*60)
+                print("\nFIDE doesn't have a public API, but you can:")
+                print(f"\n1. Visit: {result['info']['url']}")
+                print("2. Browse the top-rated players worldwide")
+                print("3. Find a player's name")
+                print("\nThen come back and use 'Analyze Player' option (Menu #1)")
+                print("if the player has a Chess.com or Lichess account.")
+                print("="*60)
+                input("\nPress Enter to continue...")
             return
         else:
             print("Invalid choice!")
@@ -1238,6 +1286,7 @@ def _tournament_forensics():
             return
         
         # Display leaderboard
+
         if result.get('players'):
             analyzer.display_leaderboard(result['players'], result['platform'])
             

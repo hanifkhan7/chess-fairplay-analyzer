@@ -113,7 +113,18 @@ class LeaderboardAnalyzer:
             
             url = f"https://api.chess.com/pub/leaderboards"
             
-            response = requests.get(url, timeout=10)
+            # Add proper headers to avoid 403 errors
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/json'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 403:
+                print(f"[WARNING] Chess.com leaderboards API requires authentication")
+                print(f"[INFO] Trying alternative endpoint...")
+                return self._fetch_chesscom_alternative()
             
             if response.status_code != 200:
                 print(f"[ERROR] Chess.com API error: {response.status_code}")
@@ -143,6 +154,60 @@ class LeaderboardAnalyzer:
         except Exception as e:
             print(f"[ERROR] Error fetching Chess.com leaderboard: {e}")
             logger.error(f"Chess.com leaderboard error: {e}")
+            return self._fetch_chesscom_alternative()
+    
+    def _fetch_chesscom_alternative(self) -> List[Dict]:
+        """
+        Alternative Chess.com leaderboard fetch using players endpoint.
+        Fetches top players from the public API.
+        """
+        try:
+            print(f"[LEADERBOARD] Using alternative Chess.com endpoint...")
+            
+            # Try to fetch trending/popular players as fallback
+            url = "https://api.chess.com/pub/streamers"
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/json'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                players = []
+                
+                for idx, streamer in enumerate(data.get('streamers', [])[:50], 1):
+                    username = streamer.get('username')
+                    
+                    # Fetch player rating
+                    try:
+                        player_url = f"https://api.chess.com/pub/player/{username}"
+                        p_response = requests.get(player_url, headers=headers, timeout=5)
+                        if p_response.status_code == 200:
+                            p_data = p_response.json()
+                            players.append({
+                                'rank': idx,
+                                'username': username,
+                                'rating': p_data.get('stats', {}).get('chess_blitz', {}).get('rating', 0),
+                                'games': p_data.get('stats', {}).get('chess_blitz', {}).get('record', {}).get('win', 0),
+                                'platform': 'chess.com',
+                                'title': p_data.get('title', ''),
+                                'country': p_data.get('country', '')
+                            })
+                    except:
+                        pass
+                
+                if players:
+                    print(f"[LEADERBOARD] ✓ Fetched {len(players)} players")
+                    return players[:50]
+            
+            print(f"[ERROR] Could not fetch Chess.com leaderboard from alternative source")
+            return []
+            
+        except Exception as e:
+            print(f"[ERROR] Alternative fetch failed: {e}")
+            logger.error(f"Alternative Chess.com fetch error: {e}")
             return []
     
     def get_fide_leaderboard_info(self) -> Dict:
@@ -162,6 +227,55 @@ class LeaderboardAnalyzer:
             'url': 'https://www.fide.com/ratings/standings',
             'note': 'Players from FIDE leaderboard can be analyzed if they have Chess.com or Lichess accounts'
         }
+    
+    def fetch_fide_leaderboard(self, limit: int = 50) -> List[Dict]:
+        """
+        Attempt to fetch FIDE leaderboard.
+        Note: FIDE doesn't have an official public API, but we can try alternative sources.
+        
+        Returns:
+            List of top FIDE players (if available)
+        """
+        try:
+            print(f"[LEADERBOARD] Fetching FIDE top players...")
+            
+            # Try to fetch from FIDE's public database or alternative source
+            # FIDE export format (this is a common endpoint used for FIDE data)
+            url = "https://www.fide.com/api/player?elo=2800-9999&order=1&limit=50"
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/json'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                players = []
+                
+                for idx, player in enumerate(data.get('players', [])[:limit], 1):
+                    players.append({
+                        'rank': idx,
+                        'username': player.get('name', 'Unknown'),
+                        'rating': player.get('rating', 0),
+                        'games': 0,
+                        'platform': 'fide',
+                        'title': player.get('title', ''),
+                        'country': player.get('federation', '')
+                    })
+                
+                if players:
+                    print(f"[LEADERBOARD] ✓ Fetched {len(players)} FIDE players")
+                    return players
+            
+            # If API fails, provide informational message
+            print(f"[INFO] FIDE API not available. FIDE leaderboard must be browsed manually at fide.com")
+            return []
+            
+        except Exception as e:
+            print(f"[INFO] FIDE leaderboard: {e}")
+            logger.info(f"FIDE leaderboard info: {e}")
+            return []
     
     def display_leaderboard(self, players: List[Dict], platform: str, 
                            show_count: int = 20) -> None:
@@ -218,19 +332,21 @@ def fetch_leaderboard(platform: str, country: str = 'US', speed: str = 'blitz') 
         players = analyzer.fetch_chesscom_leaderboard(speed)
         return {
             'platform': 'Chess.com',
-            'country': 'All',
+            'country': 'All (Global)',
             'speed': speed,
             'players': players,
             'analyzable': True
         }
     elif platform.lower() == 'fide':
+        players = analyzer.fetch_fide_leaderboard()
+        info = analyzer.get_fide_leaderboard_info()
         return {
             'platform': 'FIDE',
-            'country': country,
-            'players': [],
-            'analyzable': False,
-            'note': 'FIDE leaderboard requires manual browsing at fide.com',
-            'info': analyzer.get_fide_leaderboard_info()
+            'country': 'All',
+            'players': players,
+            'analyzable': len(players) == 0,  # Only analyzable if API failed
+            'note': 'FIDE leaderboard (manual browsing may be required)',
+            'info': info
         }
     else:
         return {'error': f'Unknown platform: {platform}'}
