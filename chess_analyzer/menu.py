@@ -1877,9 +1877,20 @@ def _head_to_head_matchup():
         
         print(f"\n[PLATFORM] Using {platform}")
         
+        # Ask how many games to analyze
+        print(f"\nHow many games to analyze? (default: 50, max: 200)")
+        max_games_input = input("Enter number (or press Enter for default): ").strip()
+        try:
+            max_games = int(max_games_input) if max_games_input else 50
+            max_games = min(max(max_games, 10), 200)  # Clamp between 10 and 200
+        except ValueError:
+            max_games = 50
+        
+        print(f"[ANALYZING] Fetching {max_games} games for each player...")
+        
         # Fetch games for both players
         print(f"\n[FETCHING] Downloading games for {player1_name}...")
-        games1, counts1 = _fetch_games(player1_name, 50, [platform], config)
+        games1, counts1 = _fetch_games(player1_name, max_games, [platform], config)
         
         if not games1:
             print(f"[ERROR] Could not fetch games for {player1_name}")
@@ -1887,7 +1898,7 @@ def _head_to_head_matchup():
             return
         
         print(f"[FETCHING] Downloading games for {player2_name}...")
-        games2, counts2 = _fetch_games(player2_name, 50, [platform], config)
+        games2, counts2 = _fetch_games(player2_name, max_games, [platform], config)
         
         if not games2:
             print(f"[ERROR] Could not fetch games for {player2_name}")
@@ -1901,8 +1912,11 @@ def _head_to_head_matchup():
         p1_info = fetch_player_info(player1_name, platform, config)
         p2_info = fetch_player_info(player2_name, platform, config)
         
-        p1_elo = p1_info.get('rating', 1600) if p1_info else 1600
-        p2_elo = p2_info.get('rating', 1600) if p2_info else 1600
+        p1_elo = p1_info.get('rating') if p1_info and p1_info.get('rating') else None
+        p2_elo = p2_info.get('rating') if p2_info and p2_info.get('rating') else None
+        
+        if not p1_elo or not p2_elo:
+            print(f"[WARNING] Could not fetch accurate ratings. Using game data for analysis.")
         
         # Generate matchup report
         report = analyzer.generate_matchup_report(

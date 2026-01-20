@@ -23,11 +23,11 @@ class HeadToHeadAnalyzer:
     
     def _convert_game_to_dict(self, game) -> Dict:
         """
-        Convert a Game object to dictionary format.
-        Handles both dictionary and Game object inputs.
+        Convert a PGN Game object to dictionary format.
+        Handles both dictionary and PGN Game object inputs.
         
         Args:
-            game: Game object or dict
+            game: PGN Game object or dict
             
         Returns:
             Dictionary with game data
@@ -37,17 +37,44 @@ class HeadToHeadAnalyzer:
             if isinstance(game, dict):
                 return game
             
-            # Convert Game object to dict
+            # Convert PGN Game object to dict using headers
+            headers = game.headers if hasattr(game, 'headers') else {}
+            
+            # Parse result from PGN header (format: "1-0" = white won, "0-1" = black won, "1/2-1/2" = draw)
+            pgn_result = headers.get('Result', '*')
+            username = headers.get('White', '')
+            opponent = headers.get('Black', '')
+            
+            # Determine result from perspective of player (username)
+            if pgn_result == '1/2-1/2':
+                result = 'draw'
+            elif pgn_result == '1-0' and headers.get('White', '') == username:
+                result = 'won'
+            elif pgn_result == '1-0' and headers.get('Black', '') == username:
+                result = 'lost'
+            elif pgn_result == '0-1' and headers.get('White', '') == username:
+                result = 'lost'
+            elif pgn_result == '0-1' and headers.get('Black', '') == username:
+                result = 'won'
+            else:
+                result = 'unknown'
+            
+            # Get opponent ELO
+            if headers.get('White', '') == username:
+                opp_elo = int(headers.get('BlackElo', '1600'))
+            else:
+                opp_elo = int(headers.get('WhiteElo', '1600'))
+            
             game_dict = {
-                'result': getattr(game, 'result', 'unknown').lower() if hasattr(game, 'result') else 'unknown',
-                'opponent': getattr(game, 'opponent', 'unknown'),
-                'opponent_elo': getattr(game, 'opponent_elo', 1600),
-                'opening': getattr(game, 'opening', 'Unknown'),
-                'accuracy': getattr(game, 'accuracy', 0),
-                'moves': getattr(game, 'moves', 0),
-                'duration': getattr(game, 'duration', 0),
-                'date': getattr(game, 'date', ''),
-                'username': getattr(game, 'username', ''),
+                'result': result,
+                'opponent': opponent,
+                'opponent_elo': opp_elo,
+                'opening': headers.get('Opening', 'Unknown'),
+                'accuracy': 0,
+                'moves': len(list(game.mainline_moves())) if hasattr(game, 'mainline_moves') else 0,
+                'duration': 0,
+                'date': headers.get('UTCDate', headers.get('Date', '')),
+                'username': username,
                 'url': getattr(game, 'url', ''),
                 'eco': getattr(game, 'eco', ''),
                 'rated': getattr(game, 'rated', False),
@@ -385,17 +412,17 @@ class HeadToHeadAnalyzer:
             logger.error(f"Error calculating combined probability: {e}")
             return (50.0, 50.0)
     
-    def generate_matchup_report(self, player1_name: str, player1_elo: int, games1: List[Dict],
-                               player2_name: str, player2_elo: int, games2: List[Dict]) -> Dict:
+    def generate_matchup_report(self, player1_name: str, player1_elo: Optional[int], games1: List[Dict],
+                               player2_name: str, player2_elo: Optional[int], games2: List[Dict]) -> Dict:
         """
         Generate comprehensive matchup report.
         
         Args:
             player1_name: Player 1 username
-            player1_elo: Player 1 ELO
+            player1_elo: Player 1 ELO (optional, can be None)
             games1: Player 1's games
             player2_name: Player 2 username
-            player2_elo: Player 2 ELO
+            player2_elo: Player 2 ELO (optional, can be None)
             games2: Player 2's games
             
         Returns:
@@ -404,9 +431,23 @@ class HeadToHeadAnalyzer:
         try:
             print("\n[MATCHUP] Analyzing matchup between {} and {}...".format(player1_name, player2_name))
             
+            # Calculate average opponent rating from games if ELO not available
+            if not player1_elo and games1:
+                opponent_elos = [self._convert_game_to_dict(g).get('opponent_elo', 1600) for g in games1]
+                player1_elo = int(sum(opponent_elos) / len(opponent_elos)) if opponent_elos else 1600
+            elif not player1_elo:
+                player1_elo = 1600
+            
+            if not player2_elo and games2:
+                opponent_elos = [self._convert_game_to_dict(g).get('opponent_elo', 1600) for g in games2]
+                player2_elo = int(sum(opponent_elos) / len(opponent_elos)) if opponent_elos else 1600
+            elif not player2_elo:
+                player2_elo = 1600
+            
             # Calculate various probabilities
             elo_prob = self.calculate_elo_probability(player1_elo, player2_elo)
             print("[ANALYSIS] ELO-based probability: {:.1f}% vs {:.1f}%".format(elo_prob[0], elo_prob[1]))
+            print("[ANALYSIS] Player 1 rating: ~{} | Player 2 rating: ~{}".format(player1_elo, player2_elo))
             
             # Analyze game history
             history_analysis = self.analyze_game_history(games1, games2)
@@ -475,12 +516,58 @@ class HeadToHeadAnalyzer:
             perf_prob = report['performance_probability']
             h2h_prob = report['h2h_probability']
             combined_prob = report['combined_probability']
+            history = report['history_analysis']
             
             print("\n" + "="*80)
             print("HEAD-TO-HEAD MATCHUP ANALYSIS")
             print("="*80)
             
-            print("\n┌─ PLAYER STATS ─────────────────────────────────────────────────────────┐")
+            # Show individual player stats first
+            print("\n┌─ PLAYER 1 STATISTICS ──────────────────────────────────────────────────────┐")
+            print(f"│ Username: {p1['name']:<71} │")
+            print(f"│ Rating: ~{p1['elo']:<71} │")
+            print(f"│ Games Analyzed: {p1['games']:<57} │")
+            win_rate_p1 = history['player1']['win_rate'] if history and 'player1' in history else 0
+            wins_p1 = history['player1']['wins'] if history and 'player1' in history else 0
+            losses_p1 = history['player1']['losses'] if history and 'player1' in history else 0
+            draws_p1 = history['player1']['draws'] if history and 'player1' in history else 0
+            print(f"│ Win Rate: {win_rate_p1:.1f}%  Wins: {wins_p1} | Losses: {losses_p1} | Draws: {draws_p1:<30} │")
+            if history and 'player1' in history and history['player1'].get('avg_accuracy'):
+                print(f"│ Average Accuracy: {history['player1']['avg_accuracy']:.1f}%{' ':<52} │")
+            
+            # Top openings for player 1
+            p1_openings = report.get('player1_openings', {})
+            if p1_openings:
+                print("│ Favorite Openings:                                                           │")
+                for i, (opening, stats) in enumerate(list(p1_openings.items())[:3]):
+                    games_count = stats.get('count', 0)
+                    win_rate = stats.get('win_rate', 0)
+                    print(f"│   {opening[:35]:<35} {games_count:>2} games ({win_rate:>5.1f}% WR) │")
+            print("└────────────────────────────────────────────────────────────────────────────┘")
+            
+            print("\n┌─ PLAYER 2 STATISTICS ──────────────────────────────────────────────────────┐")
+            print(f"│ Username: {p2['name']:<71} │")
+            print(f"│ Rating: ~{p2['elo']:<71} │")
+            print(f"│ Games Analyzed: {p2['games']:<57} │")
+            win_rate_p2 = history['player2']['win_rate'] if history and 'player2' in history else 0
+            wins_p2 = history['player2']['wins'] if history and 'player2' in history else 0
+            losses_p2 = history['player2']['losses'] if history and 'player2' in history else 0
+            draws_p2 = history['player2']['draws'] if history and 'player2' in history else 0
+            print(f"│ Win Rate: {win_rate_p2:.1f}%  Wins: {wins_p2} | Losses: {losses_p2} | Draws: {draws_p2:<30} │")
+            if history and 'player2' in history and history['player2'].get('avg_accuracy'):
+                print(f"│ Average Accuracy: {history['player2']['avg_accuracy']:.1f}%{' ':<52} │")
+            
+            # Top openings for player 2
+            p2_openings = report.get('player2_openings', {})
+            if p2_openings:
+                print("│ Favorite Openings:                                                           │")
+                for i, (opening, stats) in enumerate(list(p2_openings.items())[:3]):
+                    games_count = stats.get('count', 0)
+                    win_rate = stats.get('win_rate', 0)
+                    print(f"│   {opening[:35]:<35} {games_count:>2} games ({win_rate:>5.1f}% WR) │")
+            print("└────────────────────────────────────────────────────────────────────────────┘")
+            
+            print("\n┌─ PLAYER COMPARISON ────────────────────────────────────────────────────────┐")
             print(f"│ {p1['name']:<35} vs {p2['name']:<35} │")
             print(f"│ ELO: {p1['elo']:<32} ELO: {p2['elo']:<32} │")
             print(f"│ Games: {p1['games']:<30} Games: {p2['games']:<30} │")
@@ -497,7 +584,7 @@ class HeadToHeadAnalyzer:
             print("│                                                                            │")
             
             # Performance-based
-            print(f"│ Game Performance Analysis                                                  │")
+            print(f"│ Game Performance Analysis (Based on {p1['games']} games each)                           │")
             p1_bar = int(perf_prob[0] / 2)
             p2_bar = int(perf_prob[1] / 2)
             print(f"│ {p1['name']:<35} {'█' * p1_bar:<50} {perf_prob[0]:>5.1f}% │")
@@ -506,11 +593,15 @@ class HeadToHeadAnalyzer:
             
             # Head-to-head
             if report['h2h_games']['total_games'] > 0:
-                print(f"│ Head-to-Head Record ({report['h2h_games']['total_games']} games)                                                │")
+                print(f"│ Head-to-Head Record ({report['h2h_games']['total_games']} games between them)                                     │")
                 p1_bar = int(h2h_prob[0] / 2)
                 p2_bar = int(h2h_prob[1] / 2)
                 print(f"│ {p1['name']:<35} {'█' * p1_bar:<50} {h2h_prob[0]:>5.1f}% │")
                 print(f"│ {p2['name']:<35} {'█' * p2_bar:<50} {h2h_prob[1]:>5.1f}% │")
+                print("│                                                                            │")
+            else:
+                print(f"│ Head-to-Head Record: NO PREVIOUS GAMES FOUND                              │")
+                print("│ (Using ELO and Performance analysis only)                                  │")
                 print("│                                                                            │")
             
             # Combined prediction
@@ -529,7 +620,36 @@ class HeadToHeadAnalyzer:
             print("└────────────────────────────────────────────────────────────────────────────┘")
             
             # Head-to-head details
-            if report['h2h_games']['total_games'] > 0:
+            if report['h2h_games']['total_games'] > 0 and 'games' in report['h2h_games']:
+                h2h = report['h2h_games']
+                print("\n┌─ HEAD-TO-HEAD GAME HISTORY ────────────────────────────────────────────────┐")
+                print(f"│ Total Games: {h2h['total_games']:<64} │")
+                print(f"│ {p1['name']:<35} Wins: {h2h['player1_wins']:<44} │")
+                print(f"│ {p2['name']:<35} Wins: {h2h['player2_wins']:<44} │")
+                print(f"│ Draws: {h2h['draws']:<74} │")
+                
+                # Show recent games
+                if h2h.get('games') and len(h2h['games']) > 0:
+                    print("│                                                                            │")
+                    print("│ Recent Games (up to last 5):                                               │")
+                    for i, game in enumerate(h2h['games'][-5:]):
+                        g = game if isinstance(game, dict) else self._convert_game_to_dict(game)
+                        result = g.get('result', '?')
+                        opening = g.get('opening', 'Unknown')[:25]
+                        opponent = g.get('opponent', '?')
+                        date_str = g.get('date', '')[:10] if g.get('date') else ''
+                        result_symbol = '●' if result == 'W' else '○' if result == 'L' else '■'
+                        print(f"│   {result_symbol} {opponent:<20} {opening:<25} ({date_str}) │")
+                
+                if h2h.get('openings'):
+                    print("│                                                                            │")
+                    print("│ Opening Statistics:                                                        │")
+                    for i, (opening, stats) in enumerate(list(h2h['openings'].items())[:5]):
+                        win_rate = (stats['player1_wins'] / stats['games'] * 100) if stats['games'] > 0 else 0
+                        print(f"│   {opening[:30]:<30} {stats['games']:>2} games ({p1['name']} {win_rate:>5.1f}%) │")
+                
+                print("└────────────────────────────────────────────────────────────────────────────┘")
+            elif report['h2h_games']['total_games'] > 0:
                 h2h = report['h2h_games']
                 print("\n┌─ HEAD-TO-HEAD STATISTICS ──────────────────────────────────────────────────┐")
                 print(f"│ Total Games: {h2h['total_games']:<64} │")
@@ -537,7 +657,7 @@ class HeadToHeadAnalyzer:
                 print(f"│ {p2['name']:<35} Wins: {h2h['player2_wins']:<44} │")
                 print(f"│ Draws: {h2h['draws']:<74} │")
                 
-                if h2h['openings']:
+                if h2h.get('openings'):
                     print("│                                                                            │")
                     print("│ Openings Played:                                                           │")
                     for i, (opening, stats) in enumerate(list(h2h['openings'].items())[:5]):

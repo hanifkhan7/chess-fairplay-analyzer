@@ -351,6 +351,7 @@ def prompt_platform_selection(username: str, config: Optional[Dict] = None) -> L
 def fetch_player_info(username: str, platform: str, config: Optional[Dict] = None) -> Optional[Dict]:
     """
     Fetch player information (rating, title, etc) from platform.
+    Tries to get rating from blitz, bullet, and rapid in that order.
     
     Args:
         username: Player username
@@ -366,9 +367,15 @@ def fetch_player_info(username: str, platform: str, config: Optional[Dict] = Non
             response = requests.get(url, timeout=10)
             if response.status_code == 200:
                 data = response.json()
+                stats = data.get('stats', {})
+                # Try to get blitz, then bullet, then rapid
+                rating = (stats.get('chess_blitz', {}).get('rating') or 
+                         stats.get('chess_bullet', {}).get('rating') or
+                         stats.get('chess_rapid', {}).get('rating') or 
+                         1600)
                 return {
                     'username': data.get('username'),
-                    'rating': data.get('stats', {}).get('chess_blitz', {}).get('rating', 1600),
+                    'rating': int(rating),
                     'title': data.get('title', ''),
                     'country': data.get('country', '')
                 }
@@ -379,9 +386,15 @@ def fetch_player_info(username: str, platform: str, config: Optional[Dict] = Non
             response = requests.get(url, headers=headers, timeout=10)
             if response.status_code == 200:
                 data = response.json()
+                perfs = data.get('perfs', {})
+                # Try blitz, bullet, rapid in order of preference
+                rating = (perfs.get('blitz', {}).get('rating') or
+                         perfs.get('bullet', {}).get('rating') or
+                         perfs.get('rapid', {}).get('rating') or
+                         1600)
                 return {
                     'username': data.get('username'),
-                    'rating': data.get('perfs', {}).get('blitz', {}).get('rating', 1600),
+                    'rating': int(rating),
                     'title': data.get('title', ''),
                     'country': data.get('location', '')
                 }
