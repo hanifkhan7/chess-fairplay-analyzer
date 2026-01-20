@@ -21,7 +21,7 @@ A comprehensive, production-ready tool for analyzing player behavior, detecting 
 #### **Windows**
 ```bash
 # 1. Clone repository
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
 cd chess-fairplay-analyzer
 
 # 2. Create virtual environment
@@ -41,7 +41,7 @@ python run_menu.py
 #### **Linux/macOS**
 ```bash
 # 1. Clone repository
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
 cd chess-fairplay-analyzer
 
 # 2. Create virtual environment
@@ -64,7 +64,7 @@ python run_menu.py
 pkg install python python-pip git clang make
 
 # 2. Clone repository
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
 cd chess-fairplay-analyzer
 
 # 3. Create virtual environment
