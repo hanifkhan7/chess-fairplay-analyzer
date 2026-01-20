@@ -40,23 +40,13 @@ Completely rewritten with **300+ lines** of detailed analysis code:
 - Statistical thresholds customizable in settings
 - Real-time progress tracking
 
-#### 2. **Download All Games** - Export Game History
-- Export complete player game history in 4 formats:
-  - **Individual PGN** - Each game as separate file
-  - **Combined PGN** - All games in single file
-  - **CSV** - Spreadsheet-compatible analysis data
-  - **ZIP Archive** - All formats combined
-- Choose: Most recent games OR oldest first
-- Choose: All games OR specific count
-- Automatic timestamp naming for organization
-
-#### 3. **PlayerBrain** - Player Profile & Style Analysis
-- Comprehensive player personality assessment
-- Opening repertoire analysis with ECO codes
-- Win rate tracking by opening
-- **Phase Strength Analysis**: Opening, Middlegame, Endgame performance
-- Overall statistics: Wins/Losses/Draws with percentages
-- Playing style classification and recommendations
+#### 3. **Exploit Your Opponent** - Opening & Style Analysis
+- Detailed opening repertoire breakdown
+- Win rate by ECO code classification
+- Phase strength analysis (Opening, Middlegame, Endgame)
+- Time control exploitation strategies
+- Weakness detection with severity classification
+- Specific tactical recommendations
 
 #### 4. **Strength Profile** - Skill Level Analysis
 - Estimated skill level classification (Super-GM to Beginner)
@@ -72,12 +62,46 @@ Completely rewritten with **300+ lines** of detailed analysis code:
 - Consistency trends and improvement tracking
 - AI-generated recommendations
 
-#### 6. **View Reports** - Report Management
+#### 6. **Account Metrics Dashboard** - Quick View
+- Behavioral analysis summary
+- Rating progression patterns
+- Move timing analysis
+- Opponent strength anomalies
+- Game clustering patterns
+
+#### 7. **Multi-Player Comparison** - Compare Multiple Players
+- Side-by-side comparison of 2+ players
+- Anomaly detection and outlier identification
+- Performance ranking and metrics
+- Statistical significance testing
+
+#### 8. **Fatigue Detection** - Identify Playing Patterns
+- Session-based degradation scoring
+- Performance decline tracking
+- Fatigue severity classification (CRITICAL/MODERATE/MILD)
+- Time-based pattern analysis
+
+#### 9. **Network Analysis** - Opponent Connections
+- Opponent concentration analysis
+- Suspicious pattern detection
+- Relationship mapping
+- Network connectivity metrics
+
+#### 10. **Opening Repertoire Inspector** ⭐ **NEW!**
+**Sophisticated visualization of opponent's opening repertoire:**
+- **Opening Repertoire Map**: Visual tree of all openings with win rates
+- **Pattern Library**: Clustering of similar positions and strategies
+- **Exploitation Blueprint**: Specific recommendations for weak openings
+- **Vulnerability Scorecard**: Rating of opening skill with detailed assessment
+- **Strategic Insights**: Tournament preparation and opening selection advice
+- *See [OPENING_REPERTOIRE_INSPECTOR.md](OPENING_REPERTOIRE_INSPECTOR.md) for complete documentation*
+
+#### 11. **View Reports** - Report Management
 - Browse and manage all generated reports
 - Quick access to HTML and JSON analysis
 - Report organization and filtering
 
-#### 7. **Settings** - Full Configuration Menu
+#### 12. **Settings** - Full Configuration Menu
 - Engine configuration, cache management, report settings
 - Chess.com API customization
 - View current configuration and reset to defaults
@@ -149,12 +173,17 @@ MAIN MENU
 ==================================================
 1. Analyze Player (Detect Suspicious Activity)
 2. Download All Games (Export Game History)
-3. PlayerBrain (Player Profile & Style Analysis)
+3. Exploit your opponent (Opening & Style Analysis)
 4. Strength Profile (Skill Level Analysis)
 5. Accuracy Report (Move Accuracy & Consistency)
-6. View Reports
-7. Settings
-8. Exit
+6. Account Metrics Dashboard (Quick View)
+7. Multi-Player Comparison
+8. Fatigue Detection
+9. Network Analysis
+10. Opening Repertoire Inspector (NEW!) 🎯
+11. View Reports
+12. Settings
+13. Exit
 ==================================================
 ```
 
