@@ -346,3 +346,48 @@ def prompt_platform_selection(username: str, config: Optional[Dict] = None) -> L
         return ['lichess']
     else:  # default to both
         return ['chess.com', 'lichess']
+
+
+def fetch_player_info(username: str, platform: str, config: Optional[Dict] = None) -> Optional[Dict]:
+    """
+    Fetch player information (rating, title, etc) from platform.
+    
+    Args:
+        username: Player username
+        platform: 'chess.com' or 'lichess'
+        config: Configuration dict
+        
+    Returns:
+        Player info dict with rating, title, etc. or None
+    """
+    try:
+        if platform.lower() == 'chess.com':
+            url = f"https://api.chess.com/pub/player/{username}"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    'username': data.get('username'),
+                    'rating': data.get('stats', {}).get('chess_blitz', {}).get('rating', 1600),
+                    'title': data.get('title', ''),
+                    'country': data.get('country', '')
+                }
+        
+        elif platform.lower() == 'lichess':
+            url = f"https://lichess.org/api/user/{username}"
+            headers = {'Accept': 'application/json'}
+            response = requests.get(url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    'username': data.get('username'),
+                    'rating': data.get('perfs', {}).get('blitz', {}).get('rating', 1600),
+                    'title': data.get('title', ''),
+                    'country': data.get('location', '')
+                }
+        
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error fetching player info: {e}")
+        return None

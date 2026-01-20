@@ -68,13 +68,14 @@ def main():
         print("8. Fatigue Detection")
         print("9. Network Analysis")
         print("10. Opening Repertoire Inspector")
-        print("11. Leaderboard Browser (Country-Based)")
-        print("12. View Reports")
-        print("13. Settings")
-        print("14. Exit")
+        print("11. Leaderboard Browser (Lichess)")
+        print("12. Head-to-Head Matchup (NEW!)")
+        print("13. View Reports")
+        print("14. Settings")
+        print("15. Exit")
         print("="*50 + "\n")
         
-        choice = input("Select option (1-14): ").strip()
+        choice = input("Select option (1-15): ").strip()
         
         if choice == "1":
             _analyze_player()
@@ -99,10 +100,12 @@ def main():
         elif choice == "11":
             _tournament_forensics()
         elif choice == "12":
-            _view_reports()
+            _head_to_head_matchup()
         elif choice == "13":
-            _settings()
+            _view_reports()
         elif choice == "14":
+            _settings()
+        elif choice == "15":
             print("\nGoodbye!\n")
             break
         else:
@@ -1175,23 +1178,13 @@ def _opening_repertoire_inspector():
 
 
 def _tournament_forensics():
-    """Browse leaderboards from Chess.com, Lichess, and FIDE."""
+    """Browse Lichess leaderboards by country."""
     
     print("\n" + "="*60)
-    print("LEADERBOARD BROWSER")
+    print("LICHESS LEADERBOARD BROWSER")
     print("="*60)
-    print("\nBrowse top players from different platforms:")
-    print("  • Lichess - Free API with country filtering")
-    print("  • Chess.com - Global leaderboard (all countries)")
-    print("  • FIDE - Top international ratings")
-    print("\n")
-    
-    # Select platform
-    print("Select Platform:")
-    print("1. Lichess (By Country & Speed)")
-    print("2. Chess.com (Global)")
-    print("3. FIDE (International)")
-    platform_choice = input("\nChoose (1-3): ").strip()
+    print("\nBrowse top players from Lichess by country and speed type")
+    print("="*60 + "\n")
     
     try:
         from .leaderboard_analyzer import fetch_leaderboard, LeaderboardAnalyzer
@@ -1201,92 +1194,16 @@ def _tournament_forensics():
         analyzer = LeaderboardAnalyzer()
         config = load_config()
         
-        if platform_choice == "1":
-            # Lichess
-            print("\nLichess Speed Types: bullet, blitz, rapid, classical")
-            speed = input("Enter speed type (default: blitz): ").strip() or "blitz"
-            
-            print("\nPopular countries: US, GB, FR, DE, ES, RU, BR, IN, CN")
-            country = input("Enter country code (default: US): ").strip() or "US"
-            
-            result = fetch_leaderboard('lichess', country, speed)
-            
-        elif platform_choice == "2":
-            # Chess.com
-            print("\nChess.com Speed Types: daily, rapid, blitz, bullet")
-            speed = input("Enter speed type (default: blitz): ").strip() or "blitz"
-            
-            result = fetch_leaderboard('chess.com', 'all', speed)
-            
-        elif platform_choice == "3":
-            # FIDE
-            result = fetch_leaderboard('fide')
-            
-            # If FIDE API worked, display the leaderboard
-            if result.get('players') and len(result['players']) > 0:
-                analyzer.display_leaderboard(result['players'], result['platform'])
-                
-                # Ask about analysis
-                print("\n" + "="*60)
-                analyze_choice = input("Would you like to analyze a player? (y/n): ").strip().lower()
-                
-                if analyze_choice == 'y':
-                    rank = input("Enter player rank (1-50): ").strip()
-                    
-                    try:
-                        rank_num = int(rank)
-                        if 1 <= rank_num <= len(result['players']):
-                            player = result['players'][rank_num - 1]
-                            username = player.get('username')
-                            
-                            print(f"\n[INFO] FIDE player found: {username}")
-                            print(f"[INFO] Checking Chess.com and Lichess for this player...")
-                            
-                            # Try to find and analyze
-                            platforms = prompt_platform_selection(username, config)
-                            
-                            if not platforms:
-                                print(f"[ERROR] '{username}' not found on Chess.com or Lichess")
-                                input("\nPress Enter to continue...")
-                                return
-                            
-                            games, counts = _fetch_games(username, 20, platforms, config)
-                            
-                            if games:
-                                print(f"\n✓ Fetched {len(games)} games")
-                                print(f"  Platform breakdown: {counts}")
-                                print(f"\nPlayer: {username}")
-                                print(f"Rating: {player.get('rating')} ELO")
-                                print(f"Title: {player.get('title', 'None')}")
-                            else:
-                                print("[ERROR] Could not fetch games")
-                        else:
-                            print("Invalid rank!")
-                    except ValueError:
-                        print("Invalid rank number!")
-                
-                input("\nPress Enter to continue...")
-            else:
-                # FIDE API not available, show manual browsing option
-                print("\n" + "="*60)
-                print("FIDE LEADERBOARD (Manual Browsing)")
-                print("="*60)
-                print("\nFIDE doesn't have a public API, but you can:")
-                print(f"\n1. Visit: {result['info']['url']}")
-                print("2. Browse the top-rated players worldwide")
-                print("3. Find a player's name")
-                print("\nThen come back and use 'Analyze Player' option (Menu #1)")
-                print("if the player has a Chess.com or Lichess account.")
-                print("="*60)
-                input("\nPress Enter to continue...")
-            return
-        else:
-            print("Invalid choice!")
-            input("\nPress Enter to continue...")
-            return
+        # Lichess only
+        print("\nLichess Speed Types: bullet, blitz, rapid, classical")
+        speed = input("Enter speed type (default: blitz): ").strip() or "blitz"
+        
+        print("\nPopular countries: US, GB, FR, DE, ES, RU, BR, IN, CN")
+        country = input("Enter country code (default: US): ").strip() or "US"
+        
+        result = fetch_leaderboard('lichess', country, speed)
         
         # Display leaderboard
-
         if result.get('players'):
             analyzer.display_leaderboard(result['players'], result['platform'])
             
@@ -1882,3 +1799,139 @@ def _account_metrics():
 
     print("\n" + "="*60)
     input("\nPress Enter to continue...")
+
+
+def _head_to_head_matchup():
+    """Analyze head-to-head matchup between two players on same platform."""
+    
+    print("\n" + "="*60)
+    print("HEAD-TO-HEAD MATCHUP ANALYZER")
+    print("="*60)
+    print("\nAnalyze two players on the same platform:")
+    print("  • ELO-based win probability")
+    print("  • Game history analysis")
+    print("  • Opening statistics")
+    print("  • Suspicious activity detection")
+    print("  • Combined matchup prediction")
+    print("\n")
+    
+    try:
+        from .head_to_head_analyzer import HeadToHeadAnalyzer
+        from .dual_fetcher import prompt_platform_selection
+        from .utils.helpers import load_config
+        
+        analyzer = HeadToHeadAnalyzer()
+        config = load_config()
+        
+        # Get first player
+        print("="*60)
+        player1_name = input("Enter first player username: ").strip()
+        if not player1_name:
+            print("Player name required!")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Get second player
+        player2_name = input("Enter second player username: ").strip()
+        if not player2_name:
+            print("Player name required!")
+            input("\nPress Enter to continue...")
+            return
+        
+        print("\n[DETECTION] Detecting platform for both players...")
+        
+        # Detect platforms
+        p1_platforms = prompt_platform_selection(player1_name, config)
+        if not p1_platforms:
+            print(f"[ERROR] {player1_name} not found on Chess.com or Lichess")
+            input("\nPress Enter to continue...")
+            return
+        
+        p2_platforms = prompt_platform_selection(player2_name, config)
+        if not p2_platforms:
+            print(f"[ERROR] {player2_name} not found on Chess.com or Lichess")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Find common platforms
+        common_platforms = list(set(p1_platforms) & set(p2_platforms))
+        if not common_platforms:
+            print(f"[ERROR] No common platform found for both players")
+            print(f"  {player1_name} on: {p1_platforms}")
+            print(f"  {player2_name} on: {p2_platforms}")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Select platform if multiple
+        if len(common_platforms) > 1:
+            print("\nCommon platforms:")
+            for i, platform in enumerate(common_platforms, 1):
+                print(f"  {i}. {platform}")
+            platform_idx = input("Select platform (1-{}): ".format(len(common_platforms))).strip()
+            try:
+                platform = common_platforms[int(platform_idx) - 1]
+            except (ValueError, IndexError):
+                platform = common_platforms[0]
+        else:
+            platform = common_platforms[0]
+        
+        print(f"\n[PLATFORM] Using {platform}")
+        
+        # Fetch games for both players
+        print(f"\n[FETCHING] Downloading games for {player1_name}...")
+        games1, counts1 = _fetch_games(player1_name, 50, [platform], config)
+        
+        if not games1:
+            print(f"[ERROR] Could not fetch games for {player1_name}")
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"[FETCHING] Downloading games for {player2_name}...")
+        games2, counts2 = _fetch_games(player2_name, 50, [platform], config)
+        
+        if not games2:
+            print(f"[ERROR] Could not fetch games for {player2_name}")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Get player ratings
+        from .dual_fetcher import fetch_player_info
+        
+        print(f"\n[INFO] Getting player ratings...")
+        p1_info = fetch_player_info(player1_name, platform, config)
+        p2_info = fetch_player_info(player2_name, platform, config)
+        
+        p1_elo = p1_info.get('rating', 1600) if p1_info else 1600
+        p2_elo = p2_info.get('rating', 1600) if p2_info else 1600
+        
+        # Generate matchup report
+        report = analyzer.generate_matchup_report(
+            player1_name, p1_elo, games1,
+            player2_name, p2_elo, games2
+        )
+        
+        # Display report
+        analyzer.display_matchup_report(report)
+        
+        # Save report
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_filename = f"reports/matchup_{player1_name}_{player2_name}_{timestamp}.json"
+        
+        try:
+            import os
+            os.makedirs("reports", exist_ok=True)
+            
+            with open(report_filename, 'w') as f:
+                json.dump(report, f, indent=2, default=str)
+            
+            print(f"\n[SAVED] Matchup report: {report_filename}")
+        except Exception as e:
+            print(f"[WARNING] Could not save report: {e}")
+        
+        input("\nPress Enter to continue...")
+        
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        import traceback
+        traceback.print_exc()
+        input("\nPress Enter to continue...")
