@@ -68,7 +68,7 @@ def main():
         print("8. Fatigue Detection")
         print("9. Network Analysis")
         print("10. Opening Repertoire Inspector")
-        print("11. Tournament Forensics (NEW!)")
+        print("11. Leaderboard Browser (Country-Based)")
         print("12. View Reports")
         print("13. Settings")
         print("14. Exit")
@@ -1175,89 +1175,128 @@ def _opening_repertoire_inspector():
 
 
 def _tournament_forensics():
-    """Analyze concluded tournaments for suspicious activity patterns."""
+    """Browse leaderboards from Chess.com, Lichess, and FIDE."""
     
     print("\n" + "="*60)
-    print("TOURNAMENT FORENSICS ANALYSIS")
+    print("LEADERBOARD BROWSER")
     print("="*60)
-    print("\nAnalyze concluded tournaments to detect suspicious patterns:")
-    print("  - ELO-based probability violations")
-    print("  - Unexpected upsets and underperformance")
-    print("  - Statistical anomalies")
-    print("  - Performance consistency analysis")
-    print("\nSupported Platforms:")
-    print("  ✓ Lichess (Free API - Recommended)")
-    print("  ✗ Chess.com (Requires paid API access)")
-    print("\nExamples:")
-    print("  • Lichess: https://lichess.org/tournament/5N8Ny9oK")
-    print("  • Or just: 5N8Ny9oK")
+    print("\nBrowse top players from different platforms:")
+    print("  • Lichess - Free API with country filtering")
+    print("  • Chess.com - Free API with global leaderboard")
+    print("  • FIDE - Manual browsing (analysis if player has online account)")
     print("\n")
     
-    # Get tournament input (can be URL or ID)
-    tournament_input = input("\nEnter Lichess Tournament URL or ID: ").strip()
-    
-    if not tournament_input:
-        print("Tournament URL/ID required!")
-        input("\nPress Enter to continue...")
-        return
+    # Select platform
+    print("Select Platform:")
+    print("1. Lichess")
+    print("2. Chess.com")
+    print("3. FIDE (Info only)")
+    platform_choice = input("\nChoose (1-3): ").strip()
     
     try:
-        from .tournament_forensics import analyze_tournament
+        from .leaderboard_analyzer import fetch_leaderboard, LeaderboardAnalyzer
+        from .dual_fetcher import prompt_platform_selection
         from .utils.helpers import load_config
         
+        analyzer = LeaderboardAnalyzer()
         config = load_config()
         
-        print(f"\n[TOURNAMENT] Analyzing tournament: {tournament_input}")
-        report = analyze_tournament(tournament_input, config)
-        
-        if report.get('error'):
-            print(f"[ERROR] {report.get('error')}")
+        if platform_choice == "1":
+            # Lichess
+            print("\nLichess Speed Types: bullet, blitz, rapid, classical")
+            speed = input("Enter speed type (default: blitz): ").strip() or "blitz"
+            
+            print("\nPopular countries: US, GB, FR, DE, ES, RU, BR, IN, CN")
+            country = input("Enter country code (default: US): ").strip() or "US"
+            
+            result = fetch_leaderboard('lichess', country, speed)
+            
+        elif platform_choice == "2":
+            # Chess.com
+            print("\nChess.com Speed Types: daily, rapid, blitz, bullet")
+            speed = input("Enter speed type (default: blitz): ").strip() or "blitz"
+            
+            result = fetch_leaderboard('chess.com', 'all', speed)
+            
+        elif platform_choice == "3":
+            # FIDE
+            result = fetch_leaderboard('fide')
+            
+            print("\n" + "="*60)
+            print(result['info']['note'])
+            print("\nFIDE Leaderboard: " + result['info']['url'])
+            print("\nNote: While FIDE leaderboard must be browsed manually,")
+            print("you can analyze FIDE players if they have:")
+            print("  • Chess.com account")
+            print("  • Lichess account")
+            print("="*60)
+            input("\nPress Enter to continue...")
+            return
+        else:
+            print("Invalid choice!")
             input("\nPress Enter to continue...")
             return
         
-        # Display results
-        print(f"\n{report.get('tournament_name', 'Unknown')} Analysis")
-        print("="*60)
-        print(f"Total Players: {report.get('total_players', 0)}")
-        
-        summary = report.get('summary', {})
-        print(f"\nAverage ELO: {summary.get('average_elo', 'N/A')}")
-        
-        # Display anomalies
-        anomalies = report.get('anomalies', [])
-        if anomalies:
-            print(f"\n[⚠️  ANOMALIES DETECTED: {len(anomalies)}]")
-            print("-" * 60)
+        # Display leaderboard
+        if result.get('players'):
+            analyzer.display_leaderboard(result['players'], result['platform'])
             
-            for anomaly in anomalies[:15]:  # Top 15 anomalies
-                severity = anomaly.get('severity', 'UNKNOWN')
-                emoji = '🚩' if severity == 'HIGH' else '⚠️'
+            # Ask if user wants to analyze a player
+            if result.get('analyzable'):
+                print("\n" + "="*60)
+                analyze_choice = input("Would you like to analyze a player? (y/n): ").strip().lower()
                 
-                print(f"\n{emoji} #{anomaly.get('rank')}: {anomaly.get('player')} (ELO: {anomaly.get('elo')})")
-                print(f"   Type: {anomaly.get('type')}")
-                print(f"   {anomaly.get('description')}")
+                if analyze_choice == 'y':
+                    rank = input("Enter player rank (1-50): ").strip()
+                    
+                    try:
+                        rank_num = int(rank)
+                        if 1 <= rank_num <= len(result['players']):
+                            player = result['players'][rank_num - 1]
+                            username = player.get('username')
+                            
+                            print(f"\n[ANALYZING] {username}...")
+                            
+                            # Use the analyze player function
+                            # First detect platforms
+                            platforms = prompt_platform_selection(username, config)
+                            
+                            if not platforms:
+                                print(f"[ERROR] {username} not found on selected platforms")
+                                input("\nPress Enter to continue...")
+                                return
+                            
+                            # Fetch and analyze
+                            games, counts = _fetch_games(username, 20, platforms, config)
+                            
+                            if games:
+                                print(f"\n✓ Fetched {len(games)} games")
+                                print(f"  Platform breakdown: {counts}")
+                                
+                                # Quick stats
+                                print(f"\nPlayer: {username}")
+                                print(f"Rating: {player.get('rating')} ELO")
+                                print(f"Title: {player.get('title', 'None')}")
+                                print(f"Games analyzed: {len(games)}")
+                            else:
+                                print("[ERROR] Could not fetch games")
+                        else:
+                            print("Invalid rank!")
+                    except ValueError:
+                        print("Invalid rank number!")
                 
-                if anomaly.get('probability_pct'):
-                    print(f"   Win Probability: {anomaly.get('probability_pct'):.1f}%")
-                if anomaly.get('win_rate'):
-                    print(f"   Win Rate: {anomaly.get('win_rate'):.1f}%")
+                input("\nPress Enter to continue...")
+            else:
+                input("\nPress Enter to continue...")
         else:
-            print("\n[✓] No significant statistical anomalies detected")
+            print("[ERROR] Could not fetch leaderboard")
+            input("\nPress Enter to continue...")
         
-        # Save report
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        report_filename = f"reports/tournament_{timestamp}.json"
-        
-        try:
-            import os
-            os.makedirs("reports", exist_ok=True)
-            
-            with open(report_filename, 'w') as f:
-                json.dump(report, f, indent=2, default=str)
-            
-            print(f"\n[SAVED] Report: {report_filename}")
-        except Exception as e:
-            print(f"[WARNING] Could not save report: {e}")
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        import traceback
+        traceback.print_exc()
+        input("\nPress Enter to continue...")
         
         input("\nPress Enter to continue...")
         
