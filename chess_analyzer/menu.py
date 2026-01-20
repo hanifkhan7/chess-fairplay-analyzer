@@ -74,25 +74,25 @@ def main():
 
 def _analyze_player():
     print("\n" + "-"*50)
-    print("ANALYZE PLAYER")
+    print("🔍 ANALYZE PLAYER (Enhanced v3.0)")
     print("-"*50)
+    print("Multi-layer forensic analysis: Engine patterns, timing, accuracy, performance")
     
-    username = input("Enter Chess.com username: ").strip()
+    username = input("\nEnter Chess.com username: ").strip()
     if not username:
         return
     
     try:
         games = int(input("Games to analyze (default 50): ") or "50")
         
-        # Ask for analysis speed
-        print("\nAnalysis Speed:")
-        print("1. Fast (depth 12, ~40s per game)")
-        print("2. Standard (depth 14, ~60s per game)")
-        print("3. Thorough (depth 16, ~90s per game)")
-        speed = input("Choose (1-3, default 2): ").strip() or "2"
+        # Analysis options
+        print("\n⚡ ANALYSIS MODE:")
+        print("1. Cloud Fast (Lichess API + Caching) - Ultra Fast")
+        print("2. Hybrid (Cloud + Local) - Balanced")
+        print("3. Local Deep (Stockfish only) - Detailed")
+        mode = input("Choose (1-3, default 1): ").strip() or "1"
         
-        depth_map = {"1": 12, "2": 14, "3": 16}
-        custom_depth = depth_map.get(speed, 14)
+        use_lichess = mode != "3"
         
         print(f"\nFetching up to {games} games for {username}...")
         player_games = fetch_player_games(username, max_games=games)
@@ -103,53 +103,49 @@ def _analyze_player():
             msg += f" (player has fewer than {games} total)"
         print(msg)
         
-        from .analyzer import ChessAnalyzer
+        if not player_games:
+            print("No games found to analyze.")
+            input("\nPress Enter to continue...")
+            return
+        
+        from .analyzer_v3 import EnhancedPlayerAnalyzer, display_enhanced_analysis
         from .utils.helpers import load_config
         
         config = load_config()
-        analyzer = ChessAnalyzer(config)
+        analyzer = EnhancedPlayerAnalyzer(config, use_lichess=use_lichess)
         
-        use_lichess = config.get('analysis', {}).get('use_lichess', False)
-        depth = config.get('analysis', {}).get('engine_depth', 14)
+        # Run enhanced analysis with parallel processing
+        results = analyzer.analyze_games_fast(player_games, username, max_workers=4)
         
-        if use_lichess:
-            engine_name = "Lichess API (cloud analysis)"
-            time_estimate = "30-90 seconds per game"
-        else:
-            engine_name = f"Stockfish (depth={depth})"
-            time_estimate = "1-5 minutes per game"
+        # Display results
+        display_enhanced_analysis(results, username)
         
-        print(f"\nAnalyzing with {engine_name}...")
-        print(f"Estimated time: {time_estimate}...\n")
-        results = analyzer.analyze_games(player_games)
-        
-        print(f"\n" + "="*50)
-        print(f"ANALYSIS RESULTS for {username}")
-        print("="*50)
-        print(f"Games Analyzed: {results.games_analyzed}/{len(player_games)}")
-        print(f"Suspicion Score: {results.suspicion_score:.1f}/100")
-        print(f"Engine Correlation: {results.avg_engine_correlation:.1f}%")
-        print(f"Avg Centipawn Loss: {results.avg_centipawn_loss:.1f}")
-        print(f"Suspicious Games: {results.suspicious_game_count}")
-        print("="*50)
-        
-        save = input("\nSave report? (y/n): ").strip().lower()
+        # Option to save detailed report
+        save = input("\n\nSave detailed report? (y/n): ").strip().lower()
         if save == "y":
-            fmt = input("Format (html/json/text): ").strip() or "html"
-            from .reporter import generate_report
+            fmt = input("Format (json/text, default json): ").strip() or "json"
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             
-            # Convert PlayerAnalysis dataclass to dictionary for reporter
-            from dataclasses import asdict
-            analysis_dict = asdict(results)
+            export_dir = Path("exports")
+            export_dir.mkdir(exist_ok=True)
             
-            generate_report(analysis_dict, f"report_{username}", fmt)
-            print("Report saved!")
-        
-        # Offer to export suspicious games
-        if results.suspicious_game_count > 0:
-            export = input(f"\nExport {results.suspicious_game_count} suspicious games? (y/n): ").strip().lower()
-            if export == "y":
-                _export_suspicious_games(results, username, player_games)
+            if fmt == "json":
+                filename = export_dir / f"analysis_{username}_{timestamp}.json"
+                with open(filename, 'w') as f:
+                    json.dump(results, f, indent=2)
+                print(f"✓ Saved to {filename.name}")
+            else:
+                filename = export_dir / f"analysis_{username}_{timestamp}.txt"
+                with open(filename, 'w') as f:
+                    f.write(f"ANALYSIS REPORT: {username}\n")
+                    f.write(f"Timestamp: {results.get('analysis_timestamp', 'N/A')}\n\n")
+                    f.write(f"Games Analyzed: {results.get('games_analyzed', 0)}\n")
+                    f.write(f"Suspicion Score: {results.get('suspicion_score', 0):.1f}/100\n")
+                    f.write(f"Suspicious Games: {results.get('suspicious_games', 0)}\n\n")
+                    f.write(f"Engine Match Rate: {results.get('avg_engine_match_rate', 0):.1f}%\n")
+                    f.write(f"Blunder Rate: {results.get('avg_blunder_rate', 0):.1f}%\n")
+                    f.write(f"Average Accuracy: {results.get('avg_accuracy', 0):.1f}%\n")
+                print(f"✓ Saved to {filename.name}")
     
     except KeyboardInterrupt:
         print("\n\nAnalysis cancelled.")
