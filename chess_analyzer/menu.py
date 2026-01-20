@@ -1185,10 +1185,16 @@ def _tournament_forensics():
     print("  - Unexpected upsets and underperformance")
     print("  - Statistical anomalies")
     print("  - Performance consistency analysis")
+    print("\nSupported Platforms:")
+    print("  ✓ Lichess (Free API - Recommended)")
+    print("  ✗ Chess.com (Requires paid API access)")
+    print("\nExamples:")
+    print("  • Lichess: https://lichess.org/tournament/5N8Ny9oK")
+    print("  • Or just: 5N8Ny9oK")
     print("\n")
     
     # Get tournament input (can be URL or ID)
-    tournament_input = input("\nEnter Tournament URL or ID: ").strip()
+    tournament_input = input("\nEnter Lichess Tournament URL or ID: ").strip()
     
     if not tournament_input:
         print("Tournament URL/ID required!")

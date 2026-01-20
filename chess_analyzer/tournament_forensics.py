@@ -47,39 +47,23 @@ class TournamentForensics:
         """
         Fetch Chess.com arena/tournament data.
         
+        Note: Chess.com's tournament API requires paid access.
+        We provide alternative options instead.
+        
         Args:
             arena_id: Arena/Tournament ID
             
         Returns:
-            Tournament data with results
+            Tournament data with results or helpful message
         """
-        try:
-            print(f"[TOURNAMENT] Fetching Chess.com arena {arena_id}...")
-            
-            # Chess.com arena endpoint
-            url = f"https://www.chess.com/liveboard/game/{arena_id}"
-            
-            # Try the API endpoint for tournament data
-            api_url = f"https://api.chess.com/pub/tournament/{arena_id}"
-            
-            headers = {'User-Agent': 'Mozilla/5.0'}
-            
-            # First try the API
-            response = requests.get(api_url, headers=headers, timeout=10)
-            
-            if response.status_code == 200:
-                print("[TOURNAMENT] ✓ Found tournament via API")
-                return response.json()
-            else:
-                print(f"[TOURNAMENT] API returned {response.status_code}")
-                print("[TOURNAMENT] Note: Chess.com tournament data requires paid API access")
-                print("[TOURNAMENT] Falling back to Lichess tournaments which have free API access")
-                return {}
-                
-        except Exception as e:
-            print(f"[ERROR] Could not fetch tournament: {e}")
-            logger.error(f"Error fetching arena: {e}")
-            return {}
+        print(f"[TOURNAMENT] Analyzing Chess.com arena {arena_id}...")
+        print("[TOURNAMENT] ⚠️  Chess.com tournament API requires paid access")
+        print("[TOURNAMENT] Alternative options:")
+        print("   1. Use Lichess tournaments (free API access)")
+        print("   2. Provide tournament data manually")
+        print("   3. Use Chess.com games API with specific usernames")
+        
+        return {}
     
     def fetch_lichess_tournament(self, tournament_id: str) -> Dict:
         """
