@@ -110,9 +110,10 @@ class EnhancedPlayerAnalyzer:
     - Caching for efficiency
     """
     
-    def __init__(self, config: Dict, use_lichess: bool = True, cache_dir: str = "cache/analysis"):
+    def __init__(self, config: Dict, use_lichess: bool = True, use_chess_com: bool = True, cache_dir: str = "cache/analysis"):
         self.config = config
         self.use_lichess = use_lichess
+        self.use_chess_com = use_chess_com
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True, parents=True)
         self.lichess_url = "https://lichess.org/api/games"
@@ -155,7 +156,7 @@ class EnhancedPlayerAnalyzer:
             Comprehensive analysis results
         """
         
-        print(f"\n🚀 ENHANCED ANALYSIS ENGINE (v3.0)")
+        print(f"\n>>> ENHANCED ANALYSIS ENGINE (v3.0)")
         print(f"   Speed Mode: Parallel Processing x{max_workers}")
         print(f"   Strategy: Lichess Cloud + Local Cache")
         print(f"   Analyzing {len(games)} games...\n")
@@ -176,12 +177,17 @@ class EnhancedPlayerAnalyzer:
                     analysis = future.result()
                     if analysis:
                         analyses.append(analysis)
-                    completed += 1
-                    progress = int(completed / len(games) * 50)
-                    print(f"\r  Progress: [{progress:50s}] {completed}/{len(games)}", end='')
                 except Exception as e:
-                    print(f"\n  ⚠️  Error analyzing game: {e}")
+                    print(f"\n  [ERROR] Error analyzing game: {str(e)}")
+                finally:
                     completed += 1
+                    if len(games) > 0:
+                        progress = int(completed / len(games) * 50)
+                    else:
+                        progress = 0
+                    # Use ASCII-safe progress bar for Windows compatibility
+                    bar = '=' * progress + '-' * (50 - progress)
+                    print(f"\r  Progress: [{bar}] {completed}/{len(games)}", end='')
         
         print()  # New line
         
@@ -189,14 +195,14 @@ class EnhancedPlayerAnalyzer:
         results = self._compile_analysis_results(analyses, username)
         
         elapsed = time.time() - start_time
-        print(f"\n✅ Analysis Complete: {elapsed:.1f}s ({len(games)} games)")
+        print(f"\n[DONE] Analysis Complete: {elapsed:.1f}s ({len(games)} games)")
         
         return results
     
     def _analyze_single_game(self, game: chess.pgn.Game, username: str) -> Optional[GameAnalysisV3]:
         """Analyze a single game with caching"""
         try:
-            game_pgn = game.export(Headers=False)
+            game_pgn = str(game)  # Convert game to PGN string
             game_hash = self._get_game_hash(game_pgn)
             
             # Check cache first
@@ -252,6 +258,10 @@ class EnhancedPlayerAnalyzer:
             return game_analysis
         
         except Exception as e:
+            import traceback
+            # Log the full traceback for debugging
+            print(f"\nDEBUG: Full error in _analyze_single_game: {type(e).__name__}: {e}")
+            traceback.print_exc()
             return None
     
     def _get_evaluations(self, game: chess.pgn.Game, moves: List) -> List[Dict]:
@@ -581,7 +591,10 @@ class EnhancedPlayerAnalyzer:
         # Pattern aggregates
         avg_engine_match = statistics.mean([a.engine_pattern.top_1_match_rate for a in analyses])
         avg_blunder_rate = statistics.mean([a.blunder_analysis.blunder_rate for a in analyses])
-        avg_accuracy = statistics.mean([a.accuracy.overall_accuracy for a in analyses if a.accuracy.overall_accuracy > 0])
+        
+        # Average accuracy - handle case where no games have accuracy > 0
+        accuracy_values = [a.accuracy.overall_accuracy for a in analyses if a.accuracy.overall_accuracy > 0]
+        avg_accuracy = statistics.mean(accuracy_values) if accuracy_values else 0
         
         # Time pattern consistency
         time_coefficients = [
@@ -632,59 +645,79 @@ def display_enhanced_analysis(results: Dict, username: str):
     """Display comprehensive analysis results"""
     
     print("\n" + "="*80)
-    print(f"🔍 ENHANCED PLAYER ANALYSIS v3.0 - {username.upper()}")
+    print(f"[ANALYSIS] ENHANCED PLAYER ANALYSIS v3.0 - {username.upper()}")
     print(f"Timestamp: {results.get('analysis_timestamp', 'N/A')}")
+    
+    # Show platform breakdown if available
+    platform_breakdown = results.get('platform_breakdown', {})
+    if platform_breakdown:
+        sources = ", ".join([
+            f"{p.title()}: {c}" 
+            for p, c in platform_breakdown.items() 
+            if c > 0
+        ])
+        print(f"Sources: {sources}")
+    
     print("="*80)
     
     games_analyzed = results.get('games_analyzed', 0)
     suspicion_score = results.get('suspicion_score', 0)
     suspicious_games = results.get('suspicious_games', 0)
     
-    print(f"\n📊 OVERALL ASSESSMENT")
+    print(f"\n[ASSESSMENT] OVERALL ASSESSMENT")
     print("-"*80)
     print(f"Games Analyzed: {games_analyzed}")
     print(f"Average Suspicion Score: {suspicion_score:.1f}/100")
-    print(f"Suspicious Games Detected: {suspicious_games}/{games_analyzed} ({suspicious_games/games_analyzed*100:.1f}%)")
+    if games_analyzed > 0:
+        percentage = suspicious_games/games_analyzed*100
+        print(f"Suspicious Games Detected: {suspicious_games}/{games_analyzed} ({percentage:.1f}%)")
+    else:
+        print(f"Suspicious Games Detected: 0/0 (No games analyzed successfully)")
     
     # Assessment
     if suspicion_score < 30:
-        assessment = "✅ CLEAN - No significant indicators of assistance"
+        assessment = "[CLEAN] - No significant indicators of assistance"
     elif suspicion_score < 50:
-        assessment = "⚠️  CAUTION - Some minor patterns worth noting"
+        assessment = "[CAUTION] - Some minor patterns worth noting"
     elif suspicion_score < 70:
-        assessment = "🔶 SUSPICIOUS - Multiple indicators present"
+        assessment = "[SUSPICIOUS] - Multiple indicators present"
     else:
-        assessment = "🔴 HIGHLY SUSPICIOUS - Strong indicators of potential assistance"
+        assessment = "[HIGHLY SUSPICIOUS] - Strong indicators of potential assistance"
     
     print(f"Assessment: {assessment}")
     
-    print(f"\n🎯 DETAILED METRICS")
+    print(f"\n[METRICS] DETAILED METRICS")
     print("-"*80)
     print(f"Average Engine Match Rate: {results.get('avg_engine_match_rate', 0):.1f}%")
     print(f"Average Blunder Rate: {results.get('avg_blunder_rate', 0):.1f}%")
     print(f"Average Accuracy: {results.get('avg_accuracy', 0):.1f}%")
     print(f"Time Pattern Consistency: {results.get('avg_time_consistency', 0):.1%}")
     
-    print(f"\n⏱️  TIME ANALYSIS")
+    print(f"\n[TIME] TIME ANALYSIS")
     print("-"*80)
     if results.get('avg_time_consistency', 0) > 0.5:
-        print("✓ Natural time patterns - variable response times")
+        print("[OK] Natural time patterns - variable response times")
     elif results.get('avg_time_consistency', 0) > 0.3:
-        print("⚠️  Moderately consistent - some regularity in time usage")
+        print("[WARN] Moderately consistent - some regularity in time usage")
     else:
-        print("🔴 Suspicious consistency - too regular response times")
+        print("[ALERT] Suspicious consistency - too regular response times")
     
-    print(f"\n🏆 TOP SUSPICIOUS GAMES")
+    print(f"\n[TOP] TOP SUSPICIOUS GAMES")
     print("-"*80)
     
     analyses = results.get('game_analyses', [])
-    sorted_games = sorted(analyses, key=lambda x: x.get('suspicion_score', 0), reverse=True)[:5]
-    
-    for i, game in enumerate(sorted_games, 1):
-        print(f"\n{i}. Game {i}")
-        print(f"   Score: {game.get('suspicion_score', 0):.1f}/100")
-        print(f"   Opponent: {game.get('opponent_elo', 0)} Elo")
-        print(f"   Engine Match: {game.get('engine_pattern', {}).get('top_1_match_rate', 0):.1f}%")
-        print(f"   Accuracy: {game.get('accuracy', {}).get('overall_accuracy', 0):.1f}%")
+    if analyses:
+        sorted_games = sorted(analyses, key=lambda x: x.get('suspicion_score', 0), reverse=True)[:5]
+        
+        for i, game in enumerate(sorted_games, 1):
+            print(f"\n{i}. Game {i}")
+            print(f"   Score: {game.get('suspicion_score', 0):.1f}/100")
+            print(f"   Opponent: {game.get('opponent_elo', 0)} Elo")
+            engine_match = game.get('engine_pattern', {}).get('top_1_match_rate', 0)
+            print(f"   Engine Match: {engine_match:.1f}%")
+            accuracy = game.get('accuracy', {}).get('overall_accuracy', 0)
+            print(f"   Accuracy: {accuracy:.1f}%")
+    else:
+        print("\nNo games analyzed successfully. Check error messages above.")
     
     print("\n" + "="*80)

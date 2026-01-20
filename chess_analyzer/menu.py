@@ -10,7 +10,41 @@ import zipfile
 import io
 
 from .fetcher import fetch_player_games
+from .dual_fetcher import fetch_dual_platform_games, fetch_lichess_games
 from .reporter import generate_report
+
+
+def _fetch_games(username: str, max_games: int = 50, platforms: list = None, config: dict = None):
+    """
+    Unified function to fetch games from one or both platforms.
+    
+    Args:
+        username: Player username
+        max_games: Maximum games to fetch
+        platforms: ['chess.com', 'lichess'] or subset. None = auto-detect from config
+        config: Configuration dictionary
+    
+    Returns:
+        Tuple of (games list, platform counts dict)
+    """
+    if platforms is None:
+        # Auto-detect from config if available
+        platforms = ['chess.com', 'lichess']  # Default to both
+    
+    if len(platforms) > 1:
+        # Use dual-platform fetcher
+        return fetch_dual_platform_games(username, max_games, platforms, config)
+    else:
+        # Single platform - use appropriate fetcher
+        platform = platforms[0]
+        if platform.lower() == 'lichess':
+            games, count = fetch_lichess_games(username, max_games, config)
+            counts = {'lichess': count, 'chess.com': 0}
+        else:
+            # Chess.com
+            games = fetch_player_games(username, max_games, config)
+            counts = {'chess.com': len(games), 'lichess': 0}
+        return games, counts
 
 
 def main():
@@ -74,48 +108,66 @@ def main():
 
 def _analyze_player():
     print("\n" + "-"*50)
-    print("🔍 ANALYZE PLAYER (Enhanced v3.0)")
+    print("[ANALYZE] ANALYZE PLAYER (Enhanced v3.0 - Dual Platform)")
     print("-"*50)
     print("Multi-layer forensic analysis: Engine patterns, timing, accuracy, performance")
     
-    username = input("\nEnter Chess.com username: ").strip()
+    username = input("\nEnter player username: ").strip()
     if not username:
         return
     
     try:
-        games = int(input("Games to analyze (default 50): ") or "50")
+        games_to_fetch = int(input("Games to analyze (default 50): ") or "50")
+        
+        # Smart platform detection
+        from .dual_fetcher import prompt_platform_selection
+        from .utils.helpers import load_config
+        
+        config = load_config()
+        platforms = prompt_platform_selection(username, config)
+        
+        if not platforms:
+            input("\nPress Enter to continue...")
+            return
         
         # Analysis options
-        print("\n⚡ ANALYSIS MODE:")
+        print("\n[MODE] ANALYSIS MODE:")
         print("1. Cloud Fast (Lichess API + Caching) - Ultra Fast")
         print("2. Hybrid (Cloud + Local) - Balanced")
         print("3. Local Deep (Stockfish only) - Detailed")
         mode = input("Choose (1-3, default 1): ").strip() or "1"
         
         use_lichess = mode != "3"
+        use_chess_com = True
         
-        print(f"\nFetching up to {games} games for {username}...")
-        player_games = fetch_player_games(username, max_games=games)
-        actual_count = len(player_games)
-        status = "✓" if actual_count > 0 else "❌"
-        msg = f"{status} Retrieved {actual_count} games"
-        if actual_count < games:
-            msg += f" (player has fewer than {games} total)"
-        print(msg)
+        # Fetch from detected platforms
+        print(f"\n[FETCH] Fetching from {', '.join(platforms).title()}...")
+        
+        from .dual_fetcher import fetch_dual_platform_games
+        player_games, platform_counts = fetch_dual_platform_games(
+            username,
+            max_games=games_to_fetch,
+            platforms=platforms,
+            config=config
+        )
         
         if not player_games:
-            print("No games found to analyze.")
+            print("\n[ERROR] No games found on selected platforms.")
             input("\nPress Enter to continue...")
             return
         
         from .analyzer_v3 import EnhancedPlayerAnalyzer, display_enhanced_analysis
-        from .utils.helpers import load_config
-        
-        config = load_config()
-        analyzer = EnhancedPlayerAnalyzer(config, use_lichess=use_lichess)
         
         # Run enhanced analysis with parallel processing
+        analyzer = EnhancedPlayerAnalyzer(
+            config,
+            use_lichess=use_lichess,
+            use_chess_com=use_chess_com
+        )
         results = analyzer.analyze_games_fast(player_games, username, max_workers=4)
+        
+        # Add platform breakdown to results
+        results['platform_breakdown'] = platform_counts
         
         # Display results
         display_enhanced_analysis(results, username)
@@ -159,22 +211,33 @@ def _analyze_player():
 
 def _download_games():
     print("\n" + "-"*50)
-    print("DOWNLOAD ALL GAMES")
+    print("[DOWNLOAD] DOWNLOAD GAMES (Dual-Platform)")
     print("-"*50)
     
-    username = input("\nEnter Chess.com username: ").strip()
+    username = input("\nEnter username: ").strip()
     if not username:
         return
     
     try:
+        from .dual_fetcher import prompt_platform_selection
+        from .utils.helpers import load_config
+        
+        config = load_config()
+        
+        # Smart platform detection
+        platforms = prompt_platform_selection(username, config)
+        if not platforms:
+            input("\nPress Enter to continue...")
+            return
+        
         # Ask which games to download
-        print("\nDownload Range:")
+        print("\n[RANGE] Download Range:")
         print("1. Most recent games (newest first)")
         print("2. All games (from first ever played)")
         range_choice = input("Choose (1-2, default 1): ").strip() or "1"
         
         # Ask how many games
-        print("\nNumber of Games:")
+        print("\n[COUNT] Number of Games:")
         print("1. All games")
         print("2. Specific amount")
         count_choice = input("Choose (1-2, default 1): ").strip() or "1"
@@ -188,19 +251,19 @@ def _download_games():
                 max_games = 0
         
         # Ask for export format
-        print("\nExport Format:")
+        print("\n[FORMAT] Export Format:")
         print("1. Single PGN file")
         print("2. CSV file (metadata only)")
         print("3. JSON file (full data)")
         print("4. ZIP archive (PGN + JSON)")
         fmt_choice = input("Choose (1-4, default 1): ").strip() or "1"
         
-        print(f"\nFetching up to {max_games} games for {username}...")
-        games = fetch_player_games(username, max_games=max_games)
+        print(f"\n[FETCH] Downloading up to {max_games} games from {', '.join(platforms).title()}...")
+        games, platform_counts = _fetch_games(username, max_games, platforms)
         actual_count = len(games)
-        msg = f"✓ Retrieved {actual_count} games"
+        msg = f"[OK] Retrieved {actual_count} games"
         if actual_count < max_games:
-            msg += f" (player has fewer than {max_games} total)"
+            msg += f" (fewer available)"
         print(msg)
         print(f"✓ Retrieved {len(games)} games")
         
@@ -316,20 +379,25 @@ def _download_games():
 def _player_brain():
     """Analyze player profile: openings, strengths, playing style - EXPLOIT YOUR OPPONENT."""
     
-    username = input("\n\n🎯 EXPLOIT YOUR OPPONENT\n" + "-"*50 + "\nEnter Chess.com username: ").strip()
+    username = input("\n\n[EXPLOIT] EXPLOIT YOUR OPPONENT\n" + "-"*50 + "\nEnter username: ").strip()
     if not username:
         return
     
     try:
+        from .dual_fetcher import prompt_platform_selection
+        from .utils.helpers import load_config
+        
+        config = load_config()
         games_count = int(input("Games to analyze (default 50): ") or "50")
         
-        print(f"\nFetching up to {games_count} games for {username}...")
-        games = fetch_player_games(username, max_games=games_count)
-        actual_count = len(games)
-        msg = f"✓ Retrieved {actual_count} games"
-        if actual_count < games_count:
-            msg += f" (player has fewer than {games_count} total)"
-        print(msg + "\n")
+        # Smart platform detection
+        platforms = prompt_platform_selection(username, config)
+        if not platforms:
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"\n[FETCH] Fetching up to {games_count} games from {', '.join(platforms).title()}...")
+        games, counts = _fetch_games(username, games_count, platforms, config)
         
         if not games:
             print("No games found")
@@ -351,32 +419,38 @@ def _player_brain():
     input("\nPress Enter to continue...")
 
 
-
 def _strength_profile():
     """Analyze player's skill level and strength metrics."""
     print("\n" + "-"*50)
-    print("STRENGTH PROFILE - SKILL LEVEL ANALYSIS")
+    print("[STRENGTH] STRENGTH PROFILE - SKILL LEVEL ANALYSIS (Dual Platform)")
     print("-"*50)
     
-    username = input("\nEnter Chess.com username: ").strip()
+    username = input("\nEnter username: ").strip()
     if not username:
         return
     
     try:
+        from .dual_fetcher import prompt_platform_selection
+        from .utils.helpers import load_config
+        
+        config = load_config()
         games_count = int(input("Games to analyze (default 50): ") or "50")
         
-        print(f"\nFetching up to {games_count} games for {username}...")
-        games = fetch_player_games(username, max_games=games_count)
-        actual_count = len(games)
-        msg = f"✓ Retrieved {actual_count} games"
-        if actual_count < games_count:
-            msg += f" (player has fewer than {games_count} total)"
-        print(msg + "\n")
+        # Smart platform detection
+        platforms = prompt_platform_selection(username, config)
+        if not platforms:
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"\n[FETCH] Fetching up to {games_count} games from {', '.join(platforms).title()}...")
+        games, counts = _fetch_games(username, games_count, platforms, config)
         
         if not games:
             print("No games found")
             input("Press Enter to continue...")
             return
+        
+        print(f"[OK] Retrieved {len(games)} games\n")
         
         # Collect strength metrics
         time_controls = {}
@@ -567,23 +641,29 @@ def _strength_profile():
 def _accuracy_report():
     """Analyze player's move accuracy and consistency."""
     print("\n" + "-"*50)
-    print("ACCURACY REPORT - MOVE ACCURACY & CONSISTENCY")
+    print("[ACCURACY] ACCURACY REPORT - MOVE ACCURACY & CONSISTENCY (Dual Platform)")
     print("-"*50)
     
-    username = input("\nEnter Chess.com username: ").strip()
+    username = input("\nEnter username: ").strip()
     if not username:
         return
     
     try:
+        from .dual_fetcher import prompt_platform_selection
+        from .utils.helpers import load_config
+        
+        config = load_config()
         games_count = int(input("Games to analyze (default 30): ") or "30")
         
-        print(f"\nFetching up to {games_count} games for {username}...")
-        games = fetch_player_games(username, max_games=games_count)
-        actual_count = len(games)
-        msg = f"✓ Retrieved {actual_count} games"
-        if actual_count < games_count:
-            msg += f" (player has fewer than {games_count} total)"
-        print(msg)
+        # Smart platform detection
+        platforms = prompt_platform_selection(username, config)
+        if not platforms:
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"\n[FETCH] Fetching up to {games_count} games from {', '.join(platforms).title()}...")
+        games, counts = _fetch_games(username, games_count, platforms, config)
+        print(f"[OK] Retrieved {len(games)} games")
         print("Running accuracy analysis...")
         
         if not games:
@@ -593,9 +673,7 @@ def _accuracy_report():
         
         # Import ChessAnalyzer for analysis
         from .analyzer import ChessAnalyzer
-        from .utils.helpers import load_config
         
-        config = load_config()
         analyzer = ChessAnalyzer(config)
         
         # Analyze all games at once
@@ -881,7 +959,7 @@ def _account_metrics_dashboard():
 def _multi_player_comparison():
     """Compare statistics across multiple players"""
     print("\n" + "-"*50)
-    print("MULTI-PLAYER COMPARISON")
+    print("[COMPARE] MULTI-PLAYER COMPARISON (Dual Platform)")
     print("-"*50)
     
     print("\nEnter player usernames (comma-separated):")
@@ -891,7 +969,7 @@ def _multi_player_comparison():
     
     usernames = [u.strip() for u in usernames_input.split(',')]
     if len(usernames) < 2:
-        print("❌ Please enter at least 2 usernames")
+        print("[ERROR] Please enter at least 2 usernames")
         input("\nPress Enter to continue...")
         return
     
@@ -902,8 +980,27 @@ def _multi_player_comparison():
         game_count = 100
     
     try:
+        from .dual_fetcher import prompt_platform_selection
+        from .utils.helpers import load_config
         from .comparison import compare_players_display
-        compare_players_display(usernames, max_games=game_count)
+        
+        config = load_config()
+        
+        # Ask which platform(s) to compare on
+        print("\n[PLATFORMS] Comparing on which platform(s)?")
+        print("1. Chess.com only")
+        print("2. Lichess only")
+        print("3. Both platforms (if available)")
+        platform_choice = input("Choose (1-3, default 3): ").strip() or "3"
+        
+        if platform_choice == "1":
+            platforms = ['chess.com']
+        elif platform_choice == "2":
+            platforms = ['lichess']
+        else:
+            platforms = ['chess.com', 'lichess']
+        
+        compare_players_display(usernames, max_games=game_count, platforms=platforms)
     except Exception as e:
         print(f"\nError: {e}")
         import traceback
@@ -915,10 +1012,10 @@ def _multi_player_comparison():
 def _fatigue_detection():
     """Analyze fatigue patterns in a player's games"""
     print("\n" + "-"*50)
-    print("FATIGUE DETECTION ANALYSIS")
+    print("[FATIGUE] FATIGUE DETECTION ANALYSIS (Dual Platform)")
     print("-"*50)
     
-    username = input("Enter Chess.com username: ").strip()
+    username = input("Enter username: ").strip()
     if not username:
         return
     
@@ -929,21 +1026,28 @@ def _fatigue_detection():
         game_count = 100
     
     try:
-        print(f"\nFetching up to {game_count} games for {username}...")
-        player_games = fetch_player_games(username, max_games=game_count)
-        actual_count = len(player_games)
+        from .dual_fetcher import prompt_platform_selection
+        from .utils.helpers import load_config
+        from .fatigue import display_fatigue_analysis
+        
+        config = load_config()
+        
+        # Smart platform detection
+        platforms = prompt_platform_selection(username, config)
+        if not platforms:
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"\n[FETCH] Fetching up to {game_count} games from {', '.join(platforms).title()}...")
+        player_games, counts = _fetch_games(username, game_count, platforms, config)
         
         if not player_games:
             print(f"No games found for {username}")
             input("\nPress Enter to continue...")
             return
         
-        msg = f"Retrieved {actual_count} games"
-        if actual_count < game_count:
-            msg += f" (player has fewer than {game_count} total)"
-        print(msg + ". Analyzing...")
+        print(f"[OK] Retrieved {len(player_games)} games. Analyzing...")
         
-        from .fatigue import display_fatigue_analysis
         display_fatigue_analysis(player_games, username)
         
     except Exception as e:
@@ -957,10 +1061,10 @@ def _fatigue_detection():
 def _network_analysis():
     """Analyze player connection networks and opponent patterns"""
     print("\n" + "-"*50)
-    print("NETWORK ANALYSIS")
+    print("[NETWORK] NETWORK ANALYSIS (Dual Platform)")
     print("-"*50)
     
-    username = input("Enter Chess.com username: ").strip()
+    username = input("Enter username: ").strip()
     if not username:
         return
     
@@ -971,21 +1075,28 @@ def _network_analysis():
         game_count = 100
     
     try:
-        print(f"\nFetching up to {game_count} games for {username}...")
-        player_games = fetch_player_games(username, max_games=game_count)
-        actual_count = len(player_games)
+        from .dual_fetcher import prompt_platform_selection
+        from .utils.helpers import load_config
+        from .network import display_network_analysis
+        
+        config = load_config()
+        
+        # Smart platform detection
+        platforms = prompt_platform_selection(username, config)
+        if not platforms:
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"\n[FETCH] Fetching up to {game_count} games from {', '.join(platforms).title()}...")
+        player_games, counts = _fetch_games(username, game_count, platforms, config)
         
         if not player_games:
             print(f"No games found for {username}")
             input("\nPress Enter to continue...")
             return
         
-        msg = f"Retrieved {actual_count} games"
-        if actual_count < game_count:
-            msg += f" (player has fewer than {game_count} total)"
-        print(msg + ". Analyzing...")
+        print(f"[OK] Retrieved {len(player_games)} games. Analyzing...")
         
-        from .network import display_network_analysis
         display_network_analysis(player_games, username)
         
     except Exception as e:
@@ -999,11 +1110,11 @@ def _network_analysis():
 def _opening_repertoire_inspector():
     """Analyze opponent's opening repertoire and vulnerabilities"""
     print("\n" + "-"*50)
-    print("🎯 OPENING REPERTOIRE INSPECTOR")
+    print("[REPERTOIRE] OPENING REPERTOIRE INSPECTOR (Dual Platform)")
     print("-"*50)
     print("\nVisualize opponent's opening repertoire, patterns, and vulnerabilities")
     
-    username = input("\nEnter Chess.com username: ").strip()
+    username = input("\nEnter username: ").strip()
     if not username:
         return
     
@@ -1014,21 +1125,28 @@ def _opening_repertoire_inspector():
         game_count = 100
     
     try:
-        print(f"\nFetching up to {game_count} games for {username}...")
-        player_games = fetch_player_games(username, max_games=game_count)
-        actual_count = len(player_games)
+        from .dual_fetcher import prompt_platform_selection
+        from .utils.helpers import load_config
+        from .opening_tree import display_opening_tree_analysis
+        
+        config = load_config()
+        
+        # Smart platform detection
+        platforms = prompt_platform_selection(username, config)
+        if not platforms:
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"\n[FETCH] Fetching up to {game_count} games from {', '.join(platforms).title()}...")
+        player_games, counts = _fetch_games(username, game_count, platforms, config)
         
         if not player_games:
             print(f"No games found for {username}")
             input("\nPress Enter to continue...")
             return
         
-        msg = f"Retrieved {actual_count} games"
-        if actual_count < game_count:
-            msg += f" (player has fewer than {game_count} total)"
-        print(msg + ". Building opening tree...\n")
+        print(f"[OK] Retrieved {len(player_games)} games. Building opening tree...\n")
         
-        from .opening_tree import display_opening_tree_analysis
         display_opening_tree_analysis(player_games, username)
         
     except Exception as e:
