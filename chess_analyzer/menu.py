@@ -1319,14 +1319,29 @@ def _tournament_forensics():
                             games, counts = _fetch_games(username, 20, platforms, config)
                             
                             if games:
-                                print(f"\n✓ Fetched {len(games)} games")
-                                print(f"  Platform breakdown: {counts}")
-                                
-                                # Quick stats
-                                print(f"\nPlayer: {username}")
+                                print(f"\n{'='*60}")
+                                print(f"LEADERBOARD PLAYER ANALYSIS")
+                                print(f"{'='*60}")
+                                print(f"\nPlayer: {username} (Rank #{player.get('rank')})")
                                 print(f"Rating: {player.get('rating')} ELO")
                                 print(f"Title: {player.get('title', 'None')}")
-                                print(f"Games analyzed: {len(games)}")
+                                print(f"Country: {player.get('country', 'Unknown')}")
+                                
+                                print(f"\n{'Games Analyzed:':<30} {len(games)}")
+                                print(f"{'Platform breakdown:':<30} {counts}")
+                                
+                                # Quick win/loss stats
+                                wins = sum(1 for g in games if g.get('result') == 'won')
+                                losses = sum(1 for g in games if g.get('result') == 'lost')
+                                draws = sum(1 for g in games if g.get('result') == 'draw')
+                                
+                                if len(games) > 0:
+                                    win_rate = (wins / len(games)) * 100
+                                    print(f"\n{'Win Rate:':<30} {win_rate:.1f}% ({wins}W - {losses}L - {draws}D)")
+                                
+                                print(f"\n{'='*60}")
+                                print("For detailed analysis, use 'Analyze Player' from main menu")
+                                print(f"{'='*60}")
                             else:
                                 print("[ERROR] Could not fetch games")
                         else:
