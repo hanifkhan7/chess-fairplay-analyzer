@@ -21,13 +21,14 @@ class HeadToHeadAnalyzer:
         self.player1_games = []
         self.player2_games = []
     
-    def _convert_game_to_dict(self, game) -> Dict:
+    def _convert_game_to_dict(self, game, player_name: str = '') -> Dict:
         """
         Convert a PGN Game object to dictionary format.
         Handles both dictionary and PGN Game object inputs.
         
         Args:
             game: PGN Game object or dict
+            player_name: Optional player name to normalize result from their perspective
             
         Returns:
             Dictionary with game data
@@ -42,39 +43,56 @@ class HeadToHeadAnalyzer:
             
             # Parse result from PGN header (format: "1-0" = white won, "0-1" = black won, "1/2-1/2" = draw)
             pgn_result = headers.get('Result', '*')
-            username = headers.get('White', '')
-            opponent = headers.get('Black', '')
+            white_name = headers.get('White', '')
+            black_name = headers.get('Black', '')
             
-            # Determine result from perspective of player (username)
+            # Determine result from White's perspective
             if pgn_result == '1/2-1/2':
-                result = 'draw'
-            elif pgn_result == '1-0' and headers.get('White', '') == username:
-                result = 'won'
-            elif pgn_result == '1-0' and headers.get('Black', '') == username:
-                result = 'lost'
-            elif pgn_result == '0-1' and headers.get('White', '') == username:
-                result = 'lost'
-            elif pgn_result == '0-1' and headers.get('Black', '') == username:
-                result = 'won'
+                white_result = 'draw'
+            elif pgn_result == '1-0':
+                white_result = 'won'
+            elif pgn_result == '0-1':
+                white_result = 'lost'
             else:
-                result = 'unknown'
+                white_result = 'unknown'
+            
+            # If player_name provided, flip result if they played Black
+            result = white_result
+            if player_name:
+                if black_name.lower() == player_name.lower():
+                    # Player was Black, flip result
+                    if white_result == 'won':
+                        result = 'lost'
+                    elif white_result == 'lost':
+                        result = 'won'
+                    # 'draw' stays draw
+            
+            # Get opponent (the other player)
+            opponent = black_name if white_name.lower() == player_name.lower() else white_name
             
             # Get opponent ELO
-            if headers.get('White', '') == username:
-                opp_elo = int(headers.get('BlackElo', '1600'))
-            else:
-                opp_elo = int(headers.get('WhiteElo', '1600'))
+            white_elo = int(headers.get('WhiteElo', '1600'))
+            black_elo = int(headers.get('BlackElo', '1600'))
+            opponent_elo = black_elo if white_name.lower() == player_name.lower() else white_elo
+            
+            # Count moves (use try-except for safety)
+            moves_count = 0
+            try:
+                if hasattr(game, 'mainline_moves'):
+                    moves_count = len(list(game.mainline_moves()))
+            except:
+                moves_count = 0
             
             game_dict = {
                 'result': result,
                 'opponent': opponent,
-                'opponent_elo': opp_elo,
+                'opponent_elo': opponent_elo,
                 'opening': headers.get('Opening', 'Unknown'),
                 'accuracy': 0,
-                'moves': len(list(game.mainline_moves())) if hasattr(game, 'mainline_moves') else 0,
+                'moves': moves_count,
                 'duration': 0,
                 'date': headers.get('UTCDate', headers.get('Date', '')),
-                'username': username,
+                'username': player_name or white_name,
                 'url': getattr(game, 'url', ''),
                 'eco': getattr(game, 'eco', ''),
                 'rated': getattr(game, 'rated', False),
@@ -116,13 +134,15 @@ class HeadToHeadAnalyzer:
             logger.error(f"Error calculating ELO probability: {e}")
             return (50.0, 50.0)
     
-    def analyze_game_history(self, games1: List[Dict], games2: List[Dict]) -> Dict:
+    def analyze_game_history(self, games1: List[Dict], games2: List[Dict], player1_name: str = '', player2_name: str = '') -> Dict:
         """
         Analyze game history of both players to calculate performance-based probability.
         
         Args:
             games1: Player 1's games list
             games2: Player 2's games list
+            player1_name: Player 1 name for result normalization
+            player2_name: Player 2 name for result normalization
             
         Returns:
             Analysis dict with statistics
@@ -151,7 +171,7 @@ class HeadToHeadAnalyzer:
             
             # Analyze player 1
             for game in games1:
-                game_dict = self._convert_game_to_dict(game)
+                game_dict = self._convert_game_to_dict(game, player1_name)
                 result = game_dict.get('result', '').lower()
                 if result == 'won':
                     analysis['player1']['wins'] += 1
@@ -166,7 +186,7 @@ class HeadToHeadAnalyzer:
             
             # Analyze player 2
             for game in games2:
-                game_dict = self._convert_game_to_dict(game)
+                game_dict = self._convert_game_to_dict(game, player2_name)
                 result = game_dict.get('result', '').lower()
                 if result == 'won':
                     analysis['player2']['wins'] += 1
@@ -195,13 +215,15 @@ class HeadToHeadAnalyzer:
             logger.error(f"Error analyzing game history: {e}")
             return {}
     
-    def find_head_to_head_games(self, games1: List[Dict], games2: List[Dict]) -> Tuple[List[Dict], Dict]:
+    def find_head_to_head_games(self, games1: List[Dict], games2: List[Dict], player1_name: str = '', player2_name: str = '') -> Tuple[List[Dict], Dict]:
         """
         Find games where player 1 played against player 2.
         
         Args:
             games1: Player 1's games
             games2: Player 2's games
+            player1_name: Player 1 name
+            player2_name: Player 2 name
             
         Returns:
             Tuple of (matching_games, h2h_stats)
@@ -219,10 +241,10 @@ class HeadToHeadAnalyzer:
             
             # Find games where players faced each other
             for game1 in games1:
-                game1_dict = self._convert_game_to_dict(game1)
+                game1_dict = self._convert_game_to_dict(game1, player1_name)
                 opponent1 = game1_dict.get('opponent', '')
                 for game2 in games2:
-                    game2_dict = self._convert_game_to_dict(game2)
+                    game2_dict = self._convert_game_to_dict(game2, player2_name)
                     opponent2 = game2_dict.get('opponent', '')
                     
                     # Check if they played each other
@@ -269,12 +291,13 @@ class HeadToHeadAnalyzer:
             logger.error(f"Error finding head-to-head games: {e}")
             return ([], {})
     
-    def analyze_opening_repertoire(self, games: List[Dict]) -> Dict:
+    def analyze_opening_repertoire(self, games: List[Dict], player_name: str = '') -> Dict:
         """
         Analyze opening repertoire from games.
         
         Args:
             games: List of games
+            player_name: Player name for result normalization
             
         Returns:
             Opening statistics
@@ -283,7 +306,7 @@ class HeadToHeadAnalyzer:
             openings = {}
             
             for game in games:
-                game_dict = self._convert_game_to_dict(game)
+                game_dict = self._convert_game_to_dict(game, player_name)
                 opening = game_dict.get('opening', 'Unknown')
                 if opening not in openings:
                     openings[opening] = {'count': 0, 'wins': 0, 'losses': 0, 'draws': 0}
@@ -450,12 +473,12 @@ class HeadToHeadAnalyzer:
             print("[ANALYSIS] Player 1 rating: ~{} | Player 2 rating: ~{}".format(player1_elo, player2_elo))
             
             # Analyze game history
-            history_analysis = self.analyze_game_history(games1, games2)
+            history_analysis = self.analyze_game_history(games1, games2, player1_name, player2_name)
             perf_prob = self.calculate_performance_probability(history_analysis)
             print("[ANALYSIS] Performance-based probability: {:.1f}% vs {:.1f}%".format(perf_prob[0], perf_prob[1]))
             
             # Find head-to-head games
-            h2h_games, h2h_stats = self.find_head_to_head_games(games1, games2)
+            h2h_games, h2h_stats = self.find_head_to_head_games(games1, games2, player1_name, player2_name)
             if h2h_stats['total_games'] > 0:
                 h2h_prob = (h2h_stats['player1_win_rate'], 100 - h2h_stats['player1_win_rate'])
                 print("[H2H] Found {} previous games between players".format(h2h_stats['total_games']))
@@ -465,8 +488,8 @@ class HeadToHeadAnalyzer:
                 print("[H2H] No previous head-to-head games found")
             
             # Analyze openings
-            p1_openings = self.analyze_opening_repertoire(games1)
-            p2_openings = self.analyze_opening_repertoire(games2)
+            p1_openings = self.analyze_opening_repertoire(games1, player1_name)
+            p2_openings = self.analyze_opening_repertoire(games2, player2_name)
             
             # Check for suspicious activity
             suspicious = self.detect_suspicious_activity(games1, games2)
