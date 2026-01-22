@@ -68,7 +68,7 @@ def main():
         print("8. Fatigue Detection")
         print("9. Network Analysis")
         print("10. Opening Repertoire Inspector")
-        print("11. Leaderboard Browser (Lichess)")
+        print("11. Tournament Inspector (Head-to-Head Analysis)")
         print("12. Head-to-Head Matchup (NEW!)")
         print("13. View Reports")
         print("14. Settings")
@@ -136,31 +136,95 @@ def _analyze_player():
             input("\nPress Enter to continue...")
             return
         
-        # Analysis options
+        # TIME CONTROL SELECTION
+        print("\n[TIME CONTROL] Select game type to analyze:")
+        print("1. Rapid (10-25 min)")
+        print("2. Blitz (3-9 min)")
+        print("3. Bullet (1-2 min)")
+        print("4. All time controls")
+        time_control_choice = input("Choose (1-4, default 4): ").strip() or "4"
+        
+        time_controls = {
+            "1": {"min": 600, "max": 1500},   # Rapid
+            "2": {"min": 180, "max": 540},    # Blitz
+            "3": {"min": 60, "max": 120},     # Bullet
+            "4": None  # All
+        }
+        tc_filter = time_controls.get(time_control_choice)
+        tc_name = {
+            "1": "Rapid",
+            "2": "Blitz", 
+            "3": "Bullet",
+            "4": "All"
+        }.get(time_control_choice, "All")
+        
+        # ANALYSIS MODE WITH DEPTH OPTIONS
         print("\n[MODE] ANALYSIS MODE:")
-        print("1. Cloud Fast (Lichess API + Caching) - Ultra Fast")
-        print("2. Hybrid (Cloud + Local) - Balanced")
-        print("3. Local Deep (Stockfish only) - Detailed")
-        mode = input("Choose (1-3, default 1): ").strip() or "1"
+        print("1. Cloud Fast (Lichess API) - Ultra Fast, Good Accuracy")
+        print("2. Hybrid (Cloud + Local) - Balanced Speed/Accuracy")
+        print("3. Local Deep (Stockfish 18) - Slow but Most Accurate")
+        mode = input("Choose (1-3, default 2): ").strip() or "2"
+        
+        # DEPTH CONFIGURATION
+        print("\n[DEPTH] Stockfish Analysis Depth:")
+        print("(Higher = More Accurate but Slower)")
+        print("1. Standard (Depth 16) - 10-20s per game")
+        print("2. Deep (Depth 20) - 30-60s per game")
+        print("3. Very Deep (Depth 24) - 2-5 min per game")
+        print("4. Maximum (Depth 28) - 5-15 min per game")
+        depth_choice = input("Choose (1-4, default 1): ").strip() or "1"
+        
+        depth_map = {
+            "1": 16,  # Standard
+            "2": 20,  # Deep
+            "3": 24,  # Very Deep
+            "4": 28   # Maximum
+        }
+        depth = depth_map.get(depth_choice, 16)
+        
+        # Update config with selected depth
+        if 'analysis' not in config:
+            config['analysis'] = {}
+        config['analysis']['engine_depth'] = depth
         
         use_lichess = mode != "3"
         use_chess_com = True
         
         # Fetch from detected platforms
-        print(f"\n[FETCH] Fetching from {', '.join(platforms).title()}...")
+        print(f"\n[FETCH] Fetching {tc_name} games from {', '.join(platforms).title()}...")
         
         from .dual_fetcher import fetch_dual_platform_games
         player_games, platform_counts = fetch_dual_platform_games(
             username,
             max_games=games_to_fetch,
             platforms=platforms,
-            config=config
+            config=config,
+            time_control=tc_filter  # Pass time control filter
         )
         
         if not player_games:
-            print("\n[ERROR] No games found on selected platforms.")
+            print("\n[ERROR] No games found on selected platforms with chosen time control.")
             input("\nPress Enter to continue...")
             return
+        
+        # Get player Elo from fetched games
+        player_elos = []
+        for game in player_games:
+            white = game.headers.get("White", "").lower()
+            black = game.headers.get("Black", "").lower()
+            white_elo = int(game.headers.get("WhiteElo", "0") or "0")
+            black_elo = int(game.headers.get("BlackElo", "0") or "0")
+            
+            if white == username.lower() and white_elo > 0:
+                player_elos.append(white_elo)
+            elif black == username.lower() and black_elo > 0:
+                player_elos.append(black_elo)
+        
+        if player_elos:
+            avg_elo = sum(player_elos) / len(player_elos)
+            print(f"[INFO] Player Elo (recent): {avg_elo:.0f} ({min(player_elos)}-{max(player_elos)})")
+        
+        print(f"\n[ANALYSIS] Analyzing {len(player_games)} games with Depth {depth}...")
         
         from .analyzer_v3 import EnhancedPlayerAnalyzer, display_enhanced_analysis
         
@@ -172,8 +236,13 @@ def _analyze_player():
         )
         results = analyzer.analyze_games_fast(player_games, username, max_workers=4)
         
-        # Add platform breakdown to results
+        # Add platform breakdown and analysis settings to results
         results['platform_breakdown'] = platform_counts
+        results['analysis_settings'] = {
+            'time_control': tc_name,
+            'depth': depth,
+            'mode': ['Cloud Fast', 'Hybrid', 'Local Deep'][int(mode) - 1]
+        }
         
         # Display results
         display_enhanced_analysis(results, username)
@@ -196,8 +265,10 @@ def _analyze_player():
                 filename = export_dir / f"analysis_{username}_{timestamp}.txt"
                 with open(filename, 'w') as f:
                     f.write(f"ANALYSIS REPORT: {username}\n")
+                    f.write(f"Time Control: {tc_name} | Depth: {depth}\n")
                     f.write(f"Timestamp: {results.get('analysis_timestamp', 'N/A')}\n\n")
                     f.write(f"Games Analyzed: {results.get('games_analyzed', 0)}\n")
+                    f.write(f"Player Elo (Recent): {avg_elo:.0f if player_elos else 'N/A'}\n\n")
                     f.write(f"Suspicion Score: {results.get('suspicion_score', 0):.1f}/100\n")
                     f.write(f"Suspicious Games: {results.get('suspicious_games', 0)}\n\n")
                     f.write(f"Engine Match Rate: {results.get('avg_engine_match_rate', 0):.1f}%\n")
@@ -213,6 +284,7 @@ def _analyze_player():
         traceback.print_exc()
     
     input("\nPress Enter to continue...")
+
 
 
 def _download_games():
@@ -1006,7 +1078,7 @@ def _multi_player_comparison():
         else:
             platforms = ['chess.com', 'lichess']
         
-        compare_players_display(usernames, max_games=game_count, platforms=platforms)
+        compare_players_display(usernames, max_games=game_count)
     except Exception as e:
         print(f"\nError: {e}")
         import traceback
@@ -1178,106 +1250,91 @@ def _opening_repertoire_inspector():
 
 
 def _tournament_forensics():
-    """Browse Lichess leaderboards by country."""
+    """Tournament Inspector - Analyze player groups for suspicious patterns"""
     
-    print("\n" + "="*60)
-    print("LICHESS LEADERBOARD BROWSER")
-    print("="*60)
-    print("\nBrowse top players from Lichess by country and speed type")
-    print("="*60 + "\n")
+    print("\n" + "=" * 80)
+    print("TOURNAMENT INSPECTOR - HEAD-TO-HEAD ANALYSIS")
+    print("=" * 80)
+    print("\nAnalyze head-to-head records between multiple players")
+    print("Detects suspicious wins, anomalies, and pattern matches")
+    print("=" * 80 + "\n")
     
     try:
-        from .leaderboard_analyzer import fetch_leaderboard, LeaderboardAnalyzer
-        from .dual_fetcher import prompt_platform_selection
-        from .utils.helpers import load_config
+        from .tournament_inspector import TournamentInspector
         
-        analyzer = LeaderboardAnalyzer()
-        config = load_config()
+        inspector = TournamentInspector()
         
-        # Lichess only
-        print("\nLichess Speed Types: bullet, blitz, rapid, classical")
-        speed = input("Enter speed type (default: blitz): ").strip() or "blitz"
+        # Get player list
+        print("Enter player usernames (2-10 players, comma-separated)")
+        print("Example: hikaru, gothamchess, levy, danny")
+        players_input = input("\nPlayer usernames: ").strip()
         
-        print("\nPopular countries: US, GB, FR, DE, ES, RU, BR, IN, CN")
-        country = input("Enter country code (default: US): ").strip() or "US"
-        
-        result = fetch_leaderboard('lichess', country, speed)
-        
-        # Display leaderboard
-        if result.get('players'):
-            analyzer.display_leaderboard(result['players'], result['platform'])
-            
-            # Ask if user wants to analyze a player
-            if result.get('analyzable'):
-                print("\n" + "="*60)
-                analyze_choice = input("Would you like to analyze a player? (y/n): ").strip().lower()
-                
-                if analyze_choice == 'y':
-                    rank = input("Enter player rank (1-50): ").strip()
-                    
-                    try:
-                        rank_num = int(rank)
-                        if 1 <= rank_num <= len(result['players']):
-                            player = result['players'][rank_num - 1]
-                            username = player.get('username')
-                            
-                            print(f"\n[ANALYZING] {username}...")
-                            
-                            # Use the analyze player function
-                            # First detect platforms
-                            platforms = prompt_platform_selection(username, config)
-                            
-                            if not platforms:
-                                print(f"[ERROR] {username} not found on selected platforms")
-                                input("\nPress Enter to continue...")
-                                return
-                            
-                            # Fetch and analyze
-                            games, counts = _fetch_games(username, 20, platforms, config)
-                            
-                            if games:
-                                print(f"\n{'='*60}")
-                                print(f"LEADERBOARD PLAYER ANALYSIS")
-                                print(f"{'='*60}")
-                                print(f"\nPlayer: {username} (Rank #{player.get('rank')})")
-                                print(f"Rating: {player.get('rating')} ELO")
-                                print(f"Title: {player.get('title', 'None')}")
-                                print(f"Country: {player.get('country', 'Unknown')}")
-                                
-                                print(f"\n{'Games Analyzed:':<30} {len(games)}")
-                                print(f"{'Platform breakdown:':<30} {counts}")
-                                
-                                # Quick win/loss stats
-                                wins = sum(1 for g in games if g.get('result') == 'won')
-                                losses = sum(1 for g in games if g.get('result') == 'lost')
-                                draws = sum(1 for g in games if g.get('result') == 'draw')
-                                
-                                if len(games) > 0:
-                                    win_rate = (wins / len(games)) * 100
-                                    print(f"\n{'Win Rate:':<30} {win_rate:.1f}% ({wins}W - {losses}L - {draws}D)")
-                                
-                                print(f"\n{'='*60}")
-                                print("For detailed analysis, use 'Analyze Player' from main menu")
-                                print(f"{'='*60}")
-                            else:
-                                print("[ERROR] Could not fetch games")
-                        else:
-                            print("Invalid rank!")
-                    except ValueError:
-                        print("Invalid rank number!")
-                
-                input("\nPress Enter to continue...")
-            else:
-                input("\nPress Enter to continue...")
-        else:
-            print("[ERROR] Could not fetch leaderboard")
+        if not players_input:
+            print("No players entered")
             input("\nPress Enter to continue...")
+            return
         
-    except Exception as e:
-        print(f"[ERROR] {e}")
-        import traceback
-        traceback.print_exc()
-        input("\nPress Enter to continue...")
+        # Parse and validate player list
+        players = [p.strip().lower() for p in players_input.split(",")]
+        players = list(set(players))  # Remove duplicates
+        
+        if len(players) < 2:
+            print("[ERROR] Need at least 2 players")
+            input("\nPress Enter to continue...")
+            return
+        
+        if len(players) > 10:
+            print(f"[ERROR] Maximum 10 players allowed (you entered {len(players)})")
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"\n✓ Analyzing {len(players)} players: {', '.join(players)}")
+        
+        # Get number of games to fetch
+        max_games_input = input("\nMost recent games to fetch per player (default 50): ").strip() or "50"
+        try:
+            max_games = int(max_games_input)
+            if max_games < 1 or max_games > 200:
+                max_games = 50
+        except ValueError:
+            max_games = 50
+        
+        print(f"\nFetching up to {max_games} most recent games per player...")
+        
+        # Fetch games for each player
+        all_games = {}
+        successful_players = []
+        
+        for player in players:
+            games = inspector.fetch_recent_games(player, max_games)
+            
+            if games:
+                all_games[player] = games
+                successful_players.append(player)
+            else:
+                print(f"  ✗ Could not fetch games for {player}")
+        
+        if len(successful_players) < 2:
+            print("\n[ERROR] Need at least 2 players with fetchable games")
+            print(f"Successfully fetched: {', '.join(successful_players)}")
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"\n✓ Successfully fetched games for: {', '.join(successful_players)}")
+        
+        # Analyze head-to-head
+        print("\n[ANALYSIS] Analyzing head-to-head records...")
+        results = inspector.analyze_head_to_head(successful_players, all_games)
+        
+        # Display results
+        inspector.display_results(results)
+        
+        # Save results option
+        save_choice = input("\nSave results to file? (y/n): ").strip().lower()
+        if save_choice == 'y':
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"reports/tournament_inspector_{timestamp}.txt"
+            print(f"✓ Results saved to {filename}")
         
         input("\nPress Enter to continue...")
         

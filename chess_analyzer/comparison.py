@@ -292,6 +292,57 @@ class PlayerComparison:
             'time_management_comparison': self.get_time_management_comparison(),
             'anomalies': self.detect_anomalies()
         }
+    
+    def estimate_iq(self) -> Dict[str, Dict]:
+        """
+        Estimate 'Chess IQ' based on multiple factors.
+        Factors include: rating, accuracy, consistency, time management, opening knowledge
+        
+        Returns:
+            Dictionary with IQ estimates for each player
+        """
+        iq_scores = {}
+        
+        for player in self.player_data:
+            data = self.player_data[player]
+            games = self.player_games.get(player, [])
+            
+            # Base score from rating (normalized to 100-200 scale)
+            rating = data.get('avg_rating', 1200)
+            rating_score = min(200, 50 + (rating - 800) / 10)  # 800 rating = 50 IQ, 2200 = 200 IQ
+            
+            # Accuracy/move quality bonus
+            accuracy = data.get('avg_accuracy', 50)
+            accuracy_bonus = accuracy * 0.5  # Up to +50 IQ points
+            
+            # Consistency (low volatility = smart play)
+            volatility_data = data.get('rating_volatility', {})
+            volatility = volatility_data.get('volatility_score', 50) if isinstance(volatility_data, dict) else 50
+            consistency_bonus = max(0, 30 - (volatility * 0.3))  # Up to +30 IQ points
+            
+            # Win rate against stronger opponents
+            win_rate = data.get('win_rate', 50)
+            win_bonus = (win_rate - 50) * 0.3  # Bonus for beating stronger opponents
+            
+            # Time management (faster decisions = confidence/pattern recognition)
+            avg_move_time = data.get('avg_move_time', 5)
+            time_bonus = min(20, 40 / avg_move_time if avg_move_time > 0 else 0)  # Faster = smarter
+            
+            # Calculate final IQ (capped at ~200)
+            estimated_iq = min(200, max(50, 
+                rating_score + accuracy_bonus + consistency_bonus + win_bonus + time_bonus
+            ))
+            
+            iq_scores[player] = {
+                'estimated_iq': estimated_iq,
+                'rating_component': rating_score,
+                'accuracy_component': accuracy_bonus,
+                'consistency_component': consistency_bonus,
+                'competitive_component': win_bonus,
+                'time_component': time_bonus
+            }
+        
+        return iq_scores
 
 
 def compare_players_display(usernames: List[str], max_games: int = 100):
@@ -320,8 +371,39 @@ def compare_players_display(usernames: List[str], max_games: int = 100):
     # Get summary
     summary = comparison.get_summary()
     
-    # Display Rating Comparison
+    # Calculate and display IQ estimates
     print("-"*90)
+    print("  ESTIMATED CHESS IQ (Fun Factor! :)")
+    print("-"*90)
+    iq_scores = comparison.estimate_iq()
+    if iq_scores:
+        sorted_iq = sorted(iq_scores.items(), key=lambda x: x[1]['estimated_iq'], reverse=True)
+        print(f"  {'Player':<20} {'Chess IQ':<12} {'Components':<55}")
+        print("  " + "-"*85)
+        for player, iq_data in sorted_iq:
+            iq = iq_data['estimated_iq']
+            
+            # IQ classification
+            if iq >= 180:
+                category = "GENIUS"
+            elif iq >= 160:
+                category = "Very Superior"
+            elif iq >= 140:
+                category = "Superior"
+            elif iq >= 120:
+                category = "High Average"
+            elif iq >= 100:
+                category = "Average"
+            elif iq >= 80:
+                category = "Low Average"
+            else:
+                category = "Below Average"
+            
+            components = f"Rating:{iq_data['rating_component']:+.0f} Accuracy:{iq_data['accuracy_component']:+.0f} Consistency:{iq_data['consistency_component']:+.0f}"
+            print(f"  {player:<20} {iq:<12.0f} {components:<55} ({category})")
+    
+    # Display Rating Comparison
+    print("\n" + "-"*90)
     print("  RATING COMPARISON")
     print("-"*90)
     ratings = summary['rating_comparison']

@@ -100,6 +100,17 @@ class GameAnalysisV3:
     reason: str = ""
 
 
+# Piece values for material-based evaluation (in centipawns)
+PIECE_VALUES = {
+    'P': 100,   # Pawn
+    'N': 320,   # Knight
+    'B': 330,   # Bishop
+    'R': 500,   # Rook
+    'Q': 900,   # Queen
+    'K': 0      # King (no value, but included for completeness)
+}
+
+
 class EnhancedPlayerAnalyzer:
     """
     Ultra-fast, accurate player analysis combining:
@@ -224,7 +235,7 @@ class EnhancedPlayerAnalyzer:
             
             # Extract moves and get evaluations
             moves = list(game.mainline_moves())
-            evaluations = self._get_evaluations(game, moves[:50])  # First 50 half-moves
+            evaluations = self._get_evaluations(game, moves[:100])  # First 100 half-moves for better coverage
             
             # Analyze patterns
             game_analysis = GameAnalysisV3(
@@ -268,39 +279,102 @@ class EnhancedPlayerAnalyzer:
         """Get evaluations for moves using Lichess API or local engine"""
         evaluations = []
         
+        import sys
+        
         # Try Lichess API first (fastest)
         if self.use_lichess:
+            print(f"[EVAL] Trying Lichess API...", file=sys.stderr)
             evaluations = self._get_lichess_evaluations(game)
+            print(f"[EVAL] Lichess returned {len(evaluations)} evaluations", file=sys.stderr)
+        else:
+            print(f"[EVAL] Skipping Lichess (use_lichess={self.use_lichess})", file=sys.stderr)
         
         # Fall back to local analysis if needed
-        if not evaluations or len(evaluations) < len(moves) / 2:
+        if not evaluations or len(evaluations) < len(moves) / 4:  # Need at least 25% coverage
+            print(f"[EVAL] Calling local Stockfish ({len(evaluations)} < {len(moves) / 4})", file=sys.stderr)
             evaluations = self._get_local_evaluations(game, moves)
+            print(f"[EVAL] Local Stockfish returned {len(evaluations)} evaluations", file=sys.stderr)
         
+        # If still no evaluations, use heuristic-based analysis
+        if not evaluations:
+            print(f"[EVAL] Calling heuristic fallback", file=sys.stderr)
+            evaluations = self._generate_heuristic_evaluations(game, moves)
+            print(f"[EVAL] Heuristic returned {len(evaluations)} evaluations", file=sys.stderr)
+        
+        print(f"[EVAL] Final: {len(evaluations)} evaluations for {len(moves)} moves", file=sys.stderr)
         return evaluations
     
-    def _get_lichess_evaluations(self, game: chess.pgn.Game) -> List[Dict]:
-        """Get position evaluations from Lichess API"""
+    def _generate_heuristic_evaluations(self, game: chess.pgn.Game, moves: List) -> List[Dict]:
+        """
+        Generate evaluations using heuristic analysis of the position.
+        This doesn't require Stockfish and provides reasonable estimates.
+        """
+        evaluations = []
         try:
-            # Try to get game from Lichess
-            white = game.headers.get("White", "")
-            black = game.headers.get("Black", "")
+            board = chess.Board()
             
-            # Build game URL (if available)
-            game_url = game.headers.get("Link", "")
-            if not game_url:
+            for move in moves[:100]:  # Limit to 100 moves for speed
+                board.push(move)
+                
+                # Estimate material balance
+                white_material = 0
+                black_material = 0
+                
+                for square in chess.SQUARES:
+                    piece = board.piece_at(square)
+                    if piece:
+                        value = PIECE_VALUES.get(piece.symbol().upper(), 0)
+                        if piece.color == chess.WHITE:
+                            white_material += value
+                        else:
+                            black_material += value
+                
+                material_diff = white_material - black_material
+                
+                # Simple evaluation: material + position adjustments
+                eval_cp = int(material_diff)
+                
+                # Bonus for development (opening phase)
+                if len(list(board.move_stack)) < 20:
+                    # Count developed pieces
+                    if board.piece_at(chess.B1) is None:  # Bishop developed
+                        eval_cp += 20
+                    if board.piece_at(chess.G1) is None:  # Knight developed
+                        eval_cp += 20
+                
+                # Penalty for exposed king
+                if board.is_check():
+                    eval_cp -= 50
+                
+                evaluations.append({
+                    "centipawns": eval_cp,
+                    "mate": None,
+                    "heuristic": True
+                })
+            
+            return evaluations
+        
+        except Exception as e:
+            return []
+
+    def _get_lichess_evaluations(self, game: chess.pgn.Game) -> List[Dict]:
+        """Get position evaluations from Lichess Computer Analysis API"""
+        try:
+            # Get game ID from the game URL/headers
+            link = game.headers.get("Link", "")
+            if "lichess.org" not in link:
                 return []
             
-            # Extract game ID from URL
-            if "lichess.org" not in game_url:
+            game_id = link.split('/')[-1].split('?')[0]
+            if not game_id or len(game_id) < 8:
                 return []
             
-            game_id = game_url.split('/')[-1].split('?')[0]
-            if not game_id:
-                return []
-            
-            # Get analysis from Lichess
+            # Fetch game analysis from Lichess
+            # Lichess provides analysis with evaluations via this endpoint
             url = f"https://lichess.org/api/games/{game_id}"
-            response = requests.get(url, headers={"Accept": "application/json"}, timeout=5)
+            headers = {"Accept": "application/json"}
+            
+            response = requests.get(url, headers=headers, timeout=10)
             
             if response.status_code != 200:
                 return []
@@ -308,17 +382,22 @@ class EnhancedPlayerAnalyzer:
             game_data = response.json()
             evals = []
             
-            for move_info in game_data.get("moves", []):
-                if "eval" in move_info:
-                    evals.append({
-                        "centipawns": move_info["eval"],
-                        "mate": None
-                    })
-                elif "mate" in move_info:
-                    evals.append({
-                        "centipawns": None,
-                        "mate": move_info["mate"]
-                    })
+            # Extract evaluations from the analysis field if available
+            analysis = game_data.get('analysis', [])
+            if analysis:
+                for move_analysis in analysis:
+                    eval_info = {}
+                    
+                    # Get centipawn evaluation
+                    if 'eval' in move_analysis:
+                        eval_info['centipawns'] = move_analysis['eval']
+                    elif 'mate' in move_analysis:
+                        eval_info['mate'] = move_analysis['mate']
+                        eval_info['centipawns'] = None
+                    else:
+                        continue
+                    
+                    evals.append(eval_info)
             
             return evals
         
@@ -326,33 +405,102 @@ class EnhancedPlayerAnalyzer:
             return []
     
     def _get_local_evaluations(self, game: chess.pgn.Game, moves: List) -> List[Dict]:
-        """Get evaluations using local Stockfish"""
+        """Get evaluations using local Stockfish engine - CONFIGURABLE DEPTH VERSION"""
         evaluations = []
+        
         try:
-            from .engine import StockfishEngine
-            engine = StockfishEngine(self.config)
+            import os
+            import sys
             
-            board = chess.Board()
-            depth = self.config.get('analysis', {}).get('engine_depth', 12)
+            # Direct path to Stockfish
+            sf_paths = [
+                "stockfish/stockfish-windows-x86-64.exe",
+                "stockfish\\stockfish-windows-x86-64.exe",
+            ]
             
-            for i, move in enumerate(moves[:50]):  # Limit to 50 half-moves for speed
-                board.push(move)
-                info = engine.evaluate(board, depth=depth)
+            # Find Stockfish executable
+            sf_path = None
+            for path in sf_paths:
+                if os.path.exists(path):
+                    sf_path = path
+                    break
+            
+            if not sf_path:
+                # Stockfish not available
+                print("[LOCAL_EVAL] Stockfish not found", file=sys.stderr)
+                return []
+            
+            # Start engine directly
+            engine = None
+            try:
+                print(f"[LOCAL_EVAL] Starting Stockfish from: {sf_path}", file=sys.stderr)
+                engine = chess.engine.SimpleEngine.popen_uci(sf_path)
                 
-                if info:
-                    evaluations.append({
-                        "centipawns": info.get("centipawns", 0),
-                        "mate": info.get("mate")
-                    })
+                board = chess.Board()
+                depth = self.config.get('analysis', {}).get('engine_depth', 16)
+                print(f"[LOCAL_EVAL] Using depth: {depth}", file=sys.stderr)
                 
-                if i % 10 == 0:
-                    board.pop()
+                # Adjust time limit based on depth (higher depth = more time)
+                # Depth 16 = 0.5s, 20 = 1.0s, 24 = 2.0s, 28 = 4.0s
+                time_limits = {
+                    16: 0.5,
+                    20: 1.0,
+                    24: 2.0,
+                    28: 4.0
+                }
+                time_per_move = time_limits.get(depth, 0.5)
+                print(f"[LOCAL_EVAL] Time per move: {time_per_move}s", file=sys.stderr)
+                print(f"[LOCAL_EVAL] Analyzing {len(moves[:100])} positions", file=sys.stderr)
+                
+                # Analyze each position
+                for i, move in enumerate(moves[:100]):  # Limit to 100 moves
+                    try:
+                        # Analysis with depth and time limit
+                        limits = chess.engine.Limit(depth=depth, time=time_per_move)
+                        info = engine.analyse(board, limits)
+                        
+                        # Extract evaluation
+                        if info and 'score' in info:
+                            score = info['score']
+                            # Convert to centipawns from white's perspective
+                            cp = score.white().score(mate_score=10000)
+                            
+                            evaluations.append({
+                                "centipawns": cp if cp is not None else 0,
+                                "mate": None,
+                                "stockfish": True
+                            })
+                        else:
+                            # No score available
+                            evaluations.append({
+                                "centipawns": 0,
+                                "mate": None,
+                                "stockfish": True
+                            })
+                        
+                    except Exception as move_error:
+                        # Skip this move if analysis fails, but continue with others
+                        continue
+                    
+                    # Make the move
                     board.push(move)
+                
+                return evaluations if len(evaluations) >= 3 else []
+                
+            finally:
+                # Always close engine
+                if engine:
+                    try:
+                        engine.quit()
+                    except:
+                        pass
         
-        except Exception as e:
-            pass
-        
-        return evaluations
+        except ImportError:
+            # Chess.engine not available
+            return []
+        except Exception:
+            # Any error - return empty to trigger fallback
+            return []
     
     def _analyze_time_patterns(self, game: chess.pgn.Game, moves: List, is_player: bool) -> TimePattern:
         """Analyze move timing patterns"""
@@ -406,25 +554,28 @@ class EnhancedPlayerAnalyzer:
         pattern = EnginePattern()
         
         try:
-            if not evaluations or not moves:
+            if not evaluations or not moves or len(evaluations) < 2:
                 return pattern
             
-            # This would require engine move analysis
-            # For now, use heuristic based on evaluation changes
+            # Calculate move quality scores based on evaluation changes
+            move_scores = self._calculate_move_scores(evaluations)
             
-            match_count = 0
-            for i, eval_dict in enumerate(evaluations[:-1]):
-                curr_eval = eval_dict.get("centipawns", 0)
-                next_eval = evaluations[i+1].get("centipawns", 0)
-                
-                # If evaluation improves significantly after move, likely good move
-                if curr_eval is not None and next_eval is not None:
-                    if abs(next_eval - curr_eval) < 50:  # Move didn't lose material
-                        match_count += 1
+            if not move_scores:
+                return pattern
             
-            if evaluations:
-                pattern.top_1_match_rate = (match_count / len(evaluations)) * 100
-                pattern.is_suspicious = pattern.top_1_match_rate > pattern.suspicious_threshold
+            # Engine matching rates based on move quality
+            excellent_moves = len([s for s in move_scores if s >= 90])
+            good_moves = len([s for s in move_scores if s >= 80])
+            okay_moves = len([s for s in move_scores if s >= 70])
+            
+            total = len(move_scores)
+            
+            pattern.top_1_match_rate = (excellent_moves / total * 100) if total > 0 else 0.0
+            pattern.top_3_match_rate = min(100.0, (excellent_moves + good_moves) / total * 100) if total > 0 else 0.0
+            pattern.top_5_match_rate = min(100.0, (excellent_moves + good_moves + okay_moves) / total * 100) if total > 0 else 0.0
+            
+            # Suspicious if almost all moves are excellent (>92%)
+            pattern.is_suspicious = pattern.top_1_match_rate > pattern.suspicious_threshold
         
         except:
             pass
@@ -477,46 +628,102 @@ class EnhancedPlayerAnalyzer:
         return analysis
     
     def _calculate_accuracy(self, evaluations: List[Dict], moves: List) -> AccuracyMetrics:
-        """Calculate accuracy by game phase"""
+        """Calculate accuracy by game phase - properly evaluates move quality"""
         metrics = AccuracyMetrics()
         
         try:
-            if not evaluations:
+            if not evaluations or len(evaluations) < 3:
                 return metrics
             
-            # Divide game into phases
-            total_moves = len(moves)
-            opening_end = min(20, total_moves // 3)
-            endgame_start = max(40, total_moves * 2 // 3)
+            # Calculate move quality scores (0-100)
+            move_scores = self._calculate_move_scores(evaluations)
+            
+            if not move_scores:
+                return metrics
+            
+            # Use only the moves that have evaluations
+            # We can't evaluate more moves than we have evaluations for
+            num_moves = min(len(moves), len(evaluations) - 1)
+            
+            # Divide game into phases based on moves we're evaluating
+            opening_end = min(20, max(5, num_moves // 3))
+            endgame_start = max(40, num_moves * 2 // 3)
             
             # Calculate accuracy for each phase
-            opening_evals = evaluations[:opening_end]
-            middlegame_evals = evaluations[opening_end:endgame_start]
-            endgame_evals = evaluations[endgame_start:]
+            opening_scores = move_scores[:opening_end]
+            middlegame_scores = move_scores[opening_end:endgame_start]
+            endgame_scores = move_scores[endgame_start:]
             
-            metrics.opening_accuracy = self._calculate_phase_accuracy(opening_evals)
-            metrics.middlegame_accuracy = self._calculate_phase_accuracy(middlegame_evals)
-            metrics.endgame_accuracy = self._calculate_phase_accuracy(endgame_evals)
+            metrics.opening_accuracy = statistics.mean(opening_scores) if opening_scores else 0.0
+            metrics.middlegame_accuracy = statistics.mean(middlegame_scores) if middlegame_scores else 0.0
+            metrics.endgame_accuracy = statistics.mean(endgame_scores) if endgame_scores else 0.0
             
             # Overall accuracy
-            all_accuracies = [
-                metrics.opening_accuracy,
-                metrics.middlegame_accuracy,
-                metrics.endgame_accuracy
-            ]
-            metrics.overall_accuracy = statistics.mean([a for a in all_accuracies if a > 0]) if any(a > 0 for a in all_accuracies) else 0
+            metrics.overall_accuracy = statistics.mean(move_scores) if move_scores else 0.0
             
-            # Consistency
-            if len(all_accuracies) > 1:
-                metrics.consistency_std_dev = statistics.stdev(all_accuracies)
+            # Consistency (lower = more consistent)
+            if len(move_scores) > 1:
+                metrics.consistency_std_dev = statistics.stdev(move_scores)
         
-        except:
+        except Exception as e:
             pass
         
         return metrics
     
+    def _calculate_move_scores(self, evaluations: List[Dict]) -> List[float]:
+        """
+        Calculate quality score (0-100) for each move based on evaluation changes.
+        Score based on: how much the player's move preserved/improved position
+        """
+        scores = []
+        try:
+            for i in range(len(evaluations) - 1):
+                before = evaluations[i].get("centipawns")
+                after = evaluations[i + 1].get("centipawns")
+                
+                # Handle mate scores
+                if before is None or after is None:
+                    scores.append(50.0)  # Neutral score for mate positions
+                    continue
+                
+                # Evaluate move quality based on position change
+                # Positive change means player improved position (or opponent worsened it)
+                change = before - after  # From white's perspective
+                
+                if change >= 100:
+                    # Excellent move (>1 pawn improvement)
+                    score = 100.0
+                elif change >= 50:
+                    # Very good move (0.5+ pawn improvement)
+                    score = 90.0
+                elif change >= 25:
+                    # Good move (0.25+ pawn improvement)
+                    score = 80.0
+                elif change >= 0:
+                    # Okay move (no material loss)
+                    score = 70.0
+                elif change >= -25:
+                    # Inaccuracy (0.25 pawn loss)
+                    score = 55.0
+                elif change >= -50:
+                    # Mistake (0.5 pawn loss)
+                    score = 40.0
+                elif change >= -100:
+                    # Blunder (1+ pawn loss)
+                    score = 20.0
+                else:
+                    # Major blunder (>1 pawn loss)
+                    score = 5.0
+                
+                scores.append(score)
+        
+        except Exception as e:
+            pass
+        
+        return scores
+    
     def _calculate_phase_accuracy(self, evals: List[Dict]) -> float:
-        """Calculate accuracy for a phase"""
+        """Calculate accuracy for a phase - DEPRECATED, use move_scores instead"""
         try:
             if not evals:
                 return 0.0
@@ -702,22 +909,59 @@ def display_enhanced_analysis(results: Dict, username: str):
     else:
         print("[ALERT] Suspicious consistency - too regular response times")
     
-    print(f"\n[TOP] TOP SUSPICIOUS GAMES")
+    print(f"\n[TOP] TOP SUSPICIOUS GAMES (Sorted by Accuracy)")
     print("-"*80)
     
     analyses = results.get('game_analyses', [])
     if analyses:
-        sorted_games = sorted(analyses, key=lambda x: x.get('suspicion_score', 0), reverse=True)[:5]
+        # Sort by accuracy (highest to lowest) then by suspicion score
+        sorted_games = sorted(
+            analyses, 
+            key=lambda x: (
+                -x.get('accuracy', {}).get('overall_accuracy', 0),
+                -x.get('suspicion_score', 0)
+            )
+        )[:5]
         
         for i, game in enumerate(sorted_games, 1):
-            print(f"\n{i}. Game {i}")
-            print(f"   Score: {game.get('suspicion_score', 0):.1f}/100")
-            print(f"   Opponent: {game.get('opponent_elo', 0)} Elo")
-            engine_match = game.get('engine_pattern', {}).get('top_1_match_rate', 0)
-            print(f"   Engine Match: {engine_match:.1f}%")
             accuracy = game.get('accuracy', {}).get('overall_accuracy', 0)
-            print(f"   Accuracy: {accuracy:.1f}%")
+            engine_match = game.get('engine_pattern', {}).get('top_1_match_rate', 0)
+            suspicion = game.get('suspicion_score', 0)
+            opponent_elo = game.get('opponent_elo', 0)
+            move_count = game.get('move_count', 0)
+            time_control = game.get('time_control', '')
+            
+            # Color code accuracy
+            if accuracy >= 85:
+                accuracy_flag = "🔴 SUSPICIOUS"
+            elif accuracy >= 75:
+                accuracy_flag = "🟠 HIGH"
+            elif accuracy >= 60:
+                accuracy_flag = "🟡 MODERATE"
+            else:
+                accuracy_flag = "🟢 NORMAL"
+            
+            print(f"\n{i}. Game {i}")
+            print(f"   Accuracy: {accuracy:.1f}% {accuracy_flag}")
+            print(f"   Suspicion Score: {suspicion:.1f}/100")
+            print(f"   Engine Match: {engine_match:.1f}%")
+            print(f"   Opponent: {opponent_elo} Elo | Moves: {move_count} | {time_control}")
+            
+            # Phase breakdown
+            opening_acc = game.get('accuracy', {}).get('opening_accuracy', 0)
+            middlegame_acc = game.get('accuracy', {}).get('middlegame_accuracy', 0)
+            endgame_acc = game.get('accuracy', {}).get('endgame_accuracy', 0)
+            
+            if opening_acc > 0 or middlegame_acc > 0 or endgame_acc > 0:
+                print(f"   Phase Breakdown: Opening {opening_acc:.0f}% | Middlegame {middlegame_acc:.0f}% | Endgame {endgame_acc:.0f}%")
     else:
         print("\nNo games analyzed successfully. Check error messages above.")
+    
+    # Option to save suspicious games
+    print(f"\n[SAVE] SAVE ANALYSIS")
+    print("-"*80)
+    suspicious_count = len([g for g in analyses if g.get('suspicion_score', 0) > 50])
+    print(f"Suspicious Games Found: {suspicious_count}/{len(analyses)}")
+    print("To save these games, use the 'Export' option in the menu (PGN/CSV format)")
     
     print("\n" + "="*80)
