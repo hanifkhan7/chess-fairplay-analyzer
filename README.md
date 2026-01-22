@@ -1,4 +1,4 @@
-# ♟️ Chess Fairplay Analyzer v3.0.0
+# ♟️ Chess Detective v3.0.0
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -21,7 +21,7 @@ A comprehensive, production-ready tool for analyzing player behavior, detecting 
 #### **Windows**
 ```bash
 # 1. Clone repository
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
 cd chess-fairplay-analyzer
 
 # 2. Create virtual environment
@@ -41,7 +41,7 @@ python run_menu.py
 #### **Linux/macOS**
 ```bash
 # 1. Clone repository
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
 cd chess-fairplay-analyzer
 
 # 2. Create virtual environment
@@ -64,7 +64,7 @@ python run_menu.py
 pkg install python python-pip git clang make
 
 # 2. Clone repository
-git clone https://github.com/yourusername/chess-fairplay-analyzer.git
+git clone https://github.com/hanifkhan7/chess-fairplay-analyzer.git
 cd chess-fairplay-analyzer
 
 # 3. Create virtual environment
