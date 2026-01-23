@@ -13,11 +13,45 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
+def _filter_by_time_control(games: List[chess.pgn.Game], time_control: Dict[str, int]) -> List[chess.pgn.Game]:
+    """
+    Filter games by time control (in seconds).
+    
+    Args:
+        games: List of games to filter
+        time_control: Dict with 'min' and 'max' keys (seconds)
+    
+    Returns:
+        Filtered list of games
+    """
+    filtered = []
+    
+    for game in games:
+        tc_str = game.headers.get("TimeControl", "")
+        
+        # Parse TimeControl string (format: "initial+increment" e.g., "600+3")
+        if not tc_str or tc_str == "-":
+            continue
+            
+        try:
+            parts = tc_str.split("+")
+            initial = int(parts[0]) if parts else 0
+            
+            # Check if within time control range
+            if time_control.get("min", 0) <= initial <= time_control.get("max", float("inf")):
+                filtered.append(game)
+        except (ValueError, IndexError):
+            continue
+    
+    return filtered
+
 def fetch_dual_platform_games(
     username: str,
     max_games: int = 50,
     platforms: Optional[List[str]] = None,
-    config: Optional[Dict] = None
+    config: Optional[Dict] = None,
+    time_control: Optional[Dict] = None
 ) -> Tuple[List[chess.pgn.Game], Dict[str, int]]:
     """
     Fetch games from both Chess.com and Lichess for a player.
@@ -27,6 +61,7 @@ def fetch_dual_platform_games(
         max_games: Maximum total games to fetch
         platforms: Which platforms to fetch from ['chess.com', 'lichess']. Default: both
         config: Configuration dictionary
+        time_control: Filter by time control {'min': seconds, 'max': seconds}. None = all
     
     Returns:
         Tuple of (list of games, dict with platform counts)
@@ -60,6 +95,10 @@ def fetch_dual_platform_games(
             from .fetcher import fetch_player_games as fetch_chess_com
             chess_com_games = fetch_chess_com(username, fetch_amount, config)
             
+            # Filter by time control if specified
+            if time_control:
+                chess_com_games = _filter_by_time_control(chess_com_games, time_control)
+            
             print(f"[CHESS.COM] Retrieved {len(chess_com_games)} games")
             all_games.extend(chess_com_games)
             platform_counts['chess.com'] = len(chess_com_games)
@@ -75,6 +114,11 @@ def fetch_dual_platform_games(
             print(f"\n[LICHESS] Fetching up to {fetch_amount} games...")
             
             games, count = fetch_lichess_games(username, fetch_amount, config)
+            
+            # Filter by time control if specified
+            if time_control:
+                games = _filter_by_time_control(games, time_control)
+            
             print(f"[LICHESS] Retrieved {len(games)} games")
             all_games.extend(games)
             platform_counts['lichess'] = count

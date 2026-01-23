@@ -1,0 +1,9 @@
+10
+HD-MI6
+white
+all
+15
+100
+n
+n
+0

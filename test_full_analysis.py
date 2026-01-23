@@ -1,48 +1,69 @@
 #!/usr/bin/env python3
-"""Full test of analyzer v3.0 with real data"""
-import sys
-import os
+"""Test full analysis with Stockfish evaluations"""
 
-os.chdir('c:\\Users\\zaibi\\chess-fairplay-analyzer')
+import json
+import yaml
+import chess.pgn
+import io
+from pathlib import Path
+from dataclasses import asdict
 
-from chess_analyzer.fetcher import fetch_player_games
-from chess_analyzer.analyzer_v3 import EnhancedPlayerAnalyzer, display_enhanced_analysis
-from chess_analyzer.utils.helpers import load_config
+print("=" * 70)
+print("FULL ANALYSIS TEST - STOCKFISH DEPTH 24")
+print("=" * 70)
 
-username = "hikaru"
-max_games = 5
+# Load config
+config_file = Path("config.yaml")
+with open(config_file) as f:
+    config = yaml.safe_load(f) or {}
 
-print(f"\n[TEST] Fetching up to {max_games} games for {username}...")
-games = fetch_player_games(username, max_games)
-print(f"[TEST] Retrieved {len(games)} games")
+# Set Depth 24
+if 'analysis' not in config:
+    config['analysis'] = {}
+config['analysis']['engine_depth'] = 24
 
-if not games:
-    print("[ERROR] No games retrieved")
-    sys.exit(1)
+# Load cached games
+games_file = Path("cache/hikaru_games.json")
+with open(games_file) as f:
+    games_data = json.load(f)
 
-print(f"\n[TEST] Initializing analyzer...")
-config = load_config()
-analyzer = EnhancedPlayerAnalyzer(config, use_lichess=True)
+print(f"\n[SETUP] Loaded {len(games_data['games'])} cached games")
+print(f"        engine_depth = 24")
 
-print(f"[TEST] Running analysis with {len(games)} games...")
-try:
-    results = analyzer.analyze_games_fast(games, username, max_workers=4)
-    print(f"\n[TEST] Analysis complete!\n")
-    
-    print("="*80)
-    print(f"Results Summary:")
-    print(f"  Games Analyzed: {results.get('games_analyzed', 0)}")
-    print(f"  Suspicious Games: {results.get('suspicious_games', 0)}")
-    print(f"  Suspicion Score: {results.get('suspicion_score', 0):.1f}/100")
-    print(f"  Avg Engine Match: {results.get('avg_engine_match_rate', 0):.1f}%")
-    print("="*80)
-    
-    print("\n[TEST] Displaying enhanced analysis...")
-    display_enhanced_analysis(results, username)
-    
-except Exception as e:
-    print(f"[ERROR] Analysis failed: {e}")
-    import traceback
-    traceback.print_exc()
+# Analyze first 2 games only (for speed)
+from chess_analyzer.analyzer_v3 import EnhancedPlayerAnalyzer
 
-print("\n[TEST] COMPLETE")
+analyzer = EnhancedPlayerAnalyzer(
+    config,
+    use_lichess=False,
+    use_chess_com=True
+)
+
+games_to_analyze = []
+for game_data in games_data['games'][:2]:  # Only first 2 games
+    pgn_io = io.StringIO(game_data['pgn'])
+    game = chess.pgn.read_game(pgn_io)
+    if game:
+        games_to_analyze.append(game)
+
+print(f"\n[ANALYZE] Analyzing {len(games_to_analyze)} games...")
+print("          (This will take several minutes with Depth 24)")
+
+# Analyze games
+results = analyzer.analyze_games_fast(games_to_analyze, "hikaru", max_workers=1)
+
+print(f"\n[RESULTS]")
+print(f"  Total games analyzed: {results.get('total_games_analyzed', 0)}")
+print(f"  Average engine match: {results.get('average_engine_match', 0):.1f}%")
+print(f"  Average accuracy: {results.get('average_accuracy', 0):.1f}%")
+print(f"  Average blunder rate: {results.get('average_blunder_rate', 0):.1f}%")
+
+if results.get('analyses'):
+    first_game = results['analyses'][0]
+    print(f"\n[FIRST GAME]")
+    print(f"  ID: {first_game.get('game_id', 'N/A')}")
+    print(f"  Accuracy: {first_game.get('accuracy', {}).get('overall_accuracy', 0):.1f}%")
+    print(f"  Engine Match: {first_game.get('engine_pattern', {}).get('top_1_match_rate', 0):.1f}%")
+    print(f"  Suspicion Score: {first_game.get('suspicion_score', 0):.1f}/100")
+
+print("\n" + "=" * 70)

@@ -1,4 +1,4 @@
-# ♟️ Chess Detective v3.0.0
+# ♟️ Chess Detective v3.2
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)

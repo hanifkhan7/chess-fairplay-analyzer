@@ -9,9 +9,16 @@ import csv
 import zipfile
 import io
 
+try:
+    import chess.pgn
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass  # Optional imports for visualization
+
 from .fetcher import fetch_player_games
 from .dual_fetcher import fetch_dual_platform_games, fetch_lichess_games
 from .reporter import generate_report
+
 
 
 def _fetch_games(username: str, max_games: int = 50, platforms: list = None, config: dict = None):
@@ -51,8 +58,8 @@ def main():
     """Entry point for menu UI"""
     
     print("\n" + "="*60)
-    print("   CHESS DETECTIVE v2.2.1")
-    print("   Forensic Analysis of Player Behavior")
+    print("   CHESS FAIRPLAY ANALYZER v3.1.0")
+    print("   Forensic Analysis & Fair-Play Research")
     print("="*60 + "\n")
     
     while True:
@@ -1186,67 +1193,184 @@ def _network_analysis():
 
 
 def _opening_repertoire_inspector():
-    """Analyze opponent's opening repertoire and vulnerabilities"""
-    print("\n" + "-"*50)
-    print("[REPERTOIRE] OPENING REPERTOIRE INSPECTOR (Dual Platform)")
-    print("-"*50)
-    print("\nVisualize opponent's opening repertoire, patterns, and vulnerabilities")
+    """Hybrid Opening Repertoire Analysis - Tree + Statistics (v3.1)"""
+    print("\n" + "="*70)
+    print("[REPERTOIRE] OPENING REPERTOIRE INSPECTOR v3.1")
+    print("Hybrid System: Opening Tree + Statistical Analysis")
+    print("="*70)
     
-    username = input("\nEnter username: ").strip()
+    username = input("\nEnter player username: ").strip()
     if not username:
         return
     
-    game_count = input("Games to analyze? (default 100, recommended 50-200): ").strip()
+    print("\n[FILTERS]")
+    
+    # Color selection
+    print("\nColor:")
+    print("  1. White only")
+    print("  2. Black only")
+    print("  3. Both colors")
+    color_choice = input("Select (1-3, default 3): ").strip()
+    color_map = {'1': 'white', '2': 'black', '3': 'both'}
+    color = color_map.get(color_choice, 'both')
+    
+    # Result filter
+    print("\nResults:")
+    print("  1. All games")
+    print("  2. Wins only")
+    print("  3. Losses only")
+    print("  4. Draws only")
+    result_choice = input("Select (1-4, default 1): ").strip()
+    result_map = {'1': 'all', '2': 'wins', '3': 'losses', '4': 'draws'}
+    result_filter = result_map.get(result_choice, 'all')
+    
+    # Minimum depth
+    min_depth_str = input("Minimum moves in game (default 15): ").strip()
     try:
-        game_count = int(game_count) if game_count else 100
+        min_depth = int(min_depth_str) if min_depth_str else 15
+    except:
+        min_depth = 15
+    
+    # Game count
+    game_count_str = input("Games to analyze? (default 100, recommended 50-200): ").strip()
+    try:
+        game_count = int(game_count_str) if game_count_str else 100
     except:
         game_count = 100
     
     try:
-        from .dual_fetcher import prompt_platform_selection
+        from .opening_repertoire_inspector import OpeningAnalyzer, OpeningVisualizer, ReportGenerator
         from .utils.helpers import load_config
-        from .opening_tree import display_opening_tree_analysis
         
         config = load_config()
         
-        # Smart platform detection
-        platforms = prompt_platform_selection(username, config)
-        if not platforms:
-            input("\nPress Enter to continue...")
-            return
-        
-        print(f"\n[FETCH] Fetching up to {game_count} games from {', '.join(platforms).title()}...")
-        player_games, counts = _fetch_games(username, game_count, platforms, config)
+        # Fetch games
+        print(f"\n[FETCH] Fetching up to {game_count} games...")
+        player_games, counts = _fetch_games(username, game_count, config=config)
         
         if not player_games:
-            print(f"No games found for {username}")
+            print(f"[ERROR] No games found for {username}")
             input("\nPress Enter to continue...")
             return
         
-        print(f"[OK] Retrieved {len(player_games)} games. Building opening tree...\n")
+        print(f"[OK] Retrieved {len(player_games)} games")
         
-        display_opening_tree_analysis(player_games, username)
+        # Analyze opening repertoire
+        print(f"\n[ANALYZE] Building opening repertoire analysis...")
+        analyzer = OpeningAnalyzer()
+        results = analyzer.analyze_games(
+            player_games, 
+            username, 
+            player_color=color, 
+            result_filter=result_filter,
+            min_moves=min_depth
+        )
         
+        # Display results
+        print("="*70)
+        print("[RESULTS] OPENING REPERTOIRE ANALYSIS")
+        print("="*70)
+        
+        # Summary statistics
+        df = analyzer.export_to_dataframe()
+        if df is not None and not df.empty:
+            print(f"\n[SUMMARY] Games Analyzed: {len(df)}")
+            print(f"  Color Split: {df['color'].value_counts().to_dict()}")
+            print(f"  Unique Openings: {df['opening'].nunique()}")
+            print(f"  Average Game Length: {df['moves'].mean():.1f} moves")
+            
+            # Result statistics
+            wins = (df['result'] == '1-0').sum()
+            losses = (df['result'] == '0-1').sum()
+            draws = (df['result'] == '*').sum()
+            total = len(df)
+            
+            if total > 0:
+                print(f"  Results: W={wins} ({wins/total*100:.1f}%) L={losses} ({losses/total*100:.1f}%) D={draws} ({draws/total*100:.1f}%)")
+            
+            # Top openings
+            print(f"\n[TABLE] TOP 10 OPENINGS BY FREQUENCY")
+            print("-"*70)
+            top_openings = df['opening'].value_counts().head(10)
+            for i, (opening, count) in enumerate(top_openings.items(), 1):
+                opening_subset = df[df['opening'] == opening]
+                wr = (opening_subset['result'] == '1-0').sum() / len(opening_subset) * 100
+                eco_code = opening_subset['eco'].mode()
+                eco_str = f" [{eco_code[0]}]" if len(eco_code) > 0 and eco_code[0] != "Unknown" else ""
+                print(f"  {i:2d}. {opening:35s}{eco_str:10s} ({count:2d} games, {wr:.1f}% W)")
+            
+            # Display opening tree
+            print(f"\n[TREE] OPENING TREE VISUALIZATION")
+            print("-"*70)
+            tree_viz = (analyzer.white_tree.get_opening_tree_visualization() if analyzer.white_tree 
+                       else analyzer.black_tree.get_opening_tree_visualization() if analyzer.black_tree else "")
+            if tree_viz:
+                print(tree_viz)
+            
+            # Visualization options
+            print(f"\n[VISUALIZATIONS] Generate statistical graphs?")
+            print("-"*70)
+            
+            viz_choice = input("Generate graphs? (y/n, default y): ").strip().lower()
+            if viz_choice != 'n':
+                print("\n[PLOT] Generating visualizations...")
+                try:
+                    visualizer = OpeningVisualizer(analyzer)
+                    figures = visualizer.generate_statistics()
+                    
+                    save_choice = input("Save as PNG files? (y/n, default n): ").strip().lower()
+                    if save_choice == 'y':
+                        os.makedirs('reports', exist_ok=True)
+                        filenames = visualizer.save_figures('reports')
+                        print(f"[OK] Saved {len(filenames)} graphs to reports/")
+                    else:
+                        print("[OK] Displaying graphs...")
+                        plt.show()
+                        
+                except Exception as e:
+                    print(f"[ERROR] Visualization failed: {e}")
+                    print("Ensure matplotlib is installed: pip install matplotlib seaborn")
+            
+            # Export options
+            print(f"\n[EXPORT] Export results?")
+            print("-"*70)
+            print("1. CSV (opening statistics)")
+            print("2. Excel (with summary sheets)")
+            print("3. Both CSV and Excel")
+            print("4. Skip export")
+            
+            export_choice = input("Select (1-4, default 4): ").strip()
+            
+            if export_choice in ['1', '3']:
+                os.makedirs('reports', exist_ok=True)
+                csv_file = f"reports/{username}_opening_repertoire.csv"
+                generator = ReportGenerator(analyzer, visualizer)
+                generator.export_to_csv(csv_file)
+            
+            if export_choice in ['2', '3']:
+                os.makedirs('reports', exist_ok=True)
+                excel_file = f"reports/{username}_opening_repertoire.xlsx"
+                generator = ReportGenerator(analyzer, visualizer)
+                generator.export_to_excel(excel_file)
+            
+            print(f"\n[OK] Analysis complete!")
+        else:
+            print(f"[WARN] No games matched the filter criteria")
+        
+    except ImportError as ie:
+        print(f"\n[ERROR] Missing module: {ie}")
+        print("Install dependencies: pip install -r requirements.txt")
     except Exception as e:
-        print(f"\nError: {e}")
+        print(f"\n[ERROR] Analysis failed: {e}")
+        import traceback
+        traceback.print_exc()
+        print("Ensure all dependencies are installed: pip install -r requirements.txt")
+    except Exception as e:
+        print(f"\n[ERROR] {e}")
         import traceback
         traceback.print_exc()
     
     input("\nPress Enter to continue...")
-    print("\n" + "-"*50)
-    print("VIEW REPORTS")
-    print("-"*50)
-    reports_dir = Path("reports")
-    if reports_dir.exists():
-        reports = list(reports_dir.glob("*"))
-        if reports:
-            for i, r in enumerate(reports, 1):
-                print(f"{i}. {r.name}")
-        else:
-            print("No reports found")
-    else:
-        print("Reports directory not found")
-    input("Press Enter to continue...")
 
 
 def _tournament_forensics():
