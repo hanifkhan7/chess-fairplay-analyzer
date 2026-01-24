@@ -2130,3 +2130,124 @@ def _head_to_head_matchup():
         import traceback
         traceback.print_exc()
         input("\nPress Enter to continue...")
+
+
+def _view_reports():
+    """View generated reports and exports"""
+    import os
+    import subprocess
+    from pathlib import Path
+    
+    print("\n" + "="*70)
+    print("[REPORTS] VIEW GENERATED REPORTS")
+    print("="*70)
+    
+    reports_dir = Path('reports')
+    
+    if not reports_dir.exists():
+        print("\n[INFO] No reports directory found. Generate some reports first!")
+        input("\nPress Enter to continue...")
+        return
+    
+    # List available reports
+    files = sorted(reports_dir.glob('*'))
+    
+    if not files:
+        print("\n[INFO] No reports found in the reports/ directory.")
+        input("\nPress Enter to continue...")
+        return
+    
+    print("\n[AVAILABLE REPORTS]")
+    print("-" * 70)
+    
+    file_types = {
+        '.csv': 'CSV Export',
+        '.xlsx': 'Excel Export',
+        '.json': 'JSON Report',
+        '.html': 'HTML Report',
+        '.text': 'Text Report',
+        '.png': 'Graph Image',
+        '.txt': 'Text File'
+    }
+    
+    for i, file_path in enumerate(files, 1):
+        file_type = file_types.get(file_path.suffix, 'Unknown')
+        file_size = file_path.stat().st_size
+        size_str = f"{file_size / 1024:.1f} KB" if file_size > 1024 else f"{file_size} bytes"
+        print(f"{i:2}. {file_path.name:50} ({file_type:15} - {size_str})")
+    
+    print("-" * 70)
+    print(f"\nTotal: {len(files)} report(s)")
+    
+    try:
+        choice = input("\nEnter report number to open (or 0 to skip): ").strip()
+        
+        if choice == "0":
+            return
+        
+        idx = int(choice) - 1
+        if 0 <= idx < len(files):
+            selected_file = files[idx]
+            print(f"\n[INFO] Opening: {selected_file.name}")
+            
+            # Try to open with default application
+            if selected_file.suffix == '.csv':
+                # For CSV, display first few lines
+                with open(selected_file, 'r') as f:
+                    lines = f.readlines()[:20]
+                    print("\n" + "="*70)
+                    print(f"Content of {selected_file.name}:")
+                    print("="*70)
+                    for line in lines:
+                        print(line.rstrip())
+                    if len(lines) == 20:
+                        print("...")
+                        with open(selected_file) as f:
+                            total_lines = sum(1 for _ in f)
+                        print(f"(Showing first 20 of {total_lines} lines)")
+                    print("="*70)
+            
+            elif selected_file.suffix == '.json':
+                # For JSON, pretty print
+                import json
+                with open(selected_file, 'r') as f:
+                    data = json.load(f)
+                print("\n" + "="*70)
+                print(f"Content of {selected_file.name}:")
+                print("="*70)
+                print(json.dumps(data, indent=2, default=str)[:2000])
+                if len(json.dumps(data, indent=2, default=str)) > 2000:
+                    print("\n... (truncated)")
+                print("="*70)
+            
+            elif selected_file.suffix in ['.html', '.png']:
+                # For images and HTML, try to open with system default
+                if os.name == 'nt':  # Windows
+                    os.startfile(selected_file)
+                elif os.name == 'posix':  # Linux/Mac
+                    subprocess.run(['open' if 'darwin' in os.uname().sysname.lower() else 'xdg-open', str(selected_file)])
+                print(f"[OK] Opened {selected_file.name} with default application")
+            
+            else:
+                # For other text files
+                with open(selected_file, 'r') as f:
+                    content = f.read(3000)
+                print("\n" + "="*70)
+                print(f"Content of {selected_file.name}:")
+                print("="*70)
+                print(content)
+                if len(content) == 3000:
+                    print("\n... (truncated)")
+                print("="*70)
+        
+        else:
+            print("\n[ERROR] Invalid selection!")
+    
+    except ValueError:
+        print("\n[ERROR] Invalid input!")
+    except Exception as e:
+        print(f"\n[ERROR] Could not open report: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    input("\nPress Enter to continue...")
