@@ -254,8 +254,45 @@ def _analyze_player():
         # Display results
         display_enhanced_analysis(results, username)
         
-        # Option to save detailed report
-        save = input("\n\nSave detailed report? (y/n): ").strip().lower()
+        # Generate professional HTML report
+        print("\n[REPORT] Generating professional HTML report...")
+        try:
+            from .feature_reporter import FeatureReporter
+            reporter = FeatureReporter()
+            
+            # Prepare analysis data structure
+            report_data = {
+                'summary': {
+                    'games_analyzed': results.get('games_analyzed', 0),
+                    'suspicion_score': results.get('suspicion_score', 0),
+                    'risk_level': results.get('risk_level', 'LOW RISK'),
+                    'suspicious_games': results.get('suspicious_games', 0),
+                    'avg_engine_match_rate': results.get('avg_engine_match_rate', 0),
+                    'avg_centipawn_loss': results.get('avg_centipawn_loss', 0),
+                    'avg_accuracy': results.get('avg_accuracy', 0),
+                    'avg_blunder_rate': results.get('avg_blunder_rate', 0),
+                    'win_rate': results.get('win_rate', 0),
+                    'platform_breakdown': results.get('platform_breakdown', {}),
+                    'analysis_settings': results.get('analysis_settings', {})
+                }
+            }
+            
+            html_content = reporter.generate_analyze_player_report(report_data, username)
+            report_path = reporter.save_report(html_content, username, "player_analysis")
+            print(f"✓ Professional report saved: {report_path}")
+            
+            # Open report automatically
+            open_report = input("Open report in browser? (y/n): ").strip().lower()
+            if open_report == "y":
+                import webbrowser
+                webbrowser.open(f'file://{Path(report_path).resolve()}')
+        except Exception as e:
+            print(f"Note: Could not generate HTML report: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # Option to save detailed report (JSON/Text for archiving)
+        save = input("\n\nAlso save JSON/Text export? (y/n): ").strip().lower()
         if save == "y":
             fmt = input("Format (json/text, default json): ").strip() or "json"
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -491,7 +528,32 @@ def _player_brain():
         
         # Use enhanced exploit analyzer
         from .exploit import display_exploit_analysis
-        display_exploit_analysis(games, username)
+        analysis_result = display_exploit_analysis(games, username)
+        
+        # Generate professional HTML report
+        print("\n[REPORT] Generating professional HTML report...")
+        try:
+            from .feature_reporter import FeatureReporter
+            reporter = FeatureReporter()
+            
+            # Prepare exploit analysis data
+            exploit_data = {
+                'openings': analysis_result.get('openings', {}) if analysis_result else {},
+                'weaknesses': analysis_result.get('weaknesses', []) if analysis_result else [],
+                'strengths': analysis_result.get('strengths', []) if analysis_result else []
+            }
+            
+            html_content = reporter.generate_exploit_report(exploit_data, username)
+            report_path = reporter.save_report(html_content, username, "exploit_analysis")
+            print(f"✓ Professional report saved: {report_path}")
+            
+            # Open report automatically
+            open_report = input("Open report in browser? (y/n): ").strip().lower()
+            if open_report == "y":
+                import webbrowser
+                webbrowser.open(f'file://{Path(report_path).resolve()}')
+        except Exception as e:
+            print(f"Note: Could not generate HTML report: {e}")
         
         
     except KeyboardInterrupt:
@@ -713,6 +775,46 @@ def _strength_profile():
         
         print("\n" + "="*70)
         
+        # Generate professional HTML report
+        print("\n[REPORT] Generating professional HTML report...")
+        try:
+            from .feature_reporter import FeatureReporter
+            reporter = FeatureReporter()
+            
+            # Prepare strength profile data
+            profile_data = {
+                'profile': {
+                    'current_elo': avg_white_rating,
+                    'peak_elo': max(player_ratings) if player_ratings else 0,
+                    'skill_level': level if avg_white_rating > 0 else 'Unknown',
+                    'primary_tc': sorted([(k, v['count']) for k, v in time_controls.items()], 
+                                        key=lambda x: x[1], reverse=True)[0][0] if time_controls else 'Rapid',
+                    'by_time_control': {
+                        tc: {
+                            'games': stats['count'],
+                            'win_rate': (stats['wins'] / stats['count'] * 100) if stats['count'] > 0 else 0,
+                            'avg_elo': stats['total_elo'] // stats['count'] if stats['count'] > 0 else 0,
+                            'trend': 5  # Placeholder
+                        }
+                        for tc, stats in time_controls.items()
+                    }
+                }
+            }
+            
+            html_content = reporter.generate_strength_profile_report(profile_data, username)
+            report_path = reporter.save_report(html_content, username, "strength_profile")
+            print(f"✓ Professional report saved: {report_path}")
+            
+            # Open report
+            open_report = input("Open report in browser? (y/n): ").strip().lower()
+            if open_report == "y":
+                import webbrowser
+                webbrowser.open(f'file://{Path(report_path).resolve()}')
+        except Exception as e:
+            print(f"Note: Could not generate HTML report: {e}")
+
+        
+
     except KeyboardInterrupt:
         print("\n\nAnalysis cancelled.")
     except Exception as e:
@@ -1638,13 +1740,13 @@ def _cache_settings():
 
 
 def _report_settings():
-    """Configure report settings."""
+    """Configure report settings and manage report files."""
     from .utils.helpers import load_config, save_config
     
     config = load_config()
     
     print("\n" + "-"*50)
-    print("REPORT SETTINGS")
+    print("REPORT SETTINGS & MANAGEMENT")
     print("-"*50)
     
     report_format = config.get('report', {}).get('default_format', 'html')
@@ -1663,9 +1765,10 @@ def _report_settings():
     print("2. Change Output Directory")
     print("3. Toggle Highlight Suspicious")
     print("4. Toggle Save Analysis Data")
-    print("5. Back")
+    print("5. Manage Report Files (View/Delete)")
+    print("6. Back")
     
-    choice = input("\nSelect option (1-5): ").strip()
+    choice = input("\nSelect option (1-6): ").strip()
     
     if choice == "1":
         fmt = input("Enter format (html/json): ").strip().lower()
@@ -1696,7 +1799,102 @@ def _report_settings():
         status = "enabled" if not save_analysis else "disabled"
         print(f"✓ Save analysis data {status}")
     
+    elif choice == "5":
+        _manage_reports(output_dir)
+    
     input("\nPress Enter to continue...")
+
+
+def _manage_reports(report_dir: str = "reports"):
+    """Manage report files - view and delete."""
+    from pathlib import Path
+    
+    report_path = Path(report_dir)
+    
+    while True:
+        print("\n" + "-"*50)
+        print("REPORT MANAGEMENT")
+        print("-"*50)
+        
+        # List reports
+        if not report_path.exists():
+            print("No reports directory found.")
+            return
+        
+        reports = sorted([f for f in report_path.glob("report_*.html")], 
+                        key=lambda x: x.stat().st_mtime, reverse=True)
+        
+        if not reports:
+            print("No reports found.")
+            break
+        
+        print(f"\n📊 Found {len(reports)} reports:\n")
+        for i, report in enumerate(reports[:50], 1):
+            size_kb = report.stat().st_size / 1024
+            mod_time = datetime.fromtimestamp(report.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+            print(f"{i:2d}. {report.name:50s} ({size_kb:6.1f} KB) - {mod_time}")
+        
+        print("\nOptions:")
+        print("1. Delete specific report (by number)")
+        print("2. Delete all reports")
+        print("3. Delete reports by pattern (e.g., 'hikaru', '2024')")
+        print("4. Back")
+        
+        choice = input("\nSelect option (1-4): ").strip()
+        
+        if choice == "1":
+            try:
+                num = int(input("Enter report number to delete: ").strip())
+                if 1 <= num <= len(reports):
+                    report_to_delete = reports[num - 1]
+                    confirm = input(f"Delete '{report_to_delete.name}'? (y/n): ").strip().lower()
+                    if confirm == "y":
+                        report_to_delete.unlink()
+                        print(f"✓ Deleted {report_to_delete.name}")
+                else:
+                    print("Invalid number!")
+            except ValueError:
+                print("Invalid input!")
+        
+        elif choice == "2":
+            confirm = input(f"Delete ALL {len(reports)} reports? (y/n): ").strip().lower()
+            if confirm == "y":
+                count = 0
+                for report in reports:
+                    try:
+                        report.unlink()
+                        count += 1
+                    except Exception as e:
+                        print(f"Failed to delete {report.name}: {e}")
+                print(f"✓ Deleted {count} reports")
+                break
+        
+        elif choice == "3":
+            pattern = input("Enter search pattern (e.g., 'hikaru', '2024'): ").strip()
+            if pattern:
+                matching = [r for r in reports if pattern.lower() in r.name.lower()]
+                if matching:
+                    print(f"\nFound {len(matching)} matching reports:")
+                    for r in matching:
+                        print(f"  • {r.name}")
+                    confirm = input(f"Delete these {len(matching)} reports? (y/n): ").strip().lower()
+                    if confirm == "y":
+                        count = 0
+                        for report in matching:
+                            try:
+                                report.unlink()
+                                count += 1
+                            except Exception as e:
+                                print(f"Failed to delete {report.name}: {e}")
+                        print(f"✓ Deleted {count} reports")
+                else:
+                    print("No matching reports found.")
+        
+        elif choice == "4":
+            break
+        else:
+            print("Invalid option!")
+
 
 
 def _api_settings():
