@@ -781,20 +781,48 @@ def _strength_profile():
             from .feature_reporter import FeatureReporter
             reporter = FeatureReporter()
             
-            # Prepare strength profile data
+            # Collect all player ratings for peak calculation
+            all_player_ratings = []
+            for game in games:
+                white = game.headers.get("White", "")
+                white_elo = game.headers.get("WhiteElo", "?")
+                black_elo = game.headers.get("BlackElo", "?")
+                is_player_white = white.lower() == username.lower()
+                
+                player_elo = int(white_elo) if (is_player_white and white_elo != "?") else (int(black_elo) if black_elo != "?" else None)
+                if player_elo:
+                    all_player_ratings.append(player_elo)
+            
+            # Calculate overall win rate
+            total_wins = sum(stats['wins'] for stats in time_controls.values())
+            total_games = sum(stats['count'] for stats in time_controls.values())
+            overall_win_rate = (total_wins / total_games * 100) if total_games > 0 else 0
+            
+            # Prepare strength profile data - use actual calculated values
+            current_elo = int(avg_white_rating) if avg_white_rating > 0 else (max(all_player_ratings) if all_player_ratings else 0)
+            peak_elo = max(all_player_ratings) if all_player_ratings else current_elo
+            
             profile_data = {
                 'profile': {
-                    'current_elo': avg_white_rating,
-                    'peak_elo': max(player_ratings) if player_ratings else 0,
+                    'current_elo': current_elo,
+                    'peak_elo': peak_elo,
                     'skill_level': level if avg_white_rating > 0 else 'Unknown',
                     'primary_tc': sorted([(k, v['count']) for k, v in time_controls.items()], 
                                         key=lambda x: x[1], reverse=True)[0][0] if time_controls else 'Rapid',
+                    'total_games': len(games),
+                    'overall_win_rate': overall_win_rate,
+                    'avg_game_length': avg_game_length,
                     'by_time_control': {
                         tc: {
                             'games': stats['count'],
+                            'wins': stats['wins'],
+                            'draws': stats['draws'],
+                            'losses': stats['losses'],
                             'win_rate': (stats['wins'] / stats['count'] * 100) if stats['count'] > 0 else 0,
-                            'avg_elo': stats['total_elo'] // stats['count'] if stats['count'] > 0 else 0,
-                            'trend': 5  # Placeholder
+                            'draw_rate': (stats['draws'] / stats['count'] * 100) if stats['count'] > 0 else 0,
+                            'loss_rate': (stats['losses'] / stats['count'] * 100) if stats['count'] > 0 else 0,
+                            'avg_elo': int(stats.get('total_elo', 0) / stats['count']) if stats['count'] > 0 else 0,
+                            'trend': 5
                         }
                         for tc, stats in time_controls.items()
                     }
@@ -812,6 +840,8 @@ def _strength_profile():
                 webbrowser.open(f'file://{Path(report_path).resolve()}')
         except Exception as e:
             print(f"Note: Could not generate HTML report: {e}")
+            import traceback
+            traceback.print_exc()
 
         
 
