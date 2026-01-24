@@ -415,4 +415,4 @@ MIT License - See [LICENSE](LICENSE) for details
 
 **Built with ♟️ for the chess community**
 
-*Last Updated: January 2026 | Version: 3.0.0*
+*Last Updated: January 2026 | Version: 3.2*
