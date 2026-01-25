@@ -35,33 +35,34 @@ class Colors:
 
 
 def print_header():
-    """Print beautiful ASCII header with detailed detective character"""
+    """Print professional ASCII header with DETECTIVE art"""
     header = f"""{Colors.CYAN}{Colors.BOLD}
 ╔════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                    ║
-║                     🔍 CHESS FAIRPLAY ANALYZER - DETECTIVE 🔍                     ║
-║                   Forensic Analysis & Fair-Play Investigation v3.2                ║
+║                          CHESS FAIRPLAY ANALYZER v3.2                             ║
+║                    Forensic Analysis & Fair-Play Investigation                    ║
 ║                                                                                    ║
-║              █████████████████████████    Detailed Investigation Suite             ║
-║              █▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓█    Professional Analysis Tools               ║
-║              █▓░░░░░░░░░░░░░░░░░░▓█    Forensic Chess Intelligence               ║
-║              █▓░  ╱╲╱╲╱╲╱╲╱╲  ░░▓█                                               ║
-║              █▓░  ║o ║ ║o ║   ░░▓█    🕵️  THE INVESTIGATOR                       ║
-║              █▓░  ╲╱╲╱╲╱╲╱╱   ░░▓█       Detective Mode: ACTIVE                  ║
-║              █▓░     > ^ <     ░░▓█                                               ║
-║              █▓░    /| | |\\    ░░▓█    🎯 Seeking: Truth & Fair Play             ║
-║              █▓░   /_| | |_\\   ░░▓█    📊 Method: Statistical Proof              ║
-║              █▓░  ════════════  ░░▓█    🔐 Goal: Enforce Integrity               ║
-║              █▓░░░░░░░░░░░░░░░░░░▓█                                              ║
-║              █▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓█    "Every move tells a story..."            ║
-║              █████████████████████████    - Inspector Detective                   ║
+║     ██████╗ ███████╗████████╗███████╗ ██████╗████████╗██╗██╗   ██╗███████╗     ║
+║     ██╔══██╗██╔════╝╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝██║██║   ██║██╔════╝     ║
+║     ██║  ██║█████╗     ██║   █████╗  ██║        ██║   ██║██║   ██║█████╗       ║
+║     ██║  ██║██╔══╝     ██║   ██╔══╝  ██║        ██║   ██║╚██╗ ██╔╝██╔══╝       ║
+║     ██████╔╝███████╗   ██║   ███████╗╚██████╗   ██║   ██║ ╚████╔╝ ███████╗     ║
+║     ╚═════╝ ╚══════╝   ╚═╝   ╚══════╝ ╚═════╝   ╚═╝   ╚═╝  ╚═══╝  ╚══════╝     ║
 ║                                                                                    ║
-║  ⚡ CAPABILITIES:                       🎓 ANALYSIS FEATURES:                     ║
-║  ✓ Real-time Game Monitoring           ✓ Opening Repertoire Analysis             ║
-║  ✓ Suspicious Pattern Detection        ✓ Head-to-Head Matchup Prediction         ║
-║  ✓ Statistical Anomaly Finding         ✓ Multi-Player Comparison                 ║
-║  ✓ Account Fair-Play Verification      ✓ Performance Strength Profiling          ║
-║  ✓ Dual Platform Investigation         ✓ Tactical Exploit Identification         ║
+║  CAPABILITIES & ANALYSIS FEATURES:                                               ║
+║                                                                                    ║
+║  [1] Suspicious Activity Detection    [9] Network Analysis                        ║
+║  [2] Interactive Training Mode        [10] Opening Repertoire Inspector          ║
+║  [3] Exploit Analysis                 [11] Tournament Head-to-Head Analysis       ║
+║  [4] Strength Profile Assessment      [12] Head-to-Head Matchup Prediction       ║
+║  [5] Move Accuracy Reports            [13] Professional Report Viewer            ║
+║  [6] Account Metrics Dashboard        [14] System Settings & Configuration       ║
+║  [7] Multi-Player Comparison          [15] Exit Application                      ║
+║  [8] Fatigue Detection Analysis                                                  ║
+║                                                                                    ║
+║  FEATURES: Real-time Analysis | Dual Platform Support | Statistical Proof        ║
+║            Professional Reports | Fair-Play Enforcement | Tournament Ready       ║
+║                                                                                    ║
 ║                                                                                    ║
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 {Colors.END}"""
