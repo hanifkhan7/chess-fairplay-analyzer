@@ -35,22 +35,29 @@ class Colors:
 
 
 def print_header():
-    """Print beautiful ASCII header with detective theme"""
+    """Print beautiful ASCII header with professional detective theme"""
     header = f"""{Colors.CYAN}{Colors.BOLD}
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                              ║
 ║                    🔍 CHESS FAIRPLAY ANALYZER 🔍                            ║
-║                  Detective's Forensic Analysis Toolkit                       ║
+║                  Detective's Forensic Analysis Toolkit v3.2                  ║
 ║                                                                              ║
-║                  ╭─────────────────────────────╮                            ║
-║                  │  Detective on the case...   │                            ║
-║                  │   \\(o_o)/  🕵️  \\(o_o)/     │                            ║
-║                  │   Finding the truth!        │                            ║
-║                  ╰─────────────────────────────╯                            ║
+║                      ╭─────────────────────────╮                            ║
+║                      │      🕵️ THE DETECTIVE  │                            ║
+║                      │                         │                            ║
+║                      │      /\\___/\\           │                            ║
+║                      │     ( o.o )             │                            ║
+║                      │      > ^ <              │                            ║
+║                      │     /|   |\\             │                            ║
+║                      │    /_|   |_\\            │                            ║
+║                      │   🧐 Investigating... 🔎│                            ║
+║                      │                         │                            ║
+║                      │  "Where's the truth?"  │                            ║
+║                      ╰─────────────────────────╯                            ║
 ║                                                                              ║
-║            • Detect Suspicious Activity   • Analyze Openings                ║
-║            • Compare Players             • Predict Matchups                 ║
-║            • Expose Fair-Play Violations  • Professional Reports             ║
+║    ⚡ Lightning-Fast Analysis  │  🎯 Precise Detection                      ║
+║    📊 Professional Reports    │  🔐 Fair-Play Enforcement                   ║
+║    🏆 Tournament Ready        │  📈 Statistical Proof                        ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 {Colors.END}"""
