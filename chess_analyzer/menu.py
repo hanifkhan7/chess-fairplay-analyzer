@@ -35,31 +35,35 @@ class Colors:
 
 
 def print_header():
-    """Print beautiful ASCII header with professional detective theme"""
+    """Print beautiful ASCII header with detailed detective character"""
     header = f"""{Colors.CYAN}{Colors.BOLD}
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                                                                              ║
-║                    🔍 CHESS FAIRPLAY ANALYZER 🔍                            ║
-║                  Detective's Forensic Analysis Toolkit v3.2                  ║
-║                                                                              ║
-║                      ╭─────────────────────────╮                            ║
-║                      │      🕵️ THE DETECTIVE  │                            ║
-║                      │                         │                            ║
-║                      │      /\\___/\\           │                            ║
-║                      │     ( o.o )             │                            ║
-║                      │      > ^ <              │                            ║
-║                      │     /|   |\\             │                            ║
-║                      │    /_|   |_\\            │                            ║
-║                      │   🧐 Investigating... 🔎│                            ║
-║                      │                         │                            ║
-║                      │  "Where's the truth?"  │                            ║
-║                      ╰─────────────────────────╯                            ║
-║                                                                              ║
-║    ⚡ Lightning-Fast Analysis  │  🎯 Precise Detection                      ║
-║    📊 Professional Reports    │  🔐 Fair-Play Enforcement                   ║
-║    🏆 Tournament Ready        │  📈 Statistical Proof                        ║
-║                                                                              ║
-╚══════════════════════════════════════════════════════════════════════════════╝
+╔════════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                    ║
+║                     🔍 CHESS FAIRPLAY ANALYZER - DETECTIVE 🔍                     ║
+║                   Forensic Analysis & Fair-Play Investigation v3.2                ║
+║                                                                                    ║
+║              █████████████████████████    Detailed Investigation Suite             ║
+║              █▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓█    Professional Analysis Tools               ║
+║              █▓░░░░░░░░░░░░░░░░░░▓█    Forensic Chess Intelligence               ║
+║              █▓░  ╱╲╱╲╱╲╱╲╱╲  ░░▓█                                               ║
+║              █▓░  ║o ║ ║o ║   ░░▓█    🕵️  THE INVESTIGATOR                       ║
+║              █▓░  ╲╱╲╱╲╱╲╱╱   ░░▓█       Detective Mode: ACTIVE                  ║
+║              █▓░     > ^ <     ░░▓█                                               ║
+║              █▓░    /| | |\\    ░░▓█    🎯 Seeking: Truth & Fair Play             ║
+║              █▓░   /_| | |_\\   ░░▓█    📊 Method: Statistical Proof              ║
+║              █▓░  ════════════  ░░▓█    🔐 Goal: Enforce Integrity               ║
+║              █▓░░░░░░░░░░░░░░░░░░▓█                                              ║
+║              █▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓█    "Every move tells a story..."            ║
+║              █████████████████████████    - Inspector Detective                   ║
+║                                                                                    ║
+║  ⚡ CAPABILITIES:                       🎓 ANALYSIS FEATURES:                     ║
+║  ✓ Real-time Game Monitoring           ✓ Opening Repertoire Analysis             ║
+║  ✓ Suspicious Pattern Detection        ✓ Head-to-Head Matchup Prediction         ║
+║  ✓ Statistical Anomaly Finding         ✓ Multi-Player Comparison                 ║
+║  ✓ Account Fair-Play Verification      ✓ Performance Strength Profiling          ║
+║  ✓ Dual Platform Investigation         ✓ Tactical Exploit Identification         ║
+║                                                                                    ║
+╚════════════════════════════════════════════════════════════════════════════════════╝
 {Colors.END}"""
     print(header)
 
