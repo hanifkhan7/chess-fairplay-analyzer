@@ -20,6 +20,72 @@ from .dual_fetcher import fetch_dual_platform_games, fetch_lichess_games
 from .reporter import generate_report
 
 
+# Color codes for terminal output
+class Colors:
+    """ANSI color codes for terminal output"""
+    HEADER = '\033[95m'      # Magenta
+    BLUE = '\033[94m'        # Blue
+    CYAN = '\033[96m'        # Cyan
+    GREEN = '\033[92m'       # Green
+    YELLOW = '\033[93m'      # Yellow
+    RED = '\033[91m'         # Red
+    BOLD = '\033[1m'         # Bold
+    UNDERLINE = '\033[4m'    # Underline
+    END = '\033[0m'          # Reset
+
+
+def print_header():
+    """Print beautiful ASCII header with detective theme"""
+    header = f"""{Colors.CYAN}{Colors.BOLD}
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                    🔍 CHESS FAIRPLAY ANALYZER 🔍                            ║
+║                  Detective's Forensic Analysis Toolkit                       ║
+║                                                                              ║
+║                  ╭─────────────────────────────╮                            ║
+║                  │  Detective on the case...   │                            ║
+║                  │   \\(o_o)/  🕵️  \\(o_o)/     │                            ║
+║                  │   Finding the truth!        │                            ║
+║                  ╰─────────────────────────────╯                            ║
+║                                                                              ║
+║            • Detect Suspicious Activity   • Analyze Openings                ║
+║            • Compare Players             • Predict Matchups                 ║
+║            • Expose Fair-Play Violations  • Professional Reports             ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+{Colors.END}"""
+    print(header)
+
+
+def print_menu_item(number, title, description):
+    """Pretty print a menu item"""
+    print(f"{Colors.CYAN}{number:2}. {Colors.BOLD}{title:<40}{Colors.END} {Colors.YELLOW}{description}{Colors.END}")
+
+
+def print_divider():
+    """Print a decorative divider"""
+    print(f"{Colors.CYAN}{'─' * 90}{Colors.END}")
+
+
+def print_success(message):
+    """Print a success message"""
+    print(f"{Colors.GREEN}✓ {Colors.BOLD}{message}{Colors.END}")
+
+
+def print_warning(message):
+    """Print a warning message"""
+    print(f"{Colors.YELLOW}⚠ {Colors.BOLD}{message}{Colors.END}")
+
+
+def print_error(message):
+    """Print an error message"""
+    print(f"{Colors.RED}✗ {Colors.BOLD}{message}{Colors.END}")
+
+
+def print_info(message):
+    """Print an info message"""
+    print(f"{Colors.BLUE}ℹ {Colors.BOLD}{message}{Colors.END}")
+
 
 def _fetch_games(username: str, max_games: int = 50, platforms: list = None, config: dict = None):
     """
@@ -57,44 +123,45 @@ def _fetch_games(username: str, max_games: int = 50, platforms: list = None, con
 def main():
     """Entry point for menu UI"""
     
-    print("\n" + "="*60)
-    print("   CHESS FAIRPLAY ANALYZER v3.1.0")
-    print("   Forensic Analysis & Fair-Play Research")
-    print("="*60 + "\n")
+    print_header()
 
     # Mode selection at startup
-    print("Select mode:")
+    print(f"\n{Colors.BOLD}Select mode:{Colors.END}")
     print("1. Web (modern browser interface)")
     print("2. USCI (classic CLI)")
-    mode_choice = input("Choose mode (1=Web, 2=USCI): ").strip() or "1"
+    mode_choice = input(f"{Colors.CYAN}Choose mode (1=Web, 2=USCI): {Colors.END}").strip() or "1"
 
     if mode_choice == "1":
-        print("\n[INFO] The Web option is under development and will be available in a future update.")
-        print("Please use the USCI (classic CLI) mode for now. Thank you for your patience!")
+        print_warning("The Web option is under development and will be available in a future update.")
+        print_info("Please use the USCI (classic CLI) mode for now. Thank you for your patience!")
         return
 
     # USCI/CLI mode: continue with existing menu
     while True:
-        print("\nMAIN MENU")
-        print("="*50)
-        print("1. Analyze Player (Detect Suspicious Activity)")
-        print("2. Download All Games (Export Game History)")
-        print("3. Exploit your opponent (Opening & Style Analysis)")
-        print("4. Strength Profile (Skill Level Analysis)")
-        print("5. Accuracy Report (Move Accuracy & Consistency)")
-        print("6. Account Metrics Dashboard (Quick View)")
-        print("7. Multi-Player Comparison")
-        print("8. Fatigue Detection")
-        print("9. Network Analysis")
-        print("10. Opening Repertoire Inspector")
-        print("11. Tournament Inspector (Head-to-Head Analysis)")
-        print("12. Head-to-Head Matchup")
-        print("13. View Reports")
-        print("14. Settings")
-        print("15. Exit")
-        print("="*50 + "\n")
+        print(f"\n{Colors.BOLD}{Colors.CYAN}╔══════════════════════════════════════════════════════════════╗{Colors.END}")
+        print(f"{Colors.BOLD}{Colors.CYAN}║            🔎 MAIN INVESTIGATION MENU 🔎                      ║{Colors.END}")
+        print(f"{Colors.BOLD}{Colors.CYAN}╚══════════════════════════════════════════════════════════════╝{Colors.END}")
+        
+        print()
+        print_menu_item("1", "Analyze Player", "(Detect Suspicious Activity)")
+        print_menu_item("2", "Play Against Opponent", "(Interactive Opening Training)")
+        print_menu_item("3", "Exploit Your Opponent", "(Opening & Style Analysis)")
+        print_menu_item("4", "Strength Profile", "(Skill Level Analysis)")
+        print_menu_item("5", "Accuracy Report", "(Move Accuracy & Consistency)")
+        print_menu_item("6", "Account Metrics", "(Quick Statistical View)")
+        print_menu_item("7", "Multi-Player Comparison", "(Compare Multiple Players)")
+        print_menu_item("8", "Fatigue Detection", "(Endurance & Performance)")
+        print_menu_item("9", "Network Analysis", "(Connection Patterns)")
+        print_menu_item("10", "Opening Repertoire", "(Deep Opening Analysis)")
+        print_menu_item("11", "Tournament Inspector", "(Head-to-Head Analysis)")
+        print_menu_item("12", "Head-to-Head Matchup", "(Detailed Matchup Report)")
+        print_menu_item("13", "View Reports", "(Generated Analysis Files)")
+        print_menu_item("14", "Settings", "(Configuration)")
+        print_menu_item("15", "Exit", "(Close Application)")
+        
+        print(f"\n{Colors.CYAN}{'─' * 65}{Colors.END}")
 
-        choice = input("Select option (1-15): ").strip()
+        choice = input(f"{Colors.BOLD}🔍 Select investigation (1-15): {Colors.END}").strip()
 
         if choice == "1":
             _analyze_player()
