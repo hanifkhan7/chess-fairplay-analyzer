@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opening Trainer - Interactive Chess Training</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>♟️ Opening Trainer</h1>
+            <p>Interactive chess training against opponent's documented openings</p>
+        </header>
+
+        <div id="setup-screen" class="screen active">
+            <div class="setup-card">
+                <h2>Setup Training Session</h2>
+                
+                <div class="form-group">
+                    <label for="opponent">Opponent Username:</label>
+                    <input type="text" id="opponent" placeholder="e.g., hikaru, quantum-chesss" value="Quantum-Chesss">
+                </div>
+
+                <div class="form-group">
+                    <label for="games">Games to Download:</label>
+                    <select id="games">
+                        <option value="all" selected>All games</option>
+                        <option value="100">100 games</option>
+                        <option value="200">200 games</option>
+                        <option value="300">300 games</option>
+                        <option value="500">500 games</option>
+                        <option value="1000">1000 games</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="colors">Train Against:</label>
+                    <select id="colors">
+                        <option value="white">White openings only</option>
+                        <option value="black">Black openings only</option>
+                        <option value="both" selected>Both colors</option>
+                    </select>
+                </div>
+
+                <button id="start-btn" class="btn btn-primary" onclick="startTraining()">
+                    Start Training Session
+                </button>
+
+                <div id="setup-status" class="status-message"></div>
+            </div>
+        </div>
+
+        <div id="trainer-screen" class="screen">
+            <div class="trainer-content">
+                <div class="board-section">
+                    <div id="board" style="width: 500px; height: 500px;"></div>
+                    <div class="move-controls">
+                        <input type="text" id="move-input" placeholder="Enter move (e.g., e4)" class="move-input">
+                        <button class="btn btn-small" onclick="playMove()">Play</button>
+                        <button class="btn btn-small" onclick="undoMove()">Undo</button>
+                        <button class="btn btn-small" onclick="resetGame()">Reset</button>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <div class="stats-card">
+                        <h3>Opponent's Top Responses</h3>
+                        <div id="top-moves-list" class="moves-list">
+                            <p class="placeholder">Loading...</p>
+                        </div>
+                    </div>
+
+                    <div class="stats-card">
+                        <h3>Session Stats</h3>
+                        <div id="session-stats" class="stats-display">
+                            <p><strong>Moves Played:</strong> <span id="stat-moves">0</span></p>
+                            <p><strong>In Repertoire:</strong> <span id="stat-in-rep">0</span></p>
+                            <p><strong>Out of Repertoire:</strong> <span id="stat-out-rep">0</span></p>
+                            <p><strong>Estimated Win Rate:</strong> <span id="stat-win-rate">--%</span></p>
+                        </div>
+                    </div>
+
+                    <div class="stats-card">
+                        <h3>Move Sequence</h3>
+                        <div id="move-sequence" class="move-seq">
+                            <p class="placeholder">No moves yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="message-area">
+                <div id="status-message" class="status-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Chessboard.js and Chess.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.js"></script>
+    <script src="https://chessboardjs.com/dist/chessboard-1.0.0.min.js"></script>
+    <link rel="stylesheet" href="https://chessboardjs.com/dist/chessboard-1.0.0.min.css">
+
+    <script src="{{ url_for('static', filename='js/trainer.js') }}"></script>
+</body>
+</html>

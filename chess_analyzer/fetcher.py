@@ -157,7 +157,7 @@ def fetch_player_games(username: str, max_games: int = 50, config: Optional[Dict
                     'fetched_at': datetime.now().isoformat(),
                     'game_count': len(games),
                     'archives_count': total_archives,
-                    'games': all_games_data[:200]  # Cache up to 200 games
+                    'games': all_games_data  # Cache all fetched games
                 }
                 with open(cache_file, 'w', encoding='utf-8') as f:
                     json.dump(cache_data, f, indent=2)

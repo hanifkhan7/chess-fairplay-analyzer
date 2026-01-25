@@ -61,7 +61,19 @@ def main():
     print("   CHESS FAIRPLAY ANALYZER v3.1.0")
     print("   Forensic Analysis & Fair-Play Research")
     print("="*60 + "\n")
-    
+
+    # Mode selection at startup
+    print("Select mode:")
+    print("1. Web (modern browser interface)")
+    print("2. USCI (classic CLI)")
+    mode_choice = input("Choose mode (1=Web, 2=USCI): ").strip() or "1"
+
+    if mode_choice == "1":
+        print("\n[INFO] The Web option is under development and will be available in a future update.")
+        print("Please use the USCI (classic CLI) mode for now. Thank you for your patience!")
+        return
+
+    # USCI/CLI mode: continue with existing menu
     while True:
         print("\nMAIN MENU")
         print("="*50)
@@ -76,14 +88,14 @@ def main():
         print("9. Network Analysis")
         print("10. Opening Repertoire Inspector")
         print("11. Tournament Inspector (Head-to-Head Analysis)")
-        print("12. Head-to-Head Matchup (NEW!)")
+        print("12. Head-to-Head Matchup")
         print("13. View Reports")
         print("14. Settings")
         print("15. Exit")
         print("="*50 + "\n")
-        
+
         choice = input("Select option (1-15): ").strip()
-        
+
         if choice == "1":
             _analyze_player()
         elif choice == "2":
@@ -1199,7 +1211,7 @@ def _multi_player_comparison():
     try:
         from .dual_fetcher import prompt_platform_selection
         from .utils.helpers import load_config
-        from .comparison import compare_players_display
+        from .comparison import compare_players_display, PlayerComparison
         
         config = load_config()
         
@@ -1217,7 +1229,44 @@ def _multi_player_comparison():
         else:
             platforms = ['chess.com', 'lichess']
         
+        # Display comparison in CLI
         compare_players_display(usernames, max_games=game_count)
+        
+        # Generate HTML report
+        print("\n[REPORT] Generating professional HTML report...")
+        try:
+            from .feature_reporter import FeatureReporter
+            reporter = FeatureReporter()
+            
+            # Collect comparison data
+            comparison = PlayerComparison(usernames, game_count)
+            if comparison.fetch_all_players():
+                summary = comparison.get_summary()
+                iq_scores = comparison.estimate_iq()
+                
+                # Prepare data for report
+                comparison_data = {
+                    'rating_comparison': summary.get('rating_comparison', {}),
+                    'winrate_comparison': summary.get('winrate_comparison', {}),
+                    'volatility_comparison': summary.get('volatility_comparison', {}),
+                    'opening_comparison': summary.get('opening_comparison', {}),
+                    'iq_scores': iq_scores if iq_scores else {}
+                }
+                
+                # Generate and save report
+                html_content = reporter.generate_multi_player_comparison_report(comparison_data, usernames)
+                report_path = reporter.save_report(html_content, "_".join(usernames), "comparison")
+                print(f"✓ Professional report saved: {report_path}")
+                
+                # Open report
+                open_report = input("Open report in browser? (y/n): ").strip().lower()
+                if open_report == "y":
+                    import webbrowser
+                    webbrowser.open(f'file://{Path(report_path).resolve()}')
+        except Exception as e:
+            print(f"Note: Could not generate HTML report: {e}")
+            import traceback
+            traceback.print_exc()
     except Exception as e:
         print(f"\nError: {e}")
         import traceback
@@ -1324,6 +1373,105 @@ def _network_analysis():
     input("\nPress Enter to continue...")
 
 
+def _play_against_opponent():
+    """Interactive training: Play against opponent's opening repertoire (ASCII Stats)."""
+    print("\n" + "="*70)
+    print("[TRAIN] PLAY AGAINST OPENING REPERTOIRE")
+    print("Interactive chess training against a player's documented openings")
+    print("="*70)
+    
+    opponent_name = input("\nEnter opponent username (e.g., hikaru): ").strip()
+    if not opponent_name:
+        return
+    
+    try:
+        from .opening_trainer import OpeningTrainer, InteractiveTrainer
+        from .utils.helpers import load_config
+        
+        config = load_config()
+        
+        # Ask which games to download
+        print("\n[GAMES] How many games to download for training?")
+        print("  1. All games")
+        print("  2. Specific number")
+        games_choice = input("Select (1-2, default 1): ").strip()
+        
+        if games_choice == '2':
+            game_count_str = input("Number of games (default 50): ").strip()
+            try:
+                game_count = int(game_count_str) if game_count_str else 50
+            except:
+                game_count = 50
+        else:
+            game_count = 0  # 0 means all games
+        
+        # Ask which color to train
+        print("\n[COLOR] Train against:")
+        print("  1. White openings only")
+        print("  2. Black openings only")
+        print("  3. Both colors")
+        color_choice = input("Select (1-3, default 3): ").strip()
+        color_map = {'1': 'white', '2': 'black', '3': None}
+        train_color = color_map.get(color_choice, None)
+        
+        # Fetch games
+        print(f"\n[FETCH] Downloading games from {opponent_name}...")
+        try:
+            from .dual_fetcher import prompt_platform_selection
+            
+            platforms = prompt_platform_selection(opponent_name, config)
+            if not platforms:
+                print("Could not find opponent on any platform")
+                input("\nPress Enter to continue...")
+                return
+            
+            player_games, counts = _fetch_games(opponent_name, game_count, platforms, config)
+            
+            if not player_games:
+                print(f"[ERROR] No games found for {opponent_name}")
+                input("\nPress Enter to continue...")
+                return
+            
+            print(f"[OK] Retrieved {len(player_games)} games")
+            
+        except Exception as e:
+            print(f"[ERROR] Could not fetch games: {e}")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Initialize trainer
+        print(f"\n[TRAIN] Building training repertoire from {len(player_games)} games...")
+        
+        try:
+            trainer = OpeningTrainer(player_games, opponent_name, color=train_color)
+            
+            print(f"\n{trainer.get_summary()}")
+            
+            # Use CLI version
+            start_choice = input("Start training session? (y/n): ").strip().lower()
+            if start_choice != 'y':
+                input("\nPress Enter to continue...")
+                return
+            
+            interactive = InteractiveTrainer(trainer)
+            interactive.run_interactive_game(max_moves=50)
+
+                
+        except Exception as e:
+            print(f"[ERROR] Training failed: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        input("\nPress Enter to continue...")
+    except Exception as e:
+        print(f"\n[ERROR] Error: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    input("\nPress Enter to continue...")
+    input("\nPress Enter to continue...")
+
+
 def _opening_repertoire_inspector():
     """Hybrid Opening Repertoire Analysis - Tree + Statistics (v3.1)"""
     print("\n" + "="*70)
@@ -1331,6 +1479,7 @@ def _opening_repertoire_inspector():
     print("Hybrid System: Opening Tree + Statistical Analysis")
     print("="*70)
     
+    # Original repertoire analysis
     username = input("\nEnter player username: ").strip()
     if not username:
         return
@@ -2336,7 +2485,7 @@ def _head_to_head_matchup():
         # Display report
         analyzer.display_matchup_report(report)
         
-        # Save report
+        # Save JSON report
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_filename = f"reports/matchup_{player1_name}_{player2_name}_{timestamp}.json"
         
@@ -2349,7 +2498,30 @@ def _head_to_head_matchup():
             
             print(f"\n[SAVED] Matchup report: {report_filename}")
         except Exception as e:
-            print(f"[WARNING] Could not save report: {e}")
+            print(f"[WARNING] Could not save JSON report: {e}")
+        
+        # Generate professional HTML report
+        print("\n[REPORT] Generating professional HTML report...")
+        try:
+            from .feature_reporter import FeatureReporter
+            reporter = FeatureReporter()
+            html_content = reporter.generate_h2h_report(report)
+            html_filename = f"reports/h2h_{player1_name}_vs_{player2_name}_{timestamp}.html"
+            
+            with open(html_filename, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            
+            print(f"✓ Professional H2H report saved: {html_filename}")
+            
+            # Ask to open report
+            open_report = input("Open report in browser? (y/n): ").strip().lower()
+            if open_report == "y":
+                import webbrowser
+                webbrowser.open(f'file://{Path(html_filename).resolve()}')
+        except Exception as e:
+            print(f"Note: Could not generate HTML report: {e}")
+            import traceback
+            traceback.print_exc()
         
         input("\nPress Enter to continue...")
         

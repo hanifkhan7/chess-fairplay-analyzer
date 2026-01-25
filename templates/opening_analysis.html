@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opening Repertoire Analyzer</title>
+    <link rel="stylesheet" href="https://chessboardjs.com/dist/chessboard-1.0.0.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 40px;
+        }
+
+        .board-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #board {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
+        .board-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+            transform: translateY(-2px);
+        }
+
+        .stats-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            color: #667eea;
+            font-weight: 700;
+            font-size: 1.2em;
+        }
+
+        .moves-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .move-item {
+            background: white;
+            padding: 12px 15px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .move-item:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .move-notation {
+            font-weight: 700;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .move-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .move-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .setup-screen {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            padding: 40px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .input-group input {
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .message {
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+
+        .message.info {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .message.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        @media (max-width: 1024px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>♞ Opening Repertoire Analyzer</h1>
+            <p>Explore opponent's opening patterns with modern analysis</p>
+        </header>
+
+
+        <div id="setupScreen" class="setup-screen">
+            <form id="setupForm" onsubmit="return setupRepertoire();">
+                <div class="input-group">
+                    <label for="opponentInput">Opponent Username:</label>
+                    <input type="text" id="opponentInput" placeholder="e.g., hikaru, quantum-chesss" required>
+                </div>
+                <div class="input-group">
+                    <label for="gamesInput">Number of Games:</label>
+                    <input type="number" id="gamesInput" min="1" max="2000" placeholder="e.g., 100" value="50">
+                </div>
+                <div class="input-group">
+                    <label for="colorInput">Color:</label>
+                    <select id="colorInput">
+                        <option value="both">Both</option>
+                        <option value="white">White</option>
+                        <option value="black">Black</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="platformInput">Platform:</label>
+                    <select id="platformInput">
+                        <option value="both">Both</option>
+                        <option value="lichess">Lichess</option>
+                        <option value="chesscom">Chess.com</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" type="submit">Build Repertoire</button>
+                <div id="setupMessage"></div>
+            </form>
+        </div>
+
+        <div id="mainContent" class="content hidden">
+            <div class="board-container">
+                <div id="board"></div>
+                <div class="board-controls">
+                    <button class="btn btn-primary" onclick="resetBoard()">Reset Board</button>
+                    <button class="btn btn-secondary" onclick="undoMove()">← Back</button>
+                </div>
+            </div>
+
+            <div class="stats-panel">
+                <div class="stat-card">
+                    <h3>Repertoire Stats</h3>
+                    <div>
+                        <div class="stat-item">
+                            <span class="stat-label">Games Analyzed</span>
+                            <span class="stat-value" id="statsGames">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Unique Positions</span>
+                            <span class="stat-value" id="statsPositions">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Tree Depth</span>
+                            <span class="stat-value" id="statsDepth">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Top Responses</h3>
+                    <div class="moves-list" id="movesList">
+                        <p style="color: #999;">Select a position to see responses</p>
+                    </div>
+                </div>
+
+                <div id="messageBox"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Use reliable jsDelivr CDN for chess.js and chessboard.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script>
+    window.onload = function() {
+        let board;
+        let game = new Chess();
+        let moveHistory = [];
+
+        // Show message helper
+        function showMessage(text, type) {
+            const msg = document.getElementById('messageBox') || document.getElementById('setupMessage');
+            if (msg) {
+                msg.innerHTML = `<div class="message ${type}">${text}</div>`;
+            }
+        }
+
+        // Wait for libraries to load
+        function waitForLibraries(callback, attempts = 0) {
+            if (typeof ChessBoard !== 'undefined' && typeof Chess !== 'undefined') {
+                callback();
+            } else if (attempts < 50) {
+                setTimeout(() => waitForLibraries(callback, attempts + 1), 100);
+            } else {
+                console.error('Failed to load chess libraries');
+                showMessage('Error: Chess libraries failed to load. Try refreshing.', 'error');
+            }
+        }
+
+        function initializeBoard() {
+            waitForLibraries(() => {
+                const cfg = {
+                    draggable: true,
+                    position: 'start',
+                    onDragStart: onDragStart,
+                    onDrop: onDrop,
+                    onSnapEnd: onSnapEnd,
+                    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+                };
+                board = ChessBoard('board', cfg);
+                updateStats();
+            });
+        }
+
+        function onDragStart(source, piece, position, orientation) {
+            if (game.game_over()) return false;
+        }
+
+        function onDrop(source, target) {
+            const move = game.move({
+                from: source,
+                to: target,
+                promotion: 'q'
+            });
+
+            if (move === null) return 'snapback';
+
+            moveHistory.push(move);
+            updateStats();
+            return true;
+        }
+
+        function onSnapEnd() {
+            board.position(game.fen());
+        }
+
+        function undoMove() {
+            if (moveHistory.length > 0) {
+                game.undo();
+                moveHistory.pop();
+                board.position(game.fen());
+                updateStats();
+            }
+        }
+        // ...existing code...
+    }
+
+        function resetBoard() {
+            game.reset();
+            board.start();
+            moveHistory = [];
+            updateStats();
+        }
+
+        function updateStats() {
+            fetch('/api/stats')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('statsGames').textContent = data.games;
+                    document.getElementById('statsPositions').textContent = data.positions;
+                    document.getElementById('statsDepth').textContent = data.depth;
+                });
+
+            fetch('/api/position', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fen: game.fen() })
+            })
+            .then(r => r.json())
+            .then(data => {
+                const movesList = document.getElementById('movesList');
+                if (data.moves && data.moves.length > 0) {
+                    movesList.innerHTML = data.moves.map(m => `
+                        <div class="move-item" onclick="playMoveFromList('${m.uci}')">
+                            <span class="move-notation">${m.move}</span>
+                            <span class="move-stats">
+                                <span class="move-stat">Games: ${m.count}</span>
+                            </span>
+                        </div>
+                    `).join('');
+                } else {
+                    movesList.innerHTML = '<p style="color: #999;">No moves recorded</p>';
+                }
+            })
+            .catch(e => {
+                document.getElementById('movesList').innerHTML = '<p style="color: #999;">Error loading moves</p>';
+            });
+        }
+
+        function playMoveFromList(uci) {
+            const move = game.move(uci, { sloppy: true });
+            if (move) {
+                moveHistory.push(move);
+                board.position(game.fen());
+                updateStats();
+            }
+        }
+
+
+        function setupRepertoire() {
+            const opponent = document.getElementById('opponentInput').value.trim();
+            const games = document.getElementById('gamesInput').value.trim();
+            const color = document.getElementById('colorInput').value;
+            const platform = document.getElementById('platformInput').value;
+            if (!opponent) {
+                showMessage('Please enter opponent username', 'error');
+                return false;
+            }
+            showMessage('Building repertoire, please wait...', 'info');
+            fetch('/api/setup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: opponent, games: games, color: color, platform: platform })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) throw new Error(data.error || 'Unknown error');
+                showMessage('Repertoire built! Loading board...', 'success');
+                setTimeout(() => {
+                    document.getElementById('setupScreen').classList.add('hidden');
+                    document.getElementById('mainContent').classList.remove('hidden');
+                    initializeBoard();
+                }, 800);
+            })
+            .catch(e => {
+                showMessage('Error: ' + (e.message || e), 'error');
+            });
+            return false;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('opponentInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') startAnalysis();
+            });
+        });
+    </script>
+</body>
+</html>
