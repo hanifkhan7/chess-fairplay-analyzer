@@ -6,30 +6,32 @@ from typing import Dict, Any
 class D3TreeVisualizer:
     """Generates interactive D3.js tree visualization from move tree data."""
     
-    def __init__(self, tree_data: Dict[str, Any], title: str = "Opening Repertoire Tree"):
+    def __init__(self, tree_data: Dict[str, Any]):
         """Initialize visualizer with tree data.
         
         Args:
             tree_data: Dictionary with 'tree' key containing root node dict
-            title: Title for the visualization
         """
         self.tree_data = tree_data
-        self.title = title
     
-    def generate_html(self) -> str:
-        """Generate complete HTML with D3.js visualization.
+    def generate_html(self, output_file: str, title: str = "Opening Repertoire Tree") -> None:
+        """Generate complete HTML with D3.js visualization and save to file.
         
-        Returns:
-            HTML string ready to save to file
+        Args:
+            output_file: Path where HTML file should be saved
+            title: Title for the visualization
         """
         # Serialize tree to JSON
         tree_json = json.dumps(self.tree_data, indent=2)
         
         # Build HTML with embedded JavaScript
-        html = self._build_html(tree_json)
-        return html
+        html = self._build_html(tree_json, title)
+        
+        # Save to file
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(html)
     
-    def _build_html(self, tree_json: str) -> str:
+    def _build_html(self, tree_json: str, title: str) -> str:
         """Build HTML document with D3.js visualization."""
         
         html_header = '''<!DOCTYPE html>
@@ -37,7 +39,7 @@ class D3TreeVisualizer:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>''' + self.title + '''</title>
+    <title>''' + title + '''</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         * {
@@ -210,7 +212,7 @@ class D3TreeVisualizer:
 </head>
 <body>
     <div class="container">
-        <h1>''' + self.title + '''</h1>
+        <h1>''' + title + '''</h1>
         
         <div class="stats">
             <div class="stat-item">
