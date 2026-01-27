@@ -1730,18 +1730,31 @@ def _opening_repertoire_inspector():
                     for game in player_games:
                         white = str(game.headers.get("White", "")).lower()
                         black = str(game.headers.get("Black", "")).lower()
+                        player_is_white = white == username.lower()
                         
-                        if color == 'white' and white != username.lower():
+                        # Keep games where player is in the specified color
+                        if color == 'white' and not player_is_white:
                             continue
-                        elif color == 'black' and black != username.lower():
+                        elif color == 'black' and player_is_white:
                             continue
                         
                         filtered_games.append(game)
                     
                     if filtered_games:
-                        # Build move tree (opponent perspective)
+                        # Build move tree - track player's own moves based on their color
+                        # color parameter in MoveTreeBuilder refers to which color's moves to track
+                        print(f"   Filtered to {len(filtered_games)} games for {color}")
                         tree_builder = MoveTreeBuilder(filtered_games, username, color)
-                        print(f"[OK] Tree built: {tree_builder.get_total_positions()} positions, depth {tree_builder.get_tree_depth()}")
+                        positions = tree_builder.get_total_positions()
+                        depth = tree_builder.get_tree_depth()
+                        print(f"[OK] Tree built: {positions} positions, depth {depth}")
+                        
+                        if positions == 0:
+                            print(f"[WARN] Tree has no positions - trying with color=None to track all moves...")
+                            tree_builder = MoveTreeBuilder(filtered_games, username, None)
+                            positions = tree_builder.get_total_positions()
+                            depth = tree_builder.get_tree_depth()
+                            print(f"[OK] Rebuilt tree: {positions} positions, depth {depth}")
                         
                         # Generate D3 visualization
                         print(f"[GENERATE] Creating interactive HTML visualization...")

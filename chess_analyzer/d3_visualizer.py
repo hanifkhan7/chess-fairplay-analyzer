@@ -328,6 +328,13 @@ class D3TreeVisualizer:
         // Tree data
         const treeData = {tree_json};
         
+        // Check if tree has data
+        if (!treeData.tree.children || Object.keys(treeData.tree.children).length === 0) {{
+            console.warn('Tree is empty');
+            document.getElementById('tree').innerHTML = '<div style="padding: 20px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; margin-top: 20px;"><strong>⚠️ No tree data</strong><br/>The move tree is empty. This may happen if:<ul style="margin-top: 10px;"><li>The color filter eliminated all games</li><li>The player has no games in that color</li><li>Try analyzing with "Both colors" filter</li></ul></div>';
+            throw new Error('Empty tree data');
+        }}
+        
         // SVG dimensions
         const margin = {{top: 20, right: 120, bottom: 20, left: 120}};
         const width = document.getElementById('tree').parentElement.offsetWidth - margin.left - margin.right;
@@ -348,6 +355,13 @@ class D3TreeVisualizer:
         // Create tree layout
         const tree = d3.tree().size([width, height]);
         const root = d3.hierarchy(treeData.tree);
+        
+        // Check if tree has data
+        if (!root.children || root.children.length === 0) {
+            console.warn('Tree has no children data');
+            document.getElementById('tree').innerHTML += '<p style="color: red; text-align: center; margin-top: 20px;"><strong>⚠️ No opening tree data available</strong><br/>Try selecting fewer filters or analyzing more games.</p>';
+        }
+        
         tree(root);
         
         // Create links
@@ -363,8 +377,10 @@ class D3TreeVisualizer:
         
         // Create nodes
         const nodes = root.descendants();
+        console.log('Total nodes:', nodes.length);
+        
         const nodeSelection = g.selectAll('.node')
-            .data(nodes)
+            .data(nodes, (d, i) => i)
             .enter()
             .append('g')
             .attr('class', d => {{
@@ -425,6 +441,7 @@ class D3TreeVisualizer:
         
         // Store children for toggle
         root.children.forEach(d => {{ d._children = d.children; }});
+        console.log('Tree data:', treeData.tree);
         
         function update() {{
             // Recalculate layout
