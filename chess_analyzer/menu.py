@@ -18,6 +18,9 @@ except ImportError:
 from .fetcher import fetch_player_games
 from .dual_fetcher import fetch_dual_platform_games, fetch_lichess_games
 from .reporter import generate_report
+from .move_tree_builder import MoveTreeBuilder
+from .d3_visualizer import D3TreeVisualizer
+from .eco_loader import get_opening_name
 
 
 # Color codes for terminal output
@@ -156,7 +159,7 @@ def main():
         
         print()
         print_menu_item("1", "Analyze Player", "(Detect Suspicious Activity)")
-        print_menu_item("2", "Play Against Opponent", "(Interactive Opening Training)")
+        print_menu_item("2", "Download & Analyze Games", "(Interactive Opponent Analysis)")
         print_menu_item("3", "Exploit Your Opponent", "(Opening & Style Analysis)")
         print_menu_item("4", "Strength Profile", "(Skill Level Analysis)")
         print_menu_item("5", "Accuracy Report", "(Move Accuracy & Consistency)")
@@ -1712,6 +1715,60 @@ def _opening_repertoire_inspector():
                 excel_file = f"reports/{username}_opening_repertoire.xlsx"
                 generator = ReportGenerator(analyzer, visualizer)
                 generator.export_to_excel(excel_file)
+            
+            # NEW: D3.js Interactive Visualization
+            print(f"\n[VISUALIZE] Generate interactive D3.js opening tree?")
+            print("-"*70)
+            d3_choice = input("Generate D3.js visualization? (y/n, default y): ").strip().lower()
+            
+            if d3_choice != 'n':
+                try:
+                    print(f"\n[BUILD] Building move tree from {len(player_games)} games...")
+                    
+                    # Filter games by color if needed
+                    filtered_games = []
+                    for game in player_games:
+                        white = str(game.headers.get("White", "")).lower()
+                        black = str(game.headers.get("Black", "")).lower()
+                        
+                        if color == 'white' and white != username.lower():
+                            continue
+                        elif color == 'black' and black != username.lower():
+                            continue
+                        
+                        filtered_games.append(game)
+                    
+                    if filtered_games:
+                        # Build move tree (opponent perspective)
+                        tree_builder = MoveTreeBuilder(filtered_games, username, color)
+                        print(f"[OK] Tree built: {tree_builder.get_total_positions()} positions, depth {tree_builder.get_tree_depth()}")
+                        
+                        # Generate D3 visualization
+                        print(f"[GENERATE] Creating interactive HTML visualization...")
+                        tree_dict = tree_builder.to_dict()
+                        viz = D3TreeVisualizer(tree_dict)
+                        
+                        os.makedirs('reports', exist_ok=True)
+                        d3_file = f"reports/{username}_opening_tree_d3.html"
+                        viz.generate_html(d3_file, f"Opening Tree Analysis - {username}")
+                        print(f"[OK] D3 visualization saved: {d3_file}")
+                        
+                        # Offer to open in browser
+                        open_choice = input("Open in browser? (y/n, default y): ").strip().lower()
+                        if open_choice != 'n':
+                            try:
+                                import webbrowser
+                                webbrowser.open(f"file://{os.path.abspath(d3_file)}")
+                                print(f"[OK] Opened in browser")
+                            except:
+                                print(f"[WARN] Could not auto-open browser. Manually open: {d3_file}")
+                    else:
+                        print(f"[WARN] No games matched the color filter")
+                        
+                except Exception as e:
+                    print(f"[ERROR] D3 visualization failed: {e}")
+                    import traceback
+                    traceback.print_exc()
             
             print(f"\n[OK] Analysis complete!")
         else:

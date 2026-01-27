@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+from .eco_loader import get_opening_name
+
 logger = logging.getLogger(__name__)
 
 
@@ -559,12 +561,17 @@ class FeatureReporter:
             games = opening_stats.get('games', 0)
             win_rate = opening_stats.get('win_rate', 0)
             eco = opening_stats.get('eco', 'N/A')
+            # Use get_opening_name to convert ECO to readable name
+            if eco and eco != 'N/A':
+                eco_display = f"{eco} - {get_opening_name(eco)}"
+            else:
+                eco_display = eco
             frequency = (games / total_games * 100) if total_games > 0 else 0
             
             html += f"""
                     <tr>
                         <td>{opening_name}</td>
-                        <td><code>{eco}</code></td>
+                        <td><code>{eco_display}</code></td>
                         <td>{games}</td>
                         <td>{win_rate:.1f}%</td>
                         <td>{frequency:.1f}%</td>
