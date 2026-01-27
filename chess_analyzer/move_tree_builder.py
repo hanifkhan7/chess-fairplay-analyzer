@@ -138,11 +138,14 @@ class MoveTreeBuilder:
         for move in game.mainline_moves():
             move_san = board.san(move)
             
-            # Determine if it's opponent's move
+            # Determine if it's opponent's move (before pushing)
             is_opponent_move = (board.turn and opponent_is_white) or (not board.turn and opponent_is_black)
             
+            # Push the move
+            board.push(move)
+            
             if is_opponent_move:
-                # Get next position FEN
+                # Get position FEN AFTER the move
                 next_fen = board.fen()
                 
                 # Create or get child node
@@ -161,8 +164,6 @@ class MoveTreeBuilder:
                 
                 current_node = child
                 move_count += 1
-            
-            board.push(move)
     
     def get_root(self) -> MoveNode:
         """Get root node"""

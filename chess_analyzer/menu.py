@@ -1742,39 +1742,49 @@ def _opening_repertoire_inspector():
                     
                     if filtered_games:
                         # Build move tree - track player's own moves based on their color
-                        # color parameter in MoveTreeBuilder refers to which color's moves to track
+                        # Always use color='both' to track all moves, filtering by color happens above
                         print(f"   Filtered to {len(filtered_games)} games for {color}")
-                        tree_builder = MoveTreeBuilder(filtered_games, username, color)
+                        print(f"   [DEBUG] Analyzing moves for player: {username}")
+                        tree_builder = MoveTreeBuilder(filtered_games, username, 'both')
                         positions = tree_builder.get_total_positions()
                         depth = tree_builder.get_tree_depth()
                         print(f"[OK] Tree built: {positions} positions, depth {depth}")
                         
+                        # Debug: show root node info
+                        root = tree_builder.get_root()
+                        print(f"   [DEBUG] Root children: {len(root.children)}")
+                        if root.children:
+                            for move, node in list(root.children.items())[:3]:
+                                print(f"      - {move}: {node.games} games, {node.get_win_rate():.1f}% W")
+                        
                         if positions == 0:
-                            print(f"[WARN] Tree has no positions - trying with color=None to track all moves...")
-                            tree_builder = MoveTreeBuilder(filtered_games, username, None)
-                            positions = tree_builder.get_total_positions()
-                            depth = tree_builder.get_tree_depth()
-                            print(f"[OK] Rebuilt tree: {positions} positions, depth {depth}")
+                            print(f"[WARN] Tree is empty! No moves were tracked.")
+                            print(f"        This might mean:")
+                            print(f"        - Games don't have enough moves (< {min_depth})")
+                            print(f"        - Player name doesn't match game headers exactly")
+                            print(f"        - Try 'Both colors' filter")
+                            filtered_games = []
                         
-                        # Generate D3 visualization
-                        print(f"[GENERATE] Creating interactive HTML visualization...")
-                        tree_dict = tree_builder.to_dict()
-                        viz = D3TreeVisualizer(tree_dict)
-                        
-                        os.makedirs('reports', exist_ok=True)
-                        d3_file = f"reports/{username}_opening_tree_d3.html"
-                        viz.generate_html(d3_file, f"Opening Tree Analysis - {username}")
-                        print(f"[OK] D3 visualization saved: {d3_file}")
-                        
-                        # Offer to open in browser
-                        open_choice = input("Open in browser? (y/n, default y): ").strip().lower()
-                        if open_choice != 'n':
-                            try:
-                                import webbrowser
-                                webbrowser.open(f"file://{os.path.abspath(d3_file)}")
-                                print(f"[OK] Opened in browser")
-                            except:
-                                print(f"[WARN] Could not auto-open browser. Manually open: {d3_file}")
+                        if filtered_games:
+                            # Generate D3 visualization
+                            print(f"[GENERATE] Creating interactive HTML visualization...")
+                            tree_dict = tree_builder.to_dict()
+                            viz = D3TreeVisualizer(tree_dict)
+                            
+                            os.makedirs('reports', exist_ok=True)
+                            d3_file = f"reports/{username}_opening_tree_d3.html"
+                            viz.generate_html(d3_file, f"Opening Tree Analysis - {username}")
+                            print(f"[OK] D3 visualization saved: {d3_file}")
+                            
+                            # Offer to open in browser
+                            open_choice = input("Open in browser? (y/n, default y): ").strip().lower()
+                            if open_choice != 'n':
+                                try:
+                                    import webbrowser
+                                    webbrowser.open(f"file://{os.path.abspath(d3_file)}")
+                                    print(f"[OK] Opened in browser")
+                                except:
+                                    print(f"[WARN] Could not auto-open browser. Manually open: {d3_file}")
                     else:
                         print(f"[WARN] No games matched the color filter")
                         
