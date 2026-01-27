@@ -194,12 +194,19 @@ class OpeningTree:
             "white": white_player,
             "black": black_player,
             "date": pgn_game.headers.get("Date", "Unknown"),
-            "elo_opp": int(pgn_game.headers.get(
-                "BlackElo" if is_white else "WhiteElo", 0
+            "elo_opp": self._parse_elo(pgn_game.headers.get(
+                "BlackElo" if is_white else "WhiteElo", "0"
             )),
         })
         
         self.games_analyzed += 1
+    
+    def _parse_elo(self, elo_str: str) -> int:
+        """Parse ELO rating, handling invalid values like '?'."""
+        try:
+            return int(elo_str)
+        except (ValueError, TypeError):
+            return 0
     
     def _generate_opening_name(self, eco: str, moves: list) -> str:
         """Generate opening name from ECO code and initial moves."""
