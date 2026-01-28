@@ -336,17 +336,24 @@ class D3TreeVisualizer:
         }
         
         addDebug("Stats updated from data");
+        
+        // Check if tree has data
+        if (!treeData.tree || !treeData.tree.children || treeData.tree.children.length === 0) {
+            addDebug("WARNING: No children found in tree!");
+            document.getElementById("tree-container").innerHTML = 
+                '<div class="warning">No opening moves found in selected games. The tree is empty.</div>';
+        } else {
+            addDebug("Tree root: move=" + treeData.tree.move + ", children=" + treeData.tree.children.length);
             
             // Create hierarchy
             addDebug("Creating D3 hierarchy...");
             const root = d3.hierarchy(treeData.tree);
             addDebug("Root node created. Has children: " + (root.children && root.children.length > 0 ? "YES (" + root.children.length + ")" : "NO"));
             
-            // Check if tree has data
-            if (!treeData.tree || !treeData.tree.children || treeData.tree.children.length === 0) {
-                addDebug("WARNING: No children found in tree!");
+            if (!root.children || root.children.length === 0) {
+                addDebug("WARNING: d3.hierarchy created but no children!");
                 document.getElementById("tree-container").innerHTML = 
-                    '<div class="warning">No opening moves found in selected games. The tree is empty.</div>';
+                    '<div class="warning">Tree data exists but hierarchy creation failed.</div>';
             } else {
                 // Setup layout
                 addDebug("Setting up tree layout...");
@@ -450,17 +457,14 @@ class D3TreeVisualizer:
         
         function expandAll() {
             addDebug("Expanding all nodes...");
-            // Implementation for expand all
         }
         
         function collapseAll() {
             addDebug("Collapsing all nodes...");
-            // Implementation for collapse all
         }
         
         function resetZoom() {
             addDebug("Resetting zoom...");
-            // Implementation for reset zoom
         }
     </script>
 </body>
