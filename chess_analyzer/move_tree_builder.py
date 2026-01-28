@@ -62,7 +62,7 @@ class MoveNode:
         return (self.losses / self.games * 100) if self.games > 0 else 0.0
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert node to dictionary"""
+        """Convert node to dictionary (children as array for D3.js)"""
         return {
             'move': self.move,
             'games': self.games,
@@ -74,7 +74,7 @@ class MoveNode:
             'loss_rate': self.get_loss_rate(),
             'eco': self.eco_code,
             'opening': self.opening_name,
-            'children': {move: child.to_dict() for move, child in self.children.items()}
+            'children': [child.to_dict() for child in self.children.values()]
         }
 
 
