@@ -97,6 +97,26 @@ class D3TreeVisualizer:
             color: #0066cc;
         }
         
+        .highlight {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .highlight h2 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+        
+        .highlight p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
         .controls {
             margin: 20px 0;
             padding: 15px;
@@ -149,24 +169,39 @@ class D3TreeVisualizer:
         }
         
         .node circle {
-            fill: #0066cc;
-            stroke: #003d7a;
+            fill: #4CAF50;
+            stroke: #2E7D32;
             stroke-width: 2px;
-            transition: all 0.2s;
+            transition: all 0.3s ease;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
         }
         
         .node circle:hover {
-            fill: #0052a3;
-            r: 7;
+            fill: #45a049;
+            r: 8;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
         }
         
         .node text {
-            font-size: 11px;
-            font-weight: 500;
-            fill: #333;
+            font-size: 12px;
+            font-weight: 600;
+            fill: white;
             text-anchor: middle;
             pointer-events: none;
             user-select: none;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .node.high-winrate circle {
+            fill: #2ecc71;
+        }
+        
+        .node.med-winrate circle {
+            fill: #f39c12;
+        }
+        
+        .node.low-winrate circle {
+            fill: #e74c3c;
         }
         
         .link {
@@ -214,18 +249,30 @@ class D3TreeVisualizer:
     <div class="container">
         <h1>''' + title + '''</h1>
         
-        <div class="stats">
+        <div class="stats" id="stats-container">
             <div class="stat-item">
-                <div class="stat-label">Total Moves</div>
-                <div class="stat-value" id="stat-moves">0</div>
+                <div class="stat-label">Games Analyzed</div>
+                <div class="stat-value" id="stat-games">0</div>
             </div>
             <div class="stat-item">
-                <div class="stat-label">Max Depth</div>
-                <div class="stat-value" id="stat-depth">0</div>
+                <div class="stat-label">Opponent</div>
+                <div class="stat-value" id="stat-opponent">-</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Color</div>
+                <div class="stat-value" id="stat-color">-</div>
             </div>
             <div class="stat-item">
                 <div class="stat-label">Unique Positions</div>
                 <div class="stat-value" id="stat-positions">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Tree Depth</div>
+                <div class="stat-value" id="stat-depth">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Opening Moves</div>
+                <div class="stat-value" id="stat-moves">0</div>
             </div>
         </div>
         
@@ -267,29 +314,37 @@ class D3TreeVisualizer:
         addDebug("Initializing tree visualization...");
         addDebug("Tree data keys: " + Object.keys(treeData).join(", "));
         
-        // Check tree data
-        if (!treeData || !treeData.tree) {
-            addDebug("ERROR: Tree data is missing!");
-            document.getElementById("tree-container").innerHTML = 
-                '<div class="warning">ERROR: No tree data found in HTML</div>';
-        } else {
-            addDebug("Tree root: " + JSON.stringify(treeData.tree, null, 2).substring(0, 200));
-            
-            // Update stats
-            if (treeData.stats) {
-                document.getElementById("stat-moves").textContent = treeData.stats.total_moves || 0;
-                document.getElementById("stat-depth").textContent = treeData.stats.max_depth || 0;
-                document.getElementById("stat-positions").textContent = treeData.stats.unique_positions || 0;
-                addDebug("Stats: " + JSON.stringify(treeData.stats));
-            }
+        // Update stats first
+        if (treeData.games !== undefined) {
+            document.getElementById("stat-games").textContent = treeData.games || 0;
+        }
+        if (treeData.opponent) {
+            document.getElementById("stat-opponent").textContent = treeData.opponent;
+        }
+        if (treeData.color_filter) {
+            const colorMap = {"white": "White", "black": "Black", "both": "Both Colors"};
+            document.getElementById("stat-color").textContent = colorMap[treeData.color_filter] || treeData.color_filter;
+        }
+        if (treeData.positions !== undefined) {
+            document.getElementById("stat-positions").textContent = treeData.positions || 0;
+        }
+        if (treeData.depth !== undefined) {
+            document.getElementById("stat-depth").textContent = treeData.depth || 0;
+        }
+        if (treeData.tree && treeData.tree.children) {
+            document.getElementById("stat-moves").textContent = treeData.tree.children.length || 0;
+        }
+        
+        addDebug("Stats updated from data");
             
             // Create hierarchy
             addDebug("Creating D3 hierarchy...");
             const root = d3.hierarchy(treeData.tree);
             addDebug("Root node created. Has children: " + (root.children && root.children.length > 0 ? "YES (" + root.children.length + ")" : "NO"));
             
-            if (!root.children || root.children.length === 0) {
-                addDebug("WARNING: No children found in hierarchy!");
+            // Check if tree has data
+            if (!treeData.tree || !treeData.tree.children || treeData.tree.children.length === 0) {
+                addDebug("WARNING: No children found in tree!");
                 document.getElementById("tree-container").innerHTML = 
                     '<div class="warning">No opening moves found in selected games. The tree is empty.</div>';
             } else {
@@ -347,30 +402,30 @@ class D3TreeVisualizer:
                 
                 // Add circles to nodes
                 nodes.append("circle")
-                    .attr("r", d => Math.min(5 + Math.log(d.data.games || 1) * 2, 15))
+                    .attr("r", d => Math.max(4, Math.min(5 + Math.log(Math.max(1, d.data.games)) * 1.5, 18)))
+                    .attr("class", d => {
+                        const winRate = d.data.win_rate || 0;
+                        if (winRate >= 60) return "high-winrate";
+                        if (winRate >= 40) return "med-winrate";
+                        return "low-winrate";
+                    })
                     .on("click", function(event, d) {
                         toggleChildren(d);
                         update();
                     })
-                    .on("mouseover", function(event, d) {
-                        const tooltip = `Move: ${d.data.move || "Root"}
-Games: ${d.data.games || 0}
-Wins: ${d.data.wins || 0}
-Draws: ${d.data.draws || 0}
-Losses: ${d.data.losses || 0}`;
-                        d3.select(this)
-                            .transition()
-                            .duration(200)
-                            .attr("r", d => Math.min(7 + Math.log(d.data.games || 1) * 2, 18));
-                    })
-                    .on("mouseout", function(event, d) {
-                        d3.select(this)
-                            .transition()
-                            .duration(200)
-                            .attr("r", d => Math.min(5 + Math.log(d.data.games || 1) * 2, 15));
+                    .append("title")
+                    .text(d => {
+                        const move = d.data.move || "Root";
+                        const games = d.data.games || 0;
+                        const wins = d.data.wins || 0;
+                        const draws = d.data.draws || 0;
+                        const losses = d.data.losses || 0;
+                        const winRate = d.data.win_rate || 0;
+                        const opening = d.data.opening ? ` (${d.data.opening})` : "";
+                        return `Move: ${move}${opening}\nGames: ${games}\nWins: ${wins} | Draws: ${draws} | Losses: ${losses}\nWin Rate: ${winRate.toFixed(1)}%`;
                     });
                 
-                addDebug("Circle elements created");
+                addDebug("Circle elements created with win-rate coloring");
                 
                 // Add labels
                 nodes.append("text")
