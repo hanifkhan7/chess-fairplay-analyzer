@@ -2829,8 +2829,6 @@ def _opponent_weakness_repertoire():
             return
         
         # Auto-detect platform from username pattern
-        # Lichess usernames are typically lowercase
-        # Chess.com usernames are typically mixed case or have numbers/hyphens
         if opponent.islower() and '-' not in opponent:
             platforms = ['lichess']
         else:
@@ -2868,7 +2866,7 @@ def _opponent_weakness_repertoire():
         
         print(f"\n[FETCH] Fetching {num_games} games for {opponent} on {platforms[0]}...")
         
-        # Fetch games using unified fetcher
+        # Fetch games
         games, platform_counts = _fetch_games(opponent, num_games, platforms)
         
         if not games:
@@ -2894,28 +2892,31 @@ def _opponent_weakness_repertoire():
         
         print(f"[INFO] Filtered to {len(builder.games)} games")
         
-        # Get Stockfish path
-        stockfish_path = _get_stockfish_path()
-        if not stockfish_path:
-            print("[ERROR] Stockfish not found. Please configure in settings.")
-            return
+        # Load config and get Stockfish path
+        from .utils.helpers import load_config
         
-        # Analyze weak positions
-        print("\n[ANALYZE] Finding opponent's weak positions...")
-        weak_positions = builder.analyze_weak_positions(stockfish_path)
-        print(f"[SUCCESS] Found {len(weak_positions)} weak positions")
+        config = load_config()
+        stockfish_path = config.get('stockfish_path')
         
-        # Extract repertoire
-        print("\n[EXTRACT] Building repertoire lines...")
-        builder.extract_repertoire_lines(stockfish_path)
-        print(f"[SUCCESS] Repertoire extraction complete")
+        if stockfish_path and os.path.exists(stockfish_path):
+            # Analyze weak positions
+            print("\n[ANALYZE] Finding opponent's weak positions...")
+            weak_positions = builder.analyze_weak_positions(stockfish_path)
+            print(f"[SUCCESS] Found {len(weak_positions)} weak positions")
+            
+            # Extract repertoire
+            print("\n[EXTRACT] Building repertoire lines...")
+            builder.extract_repertoire_lines(stockfish_path)
+            print(f"[SUCCESS] Repertoire extraction complete")
+        else:
+            print("[WARN] Stockfish not configured. Skipping deep analysis.")
         
         # Generate PGN
         os.makedirs('reports', exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         pgn_file = f"reports/anti_repertoire_{opponent}_{timestamp}.pgn"
         
-        print(f"\n[GENERATE] Creating annotated PGN...")
+        print(f"\n[GENERATE] Creating PGN file...")
         builder.generate_pgn(pgn_file)
         
         print(f"[SUCCESS] Anti-repertoire saved: {pgn_file}")
@@ -2941,3 +2942,4 @@ def _opponent_weakness_repertoire():
         traceback.print_exc()
     
     input("\nPress Enter to continue...")
+
