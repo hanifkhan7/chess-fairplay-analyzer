@@ -2823,29 +2823,32 @@ def _opponent_weakness_repertoire():
     
     try:
         # Get opponent username
-        opponent = input("🎯 Opponent username (Chess.com or Lichess): ").strip()
+        opponent = input("[INPUT] Opponent username: ").strip()
         if not opponent:
-            print("[WARN] Cancelled")
+            print("[CANCELLED] No opponent specified")
             return
         
-        # Ask platform
-        platform = input("📊 Platform (lichess/chesscom, default lichess): ").strip().lower()
-        if not platform or platform.startswith('l'):
+        # Auto-detect platform from username pattern
+        # Lichess usernames are typically lowercase
+        # Chess.com usernames are typically mixed case or have numbers/hyphens
+        if opponent.islower() and '-' not in opponent:
             platform = 'lichess'
         else:
             platform = 'chesscom'
         
+        print(f"[DETECT] Platform: {platform.upper()}")
+        
         # Number of games
-        games_input = input("📈 How many games to analyze? (default 50): ").strip()
+        games_input = input("[INPUT] Games to analyze (default 50): ").strip()
         num_games = int(games_input) if games_input else 50
         
         # Filter type
-        print("\nFilter by result:")
+        print("\n[FILTER] Game Results:")
         print("  1. All games")
-        print("  2. Losses only (find their weaknesses)")
+        print("  2. Losses only (opponent's weaknesses)")
         print("  3. Draws only")
         print("  4. Wins only")
-        filter_choice = input("Choose (1-4, default 2): ").strip()
+        filter_choice = input("[INPUT] Choose (1-4, default 2): ").strip()
         
         filter_map = {
             '1': None,
@@ -2857,7 +2860,7 @@ def _opponent_weakness_repertoire():
         loss_filter = filter_map.get(filter_choice, 'loss')
         
         # Your color
-        color = input("♔ What color did you play against them? (white/black, default white): ").strip().lower()
+        color = input("[INPUT] Your color (white/black, default white): ").strip().lower()
         if not color or color.startswith('w'):
             color = 'white'
         else:
@@ -2867,24 +2870,23 @@ def _opponent_weakness_repertoire():
         
         # Fetch games
         try:
-            if platform == 'lichess':
-                games = fetch_lichess_games(opponent, max_games=num_games)
-            else:
-                games = fetch_chesscom_games(opponent, max_games=num_games)
+            from .fetcher import fetch_player_games
+            
+            games = fetch_player_games(opponent, max_games=num_games, platform=platform)
             
             if not games:
                 print("[ERROR] No games found for opponent")
                 return
             
-            print(f"[OK] Found {len(games)} games")
+            print(f"[SUCCESS] Found {len(games)} games")
             
             # Build anti-repertoire
-            from chess_analyzer.opponent_repertoire_builder import OpponentRepertoireBuilder
+            from .opponent_repertoire_builder import OpponentRepertoireBuilder
             
             print(f"\n[BUILD] Building anti-repertoire against {opponent}...")
-            print(f"   Analyzing games where {color} side played")
+            print(f"[INFO] Analyzing {color} pieces")
             if loss_filter:
-                print(f"   Filter: {loss_filter.upper()} only")
+                print(f"[FILTER] Game type: {loss_filter.upper()}")
             
             builder = OpponentRepertoireBuilder(
                 opponent_name=opponent,
@@ -2893,36 +2895,53 @@ def _opponent_weakness_repertoire():
                 loss_filter=loss_filter
             )
             
-            print(f"[OK] Repertoire builder initialized with {len(builder.games)} filtered games")
+            print(f"[INFO] Filtered to {len(builder.games)} games")
+            
+            # Get Stockfish path
+            stockfish_path = _get_stockfish_path()
+            if not stockfish_path:
+                print("[ERROR] Stockfish not found. Please configure in settings.")
+                return
+            
+            # Analyze weak positions
+            print("\n[ANALYZE] Finding opponent's weak positions...")
+            weak_positions = builder.analyze_weak_positions(stockfish_path)
+            print(f"[SUCCESS] Found {len(weak_positions)} weak positions")
+            
+            # Extract repertoire
+            print("\n[EXTRACT] Building repertoire lines...")
+            builder.extract_repertoire_lines(stockfish_path)
+            print(f"[SUCCESS] Repertoire extraction complete")
             
             # Generate PGN
             os.makedirs('reports', exist_ok=True)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             pgn_file = f"reports/anti_repertoire_{opponent}_{timestamp}.pgn"
             
-            print(f"\n[GENERATE] Creating anti-repertoire PGN...")
+            print(f"\n[GENERATE] Creating annotated PGN...")
             builder.generate_pgn(pgn_file)
             
-            print(f"[OK] Anti-repertoire saved: {pgn_file}")
-            print(f"\nFile can be imported to:")
-            print(f"  • Chess.com: Repertoire → Import PGN")
-            print(f"  • Lichess: Import → PGN")
+            print(f"[SUCCESS] Anti-repertoire saved: {pgn_file}")
+            print(f"\n[IMPORT] Import to:")
+            print(f"  - Chess.com: Repertoire > Import PGN")
+            print(f"  - Lichess: Import > PGN")
             
             # Offer to open
-            open_choice = input("\n📂 Open report? (y/n, default y): ").strip().lower()
+            open_choice = input("\n[INPUT] Open file? (y/n, default y): ").strip().lower()
             if open_choice != 'n':
                 try:
                     import webbrowser
                     webbrowser.open(f"file://{os.path.abspath(pgn_file)}")
-                    print("[OK] Opening file...")
+                    print("[SUCCESS] Opening file...")
                 except:
-                    print(f"[WARN] Manual open: {pgn_file}")
+                    print(f"[INFO] Manual open: {pgn_file}")
         
         except ImportError as e:
-            print(f"[ERROR] Missing dependency: {e}")
-            print("Please ensure all modules are installed")
+            print(f"[ERROR] Missing module: {e}")
+        except ValueError as e:
+            print(f"[ERROR] Invalid input: {e}")
         except Exception as e:
-            print(f"[ERROR] Could not build repertoire: {e}")
+            print(f"[ERROR] {e}")
             import traceback
             traceback.print_exc()
     

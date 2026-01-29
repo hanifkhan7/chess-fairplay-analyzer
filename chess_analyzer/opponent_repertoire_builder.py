@@ -6,6 +6,8 @@ from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
 from collections import defaultdict
 import re
+import subprocess
+import os
 
 
 @dataclass
@@ -78,14 +80,11 @@ class OpponentRepertoireBuilder:
         Returns:
             List of weak positions
         """
-        from chess_analyzer.stockfish_analyzer import StockfishAnalyzer
-        
         self.weak_positions = []
-        opening_map = self._load_opening_names()
         
         for game_idx, game in enumerate(self.games):
             try:
-                print(f"Analyzing game {game_idx + 1}/{len(self.games)}...")
+                print(f"[ANALYZE] Game {game_idx + 1}/{len(self.games)}...")
                 board = chess.Board()
                 prev_eval = 0
                 
@@ -113,12 +112,11 @@ class OpponentRepertoireBuilder:
                     if not is_opponent_move:
                         continue
                     
-                    # Analyze position
+                    # Analyze position with Stockfish
                     try:
-                        info = StockfishAnalyzer.evaluate_position(board, stockfish_path, depth=20)
+                        eval_score = self._evaluate_position(board, stockfish_path, depth=18)
                         
-                        if info and 'score' in info:
-                            eval_score = info['score']
+                        if eval_score is not None:
                             eval_drop = prev_eval - eval_score
                             
                             # If eval dropped by 0.5+ pawns, it's a weak position
@@ -137,12 +135,66 @@ class OpponentRepertoireBuilder:
                         pass
                         
             except Exception as e:
-                print(f"Error analyzing game {game_idx}: {e}")
+                print(f"[WARN] Error analyzing game {game_idx}: {e}")
                 continue
         
         # Sort by eval drop (biggest mistakes first)
         self.weak_positions.sort(key=lambda x: x.eval_drop, reverse=True)
         return self.weak_positions
+    
+    def _evaluate_position(self, board: chess.Board, stockfish_path: str, depth: int = 18) -> Optional[float]:
+        """Evaluate position using Stockfish."""
+        try:
+            # Build command
+            cmd = [stockfish_path]
+            
+            # Send commands to Stockfish
+            process = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            # Setup and analyze
+            commands = [
+                "setoption name Skill Level value 20",
+                "position fen " + board.fen(),
+                f"go depth {depth}",
+                "quit"
+            ]
+            
+            stdout, _ = process.communicate(input="\n".join(commands), timeout=10)
+            
+            # Parse output
+            for line in stdout.split('\n'):
+                if 'score cp' in line:
+                    # Format: info depth 20 ... score cp 45 ...
+                    parts = line.split()
+                    for i, part in enumerate(parts):
+                        if part == 'cp' and i > 0:
+                            try:
+                                cp_score = int(parts[i + 1])
+                                # Convert centipawns to pawns
+                                return cp_score / 100.0
+                            except:
+                                pass
+                elif 'score mate' in line:
+                    # Mate score
+                    parts = line.split()
+                    for i, part in enumerate(parts):
+                        if part == 'mate' and i > 0:
+                            try:
+                                mate_in = int(parts[i + 1])
+                                # Return high score for mate
+                                return 100.0 if mate_in > 0 else -100.0
+                            except:
+                                pass
+            
+            return None
+        except Exception as e:
+            return None
     
     def _load_opening_names(self) -> Dict[str, str]:
         """Load ECO opening names."""
@@ -153,7 +205,7 @@ class OpponentRepertoireBuilder:
         except:
             return {}
     
-    def extract_repertoire_lines(self, stockfish_path: str, depth: int = 20) -> Dict[str, List[str]]:
+    def extract_repertoire_lines(self, stockfish_path: str, depth: int = 18) -> Dict[str, List[str]]:
         """
         Extract main lines and 2-3 variations to play against opponent.
         
@@ -164,8 +216,6 @@ class OpponentRepertoireBuilder:
         Returns:
             Dict of opening -> [main line, variation 1, variation 2, ...]
         """
-        from chess_analyzer.stockfish_analyzer import StockfishAnalyzer
-        
         self.repertoire_lines = defaultdict(list)
         
         for weak_pos in self.weak_positions[:10]:  # Top 10 weak positions
@@ -180,9 +230,9 @@ class OpponentRepertoireBuilder:
                 for move in legal_moves[:5]:  # Top 5 legal moves
                     board.push(move)
                     try:
-                        info = StockfishAnalyzer.evaluate_position(board, stockfish_path, depth=depth)
-                        if info and 'score' in info:
-                            move_evals.append((move.uci(), info['score']))
+                        eval_score = self._evaluate_position(board, stockfish_path, depth=depth)
+                        if eval_score is not None:
+                            move_evals.append((move.uci(), eval_score))
                     except:
                         pass
                     board.pop()
@@ -199,7 +249,7 @@ class OpponentRepertoireBuilder:
                     self.repertoire_lines[opening].append(line)
                     
             except Exception as e:
-                print(f"Error extracting repertoire: {e}")
+                print(f"[WARN] Error extracting repertoire: {e}")
                 continue
         
         return self.repertoire_lines
