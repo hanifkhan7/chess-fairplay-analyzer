@@ -3,7 +3,7 @@ Chess Fairplay Analyzer
 A forensic tool for statistical detection of potential cheating in chess.
 """
 
-__version__ = "1.0.0"
+__version__ = "3.3"
 __author__ = "Chess Fairplay Analyzer"
 __description__ = "Analyze chess games for fair play violations"
 

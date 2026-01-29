@@ -42,7 +42,7 @@ def print_header():
     header = f"""{Colors.CYAN}{Colors.BOLD}
 ╔════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                    ║
-║                          CHESS FAIRPLAY ANALYZER v3.2                             ║
+║                          CHESS FAIRPLAY ANALYZER v3.3                             ║
 ║                    Forensic Analysis & Fair-Play Investigation                    ║
 ║                                                                                    ║
 ║     ██████╗ ███████╗████████╗███████╗ ██████╗████████╗██╗██╗   ██╗███████╗     ║
@@ -172,11 +172,12 @@ def main():
         print_menu_item("12", "Head-to-Head Matchup", "(Detailed Matchup Report)")
         print_menu_item("13", "View Reports", "(Generated Analysis Files)")
         print_menu_item("14", "Settings", "(Configuration)")
-        print_menu_item("15", "Exit", "(Close Application)")
+        print_menu_item("15", "Anti-Repertoire Builder", "(Opponent Weakness Exploit)")
+        print_menu_item("16", "Exit", "(Close Application)")
         
         print(f"\n{Colors.CYAN}{'─' * 65}{Colors.END}")
 
-        choice = input(f"{Colors.BOLD}🔍 Select investigation (1-15): {Colors.END}").strip()
+        choice = input(f"{Colors.BOLD}🔍 Select investigation (1-16): {Colors.END}").strip()
 
         if choice == "1":
             _analyze_player()
@@ -207,6 +208,8 @@ def main():
         elif choice == "14":
             _settings()
         elif choice == "15":
+            _opponent_weakness_repertoire()
+        elif choice == "16":
             print("\nGoodbye!\n")
             break
         else:
@@ -2806,6 +2809,127 @@ def _view_reports():
         print("\n[ERROR] Invalid input!")
     except Exception as e:
         print(f"\n[ERROR] Could not open report: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+def _opponent_weakness_repertoire():
+    """Feature 15: Build anti-repertoire against specific opponent."""
+    print("\n" + "="*70)
+    print("[ANTI-REPERTOIRE] OPPONENT WEAKNESS REPERTOIRE BUILDER v3.3")
+    print("="*70)
+    print("\nPrepare specialized lines against a specific opponent's weaknesses.")
+    print("This analyzes where they lost/struggled and builds anti-repertoire lines.\n")
+    
+    try:
+        # Get opponent username
+        opponent = input("🎯 Opponent username (Chess.com or Lichess): ").strip()
+        if not opponent:
+            print("[WARN] Cancelled")
+            return
+        
+        # Ask platform
+        platform = input("📊 Platform (lichess/chesscom, default lichess): ").strip().lower()
+        if not platform or platform.startswith('l'):
+            platform = 'lichess'
+        else:
+            platform = 'chesscom'
+        
+        # Number of games
+        games_input = input("📈 How many games to analyze? (default 50): ").strip()
+        num_games = int(games_input) if games_input else 50
+        
+        # Filter type
+        print("\nFilter by result:")
+        print("  1. All games")
+        print("  2. Losses only (find their weaknesses)")
+        print("  3. Draws only")
+        print("  4. Wins only")
+        filter_choice = input("Choose (1-4, default 2): ").strip()
+        
+        filter_map = {
+            '1': None,
+            '2': 'loss',
+            '3': 'draw',
+            '4': 'win',
+            '': 'loss'
+        }
+        loss_filter = filter_map.get(filter_choice, 'loss')
+        
+        # Your color
+        color = input("♔ What color did you play against them? (white/black, default white): ").strip().lower()
+        if not color or color.startswith('w'):
+            color = 'white'
+        else:
+            color = 'black'
+        
+        print(f"\n[FETCH] Fetching {num_games} games for {opponent} on {platform}...")
+        
+        # Fetch games
+        try:
+            if platform == 'lichess':
+                games = fetch_lichess_games(opponent, max_games=num_games)
+            else:
+                games = fetch_chesscom_games(opponent, max_games=num_games)
+            
+            if not games:
+                print("[ERROR] No games found for opponent")
+                return
+            
+            print(f"[OK] Found {len(games)} games")
+            
+            # Build anti-repertoire
+            from chess_analyzer.opponent_repertoire_builder import OpponentRepertoireBuilder
+            
+            print(f"\n[BUILD] Building anti-repertoire against {opponent}...")
+            print(f"   Analyzing games where {color} side played")
+            if loss_filter:
+                print(f"   Filter: {loss_filter.upper()} only")
+            
+            builder = OpponentRepertoireBuilder(
+                opponent_name=opponent,
+                games=games,
+                color=color,
+                loss_filter=loss_filter
+            )
+            
+            print(f"[OK] Repertoire builder initialized with {len(builder.games)} filtered games")
+            
+            # Generate PGN
+            os.makedirs('reports', exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            pgn_file = f"reports/anti_repertoire_{opponent}_{timestamp}.pgn"
+            
+            print(f"\n[GENERATE] Creating anti-repertoire PGN...")
+            builder.generate_pgn(pgn_file)
+            
+            print(f"[OK] Anti-repertoire saved: {pgn_file}")
+            print(f"\nFile can be imported to:")
+            print(f"  • Chess.com: Repertoire → Import PGN")
+            print(f"  • Lichess: Import → PGN")
+            
+            # Offer to open
+            open_choice = input("\n📂 Open report? (y/n, default y): ").strip().lower()
+            if open_choice != 'n':
+                try:
+                    import webbrowser
+                    webbrowser.open(f"file://{os.path.abspath(pgn_file)}")
+                    print("[OK] Opening file...")
+                except:
+                    print(f"[WARN] Manual open: {pgn_file}")
+        
+        except ImportError as e:
+            print(f"[ERROR] Missing dependency: {e}")
+            print("Please ensure all modules are installed")
+        except Exception as e:
+            print(f"[ERROR] Could not build repertoire: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    except KeyboardInterrupt:
+        print("\n[CANCELLED]")
+    except Exception as e:
+        print(f"[ERROR] {e}")
         import traceback
         traceback.print_exc()
     
