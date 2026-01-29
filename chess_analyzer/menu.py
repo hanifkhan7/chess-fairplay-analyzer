@@ -2832,11 +2832,11 @@ def _opponent_weakness_repertoire():
         # Lichess usernames are typically lowercase
         # Chess.com usernames are typically mixed case or have numbers/hyphens
         if opponent.islower() and '-' not in opponent:
-            platform = 'lichess'
+            platforms = ['lichess']
         else:
-            platform = 'chesscom'
+            platforms = ['chesscom']
         
-        print(f"[DETECT] Platform: {platform.upper()}")
+        print(f"[DETECT] Platform: {platforms[0].upper()}")
         
         # Number of games
         games_input = input("[INPUT] Games to analyze (default 50): ").strip()
@@ -2866,13 +2866,10 @@ def _opponent_weakness_repertoire():
         else:
             color = 'black'
         
-        print(f"\n[FETCH] Fetching {num_games} games for {opponent} on {platform}...")
+        print(f"\n[FETCH] Fetching {num_games} games for {opponent} on {platforms[0]}...")
         
-        # Fetch games
-        try:
-            from .fetcher import fetch_player_games
-            
-            games = fetch_player_games(opponent, max_games=num_games, platform=platform)
+        # Fetch games using unified fetcher
+        games, platform_counts = _fetch_games(opponent, num_games, platforms)
             
             if not games:
                 print("[ERROR] No games found for opponent")
