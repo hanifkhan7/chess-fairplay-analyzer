@@ -2829,12 +2829,25 @@ def _opponent_weakness_repertoire():
             return
         
         # Auto-detect platform from username pattern
+        # But prefer Lichess if no Stockfish (for evaluation data)
         if opponent.islower() and '-' not in opponent:
-            platforms = ['lichess']
+            preferred_platform = 'lichess'
         else:
-            platforms = ['chesscom']
+            preferred_platform = 'chesscom'
         
-        print(f"[DETECT] Platform: {platforms[0].upper()}")
+        # Load config early to check Stockfish
+        from .utils.helpers import load_config
+        config = load_config()
+        stockfish_path = config.get('stockfish_path') if config else None
+        use_stockfish = stockfish_path and os.path.exists(stockfish_path)
+        
+        # If no Stockfish, switch to Lichess for evaluation data
+        if not use_stockfish:
+            platforms = ['lichess']
+            print(f"[DETECT] Platform: LICHESS (for evaluation data)")
+        else:
+            platforms = [preferred_platform]
+            print(f"[DETECT] Platform: {platforms[0].upper()}")
         
         # Number of games
         games_input = input("[INPUT] Games to analyze (default 50): ").strip()
@@ -2892,14 +2905,7 @@ def _opponent_weakness_repertoire():
         
         print(f"[INFO] Filtered to {len(builder.games)} games")
         
-        # Load config and get Stockfish path (optional)
-        from .utils.helpers import load_config
-        
-        config = load_config()
-        stockfish_path = config.get('stockfish_path') if config else None
-        
-        # Check if Stockfish is available
-        use_stockfish = stockfish_path and os.path.exists(stockfish_path)
+        # Stockfish path already loaded above
         
         if use_stockfish:
             print("\n[INFO] Using Stockfish engine for position analysis")
