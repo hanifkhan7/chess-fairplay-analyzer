@@ -71,17 +71,19 @@ class OpponentRepertoireBuilder:
             
             self.games = filtered
     
-    def analyze_weak_positions(self, stockfish_path: str) -> List[WeakPosition]:
+    def analyze_weak_positions(self, stockfish_path: Optional[str] = None) -> List[WeakPosition]:
         """
         Find positions where opponent lost or eval dropped significantly.
+        Uses Stockfish if available, otherwise uses evaluations from game comments.
         
         Args:
-            stockfish_path: Path to Stockfish executable
+            stockfish_path: Optional path to Stockfish executable
             
         Returns:
             List of weak positions
         """
         self.weak_positions = []
+        use_stockfish = stockfish_path and os.path.exists(stockfish_path)
         
         for game_idx, game in enumerate(self.games):
             try:
@@ -100,9 +102,14 @@ class OpponentRepertoireBuilder:
                 opening = game.headers.get('Opening', 'Unknown Opening')
                 
                 move_count = 0
+                current_node = game.game()
+                
                 for move in game.mainline_moves():
                     board.push(move)
                     move_count += 1
+                    
+                    # Advance in game tree
+                    current_node = current_node.variation(move)
                     
                     # Only analyze opponent's moves after opening (move 10+)
                     if move_count < 10:
@@ -113,27 +120,29 @@ class OpponentRepertoireBuilder:
                     if not is_opponent_move:
                         continue
                     
-                    # Analyze position with Stockfish
-                    try:
+                    # Try to extract evaluation from game comments
+                    eval_score = None
+                    if use_stockfish:
                         eval_score = self._evaluate_position(board, stockfish_path, depth=18)
+                    else:
+                        # Try to get eval from Lichess comments
+                        eval_score = self._extract_eval_from_comments(current_node)
+                    
+                    if eval_score is not None:
+                        eval_drop = prev_eval - eval_score
                         
-                        if eval_score is not None:
-                            eval_drop = prev_eval - eval_score
-                            
-                            # If eval dropped by 0.5+ pawns, it's a weak position
-                            if eval_drop > 0.5:
-                                weak_pos = WeakPosition(
-                                    fen=board.fen(),
-                                    move=move.uci(),
-                                    eval_drop=eval_drop,
-                                    game_result=game_result,
-                                    opening_name=opening
-                                )
-                                self.weak_positions.append(weak_pos)
-                            
-                            prev_eval = eval_score
-                    except:
-                        pass
+                        # If eval dropped by 0.5+ pawns, it's a weak position
+                        if eval_drop > 0.5:
+                            weak_pos = WeakPosition(
+                                fen=board.fen(),
+                                move=move.uci(),
+                                eval_drop=eval_drop,
+                                game_result=game_result,
+                                opening_name=opening
+                            )
+                            self.weak_positions.append(weak_pos)
+                        
+                        prev_eval = eval_score
                         
             except Exception as e:
                 print(f"[WARN] Error analyzing game {game_idx}: {e}")
@@ -142,6 +151,32 @@ class OpponentRepertoireBuilder:
         # Sort by eval drop (biggest mistakes first)
         self.weak_positions.sort(key=lambda x: x.eval_drop, reverse=True)
         return self.weak_positions
+    
+    def _extract_eval_from_comments(self, node) -> Optional[float]:
+        """Extract evaluation from PGN comments (Lichess format)."""
+        try:
+            # Lichess uses format like: [%eval 0.45] or [%eval #-3]
+            comment = node.comment if node else ""
+            if not comment:
+                return None
+            
+            # Look for [%eval ...] format
+            import re
+            match = re.search(r'\[%eval ([^\]]+)\]', comment)
+            if match:
+                eval_str = match.group(1)
+                
+                # Handle mate scores like #-3, #2
+                if eval_str.startswith('#'):
+                    mate_in = int(eval_str[1:])
+                    return 100.0 if mate_in > 0 else -100.0
+                else:
+                    # Regular eval like 0.45, -1.23
+                    return float(eval_str)
+            
+            return None
+        except:
+            return None
     
     def _evaluate_position(self, board: chess.Board, stockfish_path: str, depth: int = 18) -> Optional[float]:
         """Evaluate position using Stockfish."""
@@ -206,49 +241,60 @@ class OpponentRepertoireBuilder:
         except:
             return {}
     
-    def extract_repertoire_lines(self, stockfish_path: str, depth: int = 18) -> Dict[str, List[str]]:
+    def extract_repertoire_lines(self, stockfish_path: Optional[str] = None) -> Dict[str, List[str]]:
         """
         Extract main lines and 2-3 variations to play against opponent.
         
         Args:
-            stockfish_path: Path to Stockfish
-            depth: Analysis depth
+            stockfish_path: Optional path to Stockfish. If not provided, skips deep analysis.
             
         Returns:
             Dict of opening -> [main line, variation 1, variation 2, ...]
         """
         self.repertoire_lines = defaultdict(list)
         
+        use_stockfish = stockfish_path and os.path.exists(stockfish_path)
+        
         for weak_pos in self.weak_positions[:10]:  # Top 10 weak positions
             try:
                 board = chess.Board(weak_pos.fen)
                 opening = weak_pos.opening_name
                 
-                # Get recommended moves (best alternatives to opponent's move)
-                legal_moves = list(board.legal_moves)
-                move_evals = []
-                
-                for move in legal_moves[:5]:  # Top 5 legal moves
-                    board.push(move)
-                    try:
-                        eval_score = self._evaluate_position(board, stockfish_path, depth=depth)
-                        if eval_score is not None:
-                            move_evals.append((move.uci(), eval_score))
-                    except:
-                        pass
-                    board.pop()
-                
-                # Sort by evaluation
-                move_evals.sort(key=lambda x: x[1], reverse=True)
-                
-                # Extract lines
-                if move_evals:
-                    main_move = move_evals[0][0]
-                    variations = [m[0] for m in move_evals[1:3]]  # 2-3 alternatives
+                if use_stockfish:
+                    # Use Stockfish for deep analysis
+                    legal_moves = list(board.legal_moves)
+                    move_evals = []
                     
-                    line = f"{main_move}" + (f" ({', '.join(variations)})" if variations else "")
-                    self.repertoire_lines[opening].append(line)
+                    for move in legal_moves[:5]:  # Top 5 legal moves
+                        board.push(move)
+                        try:
+                            eval_score = self._evaluate_position(board, stockfish_path, depth=18)
+                            if eval_score is not None:
+                                move_evals.append((move.uci(), eval_score))
+                        except:
+                            pass
+                        board.pop()
                     
+                    # Sort by evaluation
+                    move_evals.sort(key=lambda x: x[1], reverse=True)
+                    
+                    # Extract lines
+                    if move_evals:
+                        main_move = move_evals[0][0]
+                        variations = [m[0] for m in move_evals[1:3]]  # 2-3 alternatives
+                        
+                        line = f"{main_move}" + (f" ({', '.join(variations)})" if variations else "")
+                        self.repertoire_lines[opening].append(line)
+                else:
+                    # Without Stockfish, just use the position itself
+                    # Extract best legal moves based on move ordering
+                    legal_moves = list(board.legal_moves)
+                    if legal_moves:
+                        # Use the first few legal moves as suggested variations
+                        variations = [m.uci() for m in legal_moves[:3]]
+                        line = f"{variations[0]}" + (f" ({', '.join(variations[1:])})" if len(variations) > 1 else "")
+                        self.repertoire_lines[opening].append(line)
+                        
             except Exception as e:
                 print(f"[WARN] Error extracting repertoire: {e}")
                 continue

@@ -2892,24 +2892,34 @@ def _opponent_weakness_repertoire():
         
         print(f"[INFO] Filtered to {len(builder.games)} games")
         
-        # Load config and get Stockfish path
+        # Load config and get Stockfish path (optional)
         from .utils.helpers import load_config
         
         config = load_config()
-        stockfish_path = config.get('stockfish_path')
+        stockfish_path = config.get('stockfish_path') if config else None
         
-        if stockfish_path and os.path.exists(stockfish_path):
-            # Analyze weak positions
-            print("\n[ANALYZE] Finding opponent's weak positions...")
-            weak_positions = builder.analyze_weak_positions(stockfish_path)
-            print(f"[SUCCESS] Found {len(weak_positions)} weak positions")
-            
-            # Extract repertoire
-            print("\n[EXTRACT] Building repertoire lines...")
-            builder.extract_repertoire_lines(stockfish_path)
-            print(f"[SUCCESS] Repertoire extraction complete")
+        # Check if Stockfish is available
+        use_stockfish = stockfish_path and os.path.exists(stockfish_path)
+        
+        if use_stockfish:
+            print("\n[INFO] Using Stockfish engine for position analysis")
         else:
-            print("[WARN] Stockfish not configured. Skipping deep analysis.")
+            print("\n[INFO] Stockfish not configured. Using Lichess evaluation data instead.")
+            print("[INFO] For best results, configure Stockfish in config.yaml")
+        
+        # Analyze weak positions
+        print("\n[ANALYZE] Finding opponent's weak positions...")
+        weak_positions = builder.analyze_weak_positions(stockfish_path)
+        print(f"[SUCCESS] Found {len(weak_positions)} weak positions")
+        
+        # Extract repertoire
+        if weak_positions:
+            print("\n[EXTRACT] Building repertoire lines...")
+            if use_stockfish:
+                builder.extract_repertoire_lines(stockfish_path)
+            else:
+                builder.extract_repertoire_lines(None)
+            print(f"[SUCCESS] Repertoire extraction complete")
         
         # Generate PGN
         os.makedirs('reports', exist_ok=True)
