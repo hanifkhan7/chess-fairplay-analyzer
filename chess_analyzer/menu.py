@@ -2870,77 +2870,68 @@ def _opponent_weakness_repertoire():
         
         # Fetch games using unified fetcher
         games, platform_counts = _fetch_games(opponent, num_games, platforms)
-            
-            if not games:
-                print("[ERROR] No games found for opponent")
-                return
-            
-            print(f"[SUCCESS] Found {len(games)} games")
-            
-            # Build anti-repertoire
-            from .opponent_repertoire_builder import OpponentRepertoireBuilder
-            
-            print(f"\n[BUILD] Building anti-repertoire against {opponent}...")
-            print(f"[INFO] Analyzing {color} pieces")
-            if loss_filter:
-                print(f"[FILTER] Game type: {loss_filter.upper()}")
-            
-            builder = OpponentRepertoireBuilder(
-                opponent_name=opponent,
-                games=games,
-                color=color,
-                loss_filter=loss_filter
-            )
-            
-            print(f"[INFO] Filtered to {len(builder.games)} games")
-            
-            # Get Stockfish path
-            stockfish_path = _get_stockfish_path()
-            if not stockfish_path:
-                print("[ERROR] Stockfish not found. Please configure in settings.")
-                return
-            
-            # Analyze weak positions
-            print("\n[ANALYZE] Finding opponent's weak positions...")
-            weak_positions = builder.analyze_weak_positions(stockfish_path)
-            print(f"[SUCCESS] Found {len(weak_positions)} weak positions")
-            
-            # Extract repertoire
-            print("\n[EXTRACT] Building repertoire lines...")
-            builder.extract_repertoire_lines(stockfish_path)
-            print(f"[SUCCESS] Repertoire extraction complete")
-            
-            # Generate PGN
-            os.makedirs('reports', exist_ok=True)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            pgn_file = f"reports/anti_repertoire_{opponent}_{timestamp}.pgn"
-            
-            print(f"\n[GENERATE] Creating annotated PGN...")
-            builder.generate_pgn(pgn_file)
-            
-            print(f"[SUCCESS] Anti-repertoire saved: {pgn_file}")
-            print(f"\n[IMPORT] Import to:")
-            print(f"  - Chess.com: Repertoire > Import PGN")
-            print(f"  - Lichess: Import > PGN")
-            
-            # Offer to open
-            open_choice = input("\n[INPUT] Open file? (y/n, default y): ").strip().lower()
-            if open_choice != 'n':
-                try:
-                    import webbrowser
-                    webbrowser.open(f"file://{os.path.abspath(pgn_file)}")
-                    print("[SUCCESS] Opening file...")
-                except:
-                    print(f"[INFO] Manual open: {pgn_file}")
         
-        except ImportError as e:
-            print(f"[ERROR] Missing module: {e}")
-        except ValueError as e:
-            print(f"[ERROR] Invalid input: {e}")
-        except Exception as e:
-            print(f"[ERROR] {e}")
-            import traceback
-            traceback.print_exc()
+        if not games:
+            print("[ERROR] No games found for opponent")
+            return
+        
+        print(f"[SUCCESS] Found {len(games)} games")
+        
+        # Build anti-repertoire
+        from .opponent_repertoire_builder import OpponentRepertoireBuilder
+        
+        print(f"\n[BUILD] Building anti-repertoire against {opponent}...")
+        print(f"[INFO] Analyzing {color} pieces")
+        if loss_filter:
+            print(f"[FILTER] Game type: {loss_filter.upper()}")
+        
+        builder = OpponentRepertoireBuilder(
+            opponent_name=opponent,
+            games=games,
+            color=color,
+            loss_filter=loss_filter
+        )
+        
+        print(f"[INFO] Filtered to {len(builder.games)} games")
+        
+        # Get Stockfish path
+        stockfish_path = _get_stockfish_path()
+        if not stockfish_path:
+            print("[ERROR] Stockfish not found. Please configure in settings.")
+            return
+        
+        # Analyze weak positions
+        print("\n[ANALYZE] Finding opponent's weak positions...")
+        weak_positions = builder.analyze_weak_positions(stockfish_path)
+        print(f"[SUCCESS] Found {len(weak_positions)} weak positions")
+        
+        # Extract repertoire
+        print("\n[EXTRACT] Building repertoire lines...")
+        builder.extract_repertoire_lines(stockfish_path)
+        print(f"[SUCCESS] Repertoire extraction complete")
+        
+        # Generate PGN
+        os.makedirs('reports', exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        pgn_file = f"reports/anti_repertoire_{opponent}_{timestamp}.pgn"
+        
+        print(f"\n[GENERATE] Creating annotated PGN...")
+        builder.generate_pgn(pgn_file)
+        
+        print(f"[SUCCESS] Anti-repertoire saved: {pgn_file}")
+        print(f"\n[IMPORT] Import to:")
+        print(f"  - Chess.com: Repertoire > Import PGN")
+        print(f"  - Lichess: Import > PGN")
+        
+        # Offer to open
+        open_choice = input("\n[INPUT] Open file? (y/n, default y): ").strip().lower()
+        if open_choice != 'n':
+            try:
+                import webbrowser
+                webbrowser.open(f"file://{os.path.abspath(pgn_file)}")
+                print("[SUCCESS] Opening file...")
+            except:
+                print(f"[INFO] Manual open: {pgn_file}")
     
     except KeyboardInterrupt:
         print("\n[CANCELLED]")
