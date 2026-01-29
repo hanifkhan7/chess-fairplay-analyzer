@@ -8,6 +8,7 @@ from collections import defaultdict
 import re
 import subprocess
 import os
+from datetime import datetime
 
 
 @dataclass
@@ -264,12 +265,14 @@ class OpponentRepertoireBuilder:
         Returns:
             Path to created file
         """
+        from datetime import datetime
+        
         pgn_lines = []
         
         # Header
         pgn_lines.append('[Event "Anti-Repertoire vs ' + self.opponent_name + '"]')
         pgn_lines.append('[Site "Chess Analyzer"]')
-        pgn_lines.append('[Date "' + chess.pgn.headers.PGN_DEFAULT_HEADERS.get('Date', '') + '"]')
+        pgn_lines.append('[Date "' + datetime.now().strftime("%Y.%m.%d") + '"]')
         pgn_lines.append('[Round "?"]')
         pgn_lines.append('[White "Preparation"]')
         pgn_lines.append('[Black "' + self.opponent_name + '"]')
@@ -301,3 +304,77 @@ class OpponentRepertoireBuilder:
             f.write(pgn_content)
         
         return output_file
+    
+    def generate_tree_image(self, output_file: str) -> str:
+        """
+        Generate visual representation of weak positions as PNG/PDF.
+        
+        Args:
+            output_file: Path to save image (with .png or .pdf extension)
+            
+        Returns:
+            Path to created image file
+        """
+        try:
+            import matplotlib.pyplot as plt
+            import matplotlib.patches as patches
+            from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
+        except ImportError:
+            print("[WARN] Matplotlib not installed. Skipping image generation.")
+            return None
+        
+        # Create figure
+        fig, ax = plt.subplots(figsize=(16, 10))
+        ax.set_xlim(0, 10)
+        ax.set_ylim(0, 12)
+        ax.axis('off')
+        
+        # Title
+        fig.suptitle(f'Anti-Repertoire: Weak Positions vs {self.opponent_name}', 
+                     fontsize=20, fontweight='bold', y=0.98)
+        
+        # Add weak positions as boxes
+        y_pos = 10.5
+        for idx, weak_pos in enumerate(self.weak_positions[:15]):  # Top 15 positions
+            if y_pos < 0.5:
+                break
+            
+            # Create box for position
+            opening = weak_pos.opening_name[:40]
+            eval_drop = f"{weak_pos.eval_drop:.2f}"
+            result = weak_pos.game_result.upper()
+            
+            # Color based on result
+            color_map = {'LOSS': '#2ecc71', 'DRAW': '#f39c12', 'WIN': '#e74c3c'}
+            box_color = color_map.get(result, '#95a5a6')
+            
+            # Draw box
+            box = FancyBboxPatch((0.2, y_pos - 0.6), 9.6, 0.55,
+                                boxstyle="round,pad=0.05", 
+                                edgecolor='black', facecolor=box_color,
+                                alpha=0.3, linewidth=2)
+            ax.add_patch(box)
+            
+            # Add text
+            text = f"{idx+1}. {opening} | Eval Drop: +{eval_drop} | Result: {result}"
+            ax.text(0.5, y_pos - 0.35, text, fontsize=11, fontweight='bold',
+                   verticalalignment='center')
+            
+            y_pos -= 0.75
+        
+        # Add legend
+        legend_y = 0.3
+        ax.text(0.5, legend_y, 'Green: Losses | Orange: Draws | Red: Wins', 
+               fontsize=10, style='italic', color='#555')
+        
+        # Save figure
+        try:
+            plt.tight_layout()
+            plt.savefig(output_file, dpi=300, bbox_inches='tight')
+            print(f"[SUCCESS] Tree image saved: {output_file}")
+            plt.close()
+            return output_file
+        except Exception as e:
+            print(f"[WARN] Could not save image: {e}")
+            plt.close()
+            return None

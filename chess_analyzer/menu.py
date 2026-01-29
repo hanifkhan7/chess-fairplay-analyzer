@@ -2915,24 +2915,36 @@ def _opponent_weakness_repertoire():
         os.makedirs('reports', exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         pgn_file = f"reports/anti_repertoire_{opponent}_{timestamp}.pgn"
+        image_file = f"reports/anti_repertoire_{opponent}_{timestamp}.png"
         
         print(f"\n[GENERATE] Creating PGN file...")
         builder.generate_pgn(pgn_file)
         
-        print(f"[SUCCESS] Anti-repertoire saved: {pgn_file}")
-        print(f"\n[IMPORT] Import to:")
+        print(f"[GENERATE] Creating visual tree image...")
+        builder.generate_tree_image(image_file)
+        
+        print(f"\n[SUCCESS] Files created:")
+        print(f"  - PGN: {pgn_file}")
+        print(f"  - Image: {image_file}")
+        print(f"\n[IMPORT] Import PGN to:")
         print(f"  - Chess.com: Repertoire > Import PGN")
         print(f"  - Lichess: Import > PGN")
         
         # Offer to open
-        open_choice = input("\n[INPUT] Open file? (y/n, default y): ").strip().lower()
+        open_choice = input("\n[INPUT] Open files? (y/n, default y): ").strip().lower()
         if open_choice != 'n':
             try:
                 import webbrowser
+                import subprocess
+                # Open image with default viewer
+                if os.path.exists(image_file):
+                    subprocess.Popen(['start', image_file], shell=True)
+                    print("[SUCCESS] Opening image...")
+                # Open PGN with browser
                 webbrowser.open(f"file://{os.path.abspath(pgn_file)}")
-                print("[SUCCESS] Opening file...")
-            except:
-                print(f"[INFO] Manual open: {pgn_file}")
+                print("[SUCCESS] Opening PGN file...")
+            except Exception as e:
+                print(f"[INFO] Manual open: {pgn_file} and {image_file}")
     
     except KeyboardInterrupt:
         print("\n[CANCELLED]")
