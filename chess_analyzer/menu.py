@@ -2838,16 +2838,24 @@ def _opponent_weakness_repertoire():
         # Load config early to check Stockfish
         from .utils.helpers import load_config
         config = load_config()
-        stockfish_path = config.get('stockfish_path') if config else None
-        use_stockfish = stockfish_path and os.path.exists(stockfish_path)
         
-        # If no Stockfish, switch to Lichess for evaluation data
+        # Get stockfish path from config
+        stockfish_path = None
+        if config and 'analysis' in config:
+            engine_path = config['analysis'].get('engine_path', '')
+            if engine_path and os.path.exists(engine_path):
+                stockfish_path = engine_path
+        
+        use_stockfish = stockfish_path is not None
+        
+        # If no Stockfish, prefer Lichess for evaluation data
         if not use_stockfish:
             platforms = ['lichess']
             print(f"[DETECT] Platform: LICHESS (for evaluation data)")
         else:
             platforms = [preferred_platform]
             print(f"[DETECT] Platform: {platforms[0].upper()}")
+            print(f"[INFO] Using Stockfish at: {stockfish_path}")
         
         # Number of games
         games_input = input("[INPUT] Games to analyze (default 50): ").strip()
