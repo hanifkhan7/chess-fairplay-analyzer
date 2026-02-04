@@ -1,12 +1,13 @@
-# ♟️ Chess Detective v3.2
+# ♟️ Chess Fairplay Analyzer v3.3
 
-[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
+[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Lichess API](https://img.shields.io/badge/API-Lichess-blue)](https://lichess.org/api)
 [![Chess.com API](https://img.shields.io/badge/API-Chess.com-orange)](https://www.chess.com/news/view/published-data-api)
 [![Stockfish](https://img.shields.io/badge/Engine-Stockfish%2016-red)](https://stockfishchess.org/)
+[![TensorFlow](https://img.shields.io/badge/ML-TensorFlow%202.13-orange)](https://www.tensorflow.org/)
 
-**Advanced Chess Analysis Platform with Forensic Detection & Head-to-Head Matchup Prediction**
+**Production-Ready Chess Analysis Platform with ML-Powered Cheat Detection, Forensic Analysis & Strategic Insights**
 
 A comprehensive, production-ready tool for analyzing player behavior, detecting suspicious activity patterns, and predicting match outcomes using AI-powered analysis similar to Chess.com's Fair Play detection system.
 

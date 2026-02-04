@@ -8,6 +8,7 @@ import json
 import csv
 import zipfile
 import io
+import numpy as np
 
 try:
     import chess.pgn
@@ -173,11 +174,12 @@ def main():
         print_menu_item("13", "View Reports", "(Generated Analysis Files)")
         print_menu_item("14", "Settings", "(Configuration)")
         print_menu_item("15", "Anti-Repertoire Builder", "(Opponent Weakness Exploit)")
-        print_menu_item("16", "Exit", "(Close Application)")
+        print_menu_item("16", "ML Cheat Detection", "(Neural Network Analysis)")
+        print_menu_item("17", "Exit", "(Close Application)")
         
         print(f"\n{Colors.CYAN}{'─' * 65}{Colors.END}")
 
-        choice = input(f"{Colors.BOLD}🔍 Select investigation (1-16): {Colors.END}").strip()
+        choice = input(f"{Colors.BOLD}🔍 Select investigation (1-17): {Colors.END}").strip()
 
         if choice == "1":
             _analyze_player()
@@ -210,6 +212,8 @@ def main():
         elif choice == "15":
             _opponent_weakness_repertoire()
         elif choice == "16":
+            _ml_cheat_detection()
+        elif choice == "17":
             print("\nGoodbye!\n")
             break
         else:
@@ -2969,6 +2973,214 @@ def _opponent_weakness_repertoire():
                 print("[SUCCESS] Opening PGN file...")
             except Exception as e:
                 print(f"[INFO] Manual open: {pgn_file} and {image_file}")
+    
+    except KeyboardInterrupt:
+        print("\n[CANCELLED]")
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        import traceback
+        traceback.print_exc()
+    
+    input("\nPress Enter to continue...")
+
+
+def _ml_cheat_detection():
+    """Feature 16: ML-based cheat detection using neural networks."""
+    print("\n" + "="*70)
+    print("[ML-DETECTOR] NEURAL NETWORK CHEAT DETECTION v1.0")
+    print("="*70)
+    print("\nUse machine learning (CNN-LSTM) to detect engine-like play patterns.")
+    print("This is an advanced detection method trained on human vs engine games.\n")
+    
+    try:
+        # Check if ML module is available
+        try:
+            from .ml_detector import MLCheatDetector, get_ml_detector
+        except ImportError:
+            print("[ERROR] ML module not available. Install with:")
+            print("        pip install -r requirements_ml.txt")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Check for trained model
+        model_path = "models/chess_detector_v1_best.h5"
+        
+        if not os.path.exists(model_path):
+            print("[INFO] No trained model found at: models/chess_detector_v1_best.h5")
+            print("\n[INFO] To use ML detection:")
+            print("  1. Install: pip install -r requirements_ml.txt")
+            print("  2. Train model: python train_ml_model_sample.py")
+            print("  3. This will create: models/chess_detector_v1_best.h5")
+            print("\n[INFO] See: docs/ML_QUICK_START.md for details")
+            
+            choice = input("\n[INPUT] Train model now? (y/n, default n): ").strip().lower()
+            if choice == 'y':
+                print("[INFO] See docs/ML_QUICK_START.md for training instructions")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Load detector
+        print(f"[LOAD] Loading ML model from: {model_path}")
+        detector = get_ml_detector(model_path)
+        
+        if detector is None:
+            print("[ERROR] Failed to load ML model")
+            input("\nPress Enter to continue...")
+            return
+        
+        if not detector.is_available():
+            print("[ERROR] ML detector not available")
+            input("\nPress Enter to continue...")
+            return
+        
+        print("[SUCCESS] ML model loaded")
+        
+        # Get model info
+        model_info = detector.get_model_info()
+        print(f"\n[MODEL] Architecture:")
+        print(f"  Input shape: {model_info['input_shape']}")
+        print(f"  Output classes: 2 (Human/Engine)")
+        print(f"  Parameters: {model_info['num_parameters']:,}")
+        print(f"  Threshold: {model_info['threshold']*100:.0f}%")
+        
+        # Get username
+        username = input("\n[INPUT] Player username: ").strip()
+        if not username:
+            print("[CANCELLED] No username provided")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Platform selection
+        print("\n[PLATFORM] Select platform:")
+        print("  1. Chess.com")
+        print("  2. Lichess")
+        print("  3. Auto-detect")
+        platform_choice = input("[INPUT] Choose (1-3, default 3): ").strip()
+        
+        if platform_choice == "1":
+            platforms = ["chesscom"]
+        elif platform_choice == "2":
+            platforms = ["lichess"]
+        else:
+            platforms = ["lichess", "chesscom"]
+        
+        # Number of games
+        games_input = input("[INPUT] Games to analyze (default 30): ").strip()
+        num_games = int(games_input) if games_input else 30
+        
+        # Fetch games
+        print(f"\n[FETCH] Fetching {num_games} games for {username}...")
+        games, platform_counts = _fetch_games(username, num_games, platforms)
+        
+        if not games:
+            print("[ERROR] No games found")
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"[SUCCESS] Found {len(games)} games")
+        
+        # Analyze with ML
+        print(f"\n[ANALYZE] Analyzing with ML model...")
+        results = []
+        flagged_count = 0
+        
+        for i, game in enumerate(games):
+            print(f"  [{i+1}/{len(games)}] Analyzing game...", end="\r")
+            
+            try:
+                # Extract moves
+                import chess.pgn
+                import io
+                
+                pgn_str = game.get('pgn', '')
+                if not pgn_str:
+                    continue
+                
+                pgn_file = io.StringIO(pgn_str)
+                pgn_game = chess.pgn.read_game(pgn_file)
+                
+                if not pgn_game:
+                    continue
+                
+                # Get moves
+                board = pgn_game.board()
+                moves = []
+                for move in pgn_game.mainline_moves():
+                    moves.append(move)
+                
+                if len(moves) < 20:  # Minimum moves needed
+                    continue
+                
+                # Analyze
+                result = detector.analyze_game(moves)
+                results.append(result)
+                
+                if result.get('is_cheating'):
+                    flagged_count += 1
+            
+            except Exception as e:
+                continue
+        
+        print(f"  Analysis complete!                       ")
+        
+        if not results:
+            print("\n[ERROR] Could not analyze any games")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Summary
+        print(f"\n[RESULTS] Analysis Summary:")
+        print(f"  Games analyzed: {len(results)}")
+        print(f"  Flagged: {flagged_count} ({flagged_count/len(results)*100:.1f}%)")
+        
+        # Calculate statistics
+        engine_probs = []
+        for r in results:
+            if 'mean_engine_probability' in r:
+                engine_probs.append(r['mean_engine_probability'])
+        
+        if engine_probs:
+            avg_prob = np.mean(engine_probs)
+            print(f"  Average engine similarity: {avg_prob:.1%}")
+            print(f"  Max similarity: {max(engine_probs):.1%}")
+            print(f"  Min similarity: {min(engine_probs):.1%}")
+        
+        # Overall verdict
+        print(f"\n[VERDICT]")
+        if flagged_count / len(results) > 0.3:
+            print(f"  ⚠️  SUSPICIOUS: High rate of engine-like moves detected")
+        elif flagged_count > 0:
+            print(f"  ⚠️  INCONCLUSIVE: Some engine-like patterns found")
+        else:
+            print(f"  ✓ LIKELY LEGITIMATE: No strong engine patterns detected")
+        
+        # Show detailed results
+        show_details = input("\n[INPUT] Show detailed results? (y/n, default n): ").strip().lower()
+        if show_details == 'y':
+            for i, result in enumerate(results[:5]):  # Show first 5
+                print(f"\n  Game {i+1}:")
+                if 'error' in result:
+                    print(f"    Error: {result['error']}")
+                else:
+                    status = "🚩 Flagged" if result.get('is_cheating') else "✓ OK"
+                    print(f"    Status: {status}")
+                    print(f"    Engine prob: {result.get('mean_engine_probability', 0):.1%}")
+                    print(f"    Suspicious moves: {result.get('num_suspicious_positions', 0)}")
+            
+            if len(results) > 5:
+                print(f"\n  ... and {len(results) - 5} more games")
+        
+        # Save report
+        save_choice = input("\n[INPUT] Save detailed report? (y/n, default y): ").strip().lower()
+        if save_choice != 'n':
+            os.makedirs('reports', exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            report_file = f"reports/ml_cheat_detection_{username}_{timestamp}.json"
+            
+            detector.save_results(results, report_file)
+            print(f"[SUCCESS] Report saved: {report_file}")
+        
+        print(f"\n[INFO] For more details, see: docs/ML_QUICK_START.md")
     
     except KeyboardInterrupt:
         print("\n[CANCELLED]")
