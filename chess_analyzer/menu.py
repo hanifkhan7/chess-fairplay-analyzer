@@ -3212,11 +3212,27 @@ def _interactive_opponent_simulator():
         if not opponent:
             return
         
+        # Get number of games to analyze
+        while True:
+            try:
+                num_games = input("[INPUT] How many games to analyze? (default 100, max 500): ").strip()
+                if not num_games:
+                    num_games = 100
+                    break
+                num_games = int(num_games)
+                if 1 <= num_games <= 500:
+                    break
+                print("  ⚠ Please enter a number between 1 and 500")
+            except ValueError:
+                print("  ⚠ Invalid input. Using default (100)")
+                num_games = 100
+                break
+        
         # Get games
         print(f"[DETECT] Downloading {opponent}'s games...")
         try:
             config = load_config()
-            games, counts = _fetch_games(opponent, max_games=100, config=config)
+            games, counts = _fetch_games(opponent, max_games=num_games, config=config)
             
             if not games:
                 print_error(f"No games found for {opponent}")

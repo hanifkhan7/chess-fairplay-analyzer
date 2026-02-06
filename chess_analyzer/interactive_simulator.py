@@ -299,38 +299,48 @@ class InteractiveSimulator:
             # User's turn
             while True:
                 try:
-                    user_input = input("  Your move: ").strip().lower()
+                    user_input = input("  Your move: ").strip()
                     
-                    if user_input == 'quit':
+                    # Handle special commands (case-insensitive)
+                    cmd = user_input.lower()
+                    if cmd == 'quit':
                         print("\nGame ended.")
                         return
-                    elif user_input == 'board':
+                    elif cmd == 'board':
                         print(f"\n{self.board}")
                         continue
-                    elif user_input == 'stats':
+                    elif cmd == 'stats':
                         self._show_opponent_stats()
                         continue
-                    elif user_input == 'fen':
+                    elif cmd == 'fen':
                         print(f"FEN: {self.board.fen()}")
                         continue
                     
-                    # Parse move
+                    # Parse move (try SAN first with original case, then UCI)
+                    move = None
                     try:
                         move = self.board.parse_san(user_input)
                     except:
-                        move = self.board.parse_uci(user_input)
+                        try:
+                            move = self.board.parse_uci(user_input.lower())
+                        except:
+                            try:
+                                move = self.board.parse_san(user_input.upper())
+                            except:
+                                move = None
                     
-                    if move in self.board.legal_moves:
+                    if move and move in self.board.legal_moves:
                         san = self.board.san(move)
                         self.board.push(move)
                         self.moves_played.append(move)
                         print(f"  ✓ {san}")
                         break
                     else:
-                        print("  ✗ Illegal move")
+                        legal = ', '.join(self.board.san(m) for m in list(self.board.legal_moves)[:5])
+                        print(f"  ✗ Invalid move. Try: {legal}...")
                 
                 except Exception as e:
-                    print(f"  ✗ Invalid move: {e}")
+                    print(f"  ✗ Error: {e}")
     
     def _show_opponent_stats(self):
         """Show opponent's statistics for current position."""
