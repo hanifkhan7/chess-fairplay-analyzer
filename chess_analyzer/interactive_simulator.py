@@ -327,7 +327,19 @@ class InteractiveSimulator:
                             try:
                                 move = self.board.parse_san(user_input.upper())
                             except:
-                                move = None
+                                # Try with piece names capitalized (e.g., nc6 -> Nc6)
+                                try:
+                                    capitalized = ''
+                                    for i, c in enumerate(user_input):
+                                        if i == 0 and c.isalpha() and c not in 'abcdefgh':
+                                            capitalized += c.upper()  # Capitalize piece names
+                                        elif i < len(user_input) - 1 and c.isalpha() and c not in 'abcdefgh':
+                                            capitalized += c.upper()
+                                        else:
+                                            capitalized += c
+                                    move = self.board.parse_san(capitalized)
+                                except:
+                                    move = None
                     
                     if move and move in self.board.legal_moves:
                         san = self.board.san(move)
