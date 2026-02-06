@@ -53,16 +53,21 @@ class OpponentMoveDatabase:
                 print(f"  ⚠ Error processing game: {e}")
                 continue
     
-    def _process_game(self, game: Dict):
+    def _process_game(self, game):
         """Extract moves and statistics from a game."""
-        # Parse PGN if provided
-        if 'pgn' in game:
-            try:
-                pgn = chess.pgn.read_game(io.StringIO(game['pgn']))
-                if pgn is None:
+        # Handle both chess.pgn.Game objects and dicts
+        if isinstance(game, dict):
+            if 'pgn' in game:
+                try:
+                    pgn = chess.pgn.read_game(io.StringIO(game['pgn']))
+                    if pgn is None:
+                        return
+                except:
                     return
-            except:
+            else:
                 return
+        elif isinstance(game, chess.pgn.GameNode):
+            pgn = game
         else:
             return
         
@@ -149,14 +154,19 @@ class OpponentMoveDatabase:
         openings = Counter()
         
         for game in self.games:
-            if 'pgn' in game:
+            pgn = None
+            
+            if isinstance(game, dict) and 'pgn' in game:
                 try:
                     pgn = chess.pgn.read_game(io.StringIO(game['pgn']))
-                    if pgn:
-                        opening = pgn.headers.get('Opening', 'Unknown')
-                        openings[opening] += 1
                 except:
                     pass
+            elif isinstance(game, chess.pgn.GameNode):
+                pgn = game
+            
+            if pgn:
+                opening = pgn.headers.get('Opening', 'Unknown')
+                openings[opening] += 1
         
         return dict(openings.most_common(10))
     
