@@ -175,11 +175,12 @@ def main():
         print_menu_item("14", "Settings", "(Configuration)")
         print_menu_item("15", "Anti-Repertoire Builder", "(Opponent Weakness Exploit)")
         print_menu_item("16", "ML Cheat Detection", "(Neural Network Analysis)")
+        print_menu_item("18", "Interactive Opponent Simulator", "(Play Against Opponent)")
         print_menu_item("17", "Exit", "(Close Application)")
         
         print(f"\n{Colors.CYAN}{'─' * 65}{Colors.END}")
 
-        choice = input(f"{Colors.BOLD}🔍 Select investigation (1-17): {Colors.END}").strip()
+        choice = input(f"{Colors.BOLD}🔍 Select investigation (1-18): {Colors.END}").strip()
 
         if choice == "1":
             _analyze_player()
@@ -213,6 +214,8 @@ def main():
             _opponent_weakness_repertoire()
         elif choice == "16":
             _ml_cheat_detection()
+        elif choice == "18":
+            _interactive_opponent_simulator()
         elif choice == "17":
             print("\nGoodbye!\n")
             break
@@ -3190,4 +3193,59 @@ def _ml_cheat_detection():
         traceback.print_exc()
     
     input("\nPress Enter to continue...")
+
+
+def _interactive_opponent_simulator():
+    """Feature 18: Interactive Opponent Simulator - Play against opponent's patterns"""
+    print("\n" + "="*60)
+    print("[SIMULATOR] INTERACTIVE OPPONENT SIMULATOR")
+    print("="*60)
+    print("Play against an opponent using their actual game patterns as responses.")
+    print("Analyzes their past games to predict likely moves.")
+    
+    try:
+        from .interactive_simulator import InteractiveSimulator
+        from .utils.helpers import load_config
+        
+        # Get opponent username
+        opponent = input("\n[INPUT] Opponent username: ").strip()
+        if not opponent:
+            return
+        
+        # Get games
+        print(f"[DETECT] Downloading {opponent}'s games...")
+        try:
+            config = load_config()
+            games, counts = _fetch_games(opponent, max_games=100, config=config)
+            
+            if not games:
+                print_error(f"No games found for {opponent}")
+                return
+            
+            print(f"[SUCCESS] Downloaded {len(games)} games")
+            print(f"  Chess.com: {counts.get('chess.com', 0)}")
+            print(f"  Lichess: {counts.get('lichess', 0)}")
+        
+        except Exception as e:
+            print(f"[ERROR] Failed to download games: {e}")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Start simulator
+        print("\n[LAUNCH] Starting interactive session...")
+        simulator = InteractiveSimulator(games, opponent)
+        simulator.run_interactive_session()
+        
+    except ImportError as e:
+        print_error(f"Interactive simulator not available: {e}")
+        print_info("The interactive_simulator module is required for this feature.")
+    except KeyboardInterrupt:
+        print("\n[CANCELLED]")
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        import traceback
+        traceback.print_exc()
+    
+    input("\nPress Enter to continue...")
+
 
