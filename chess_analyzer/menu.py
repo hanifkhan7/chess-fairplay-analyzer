@@ -168,19 +168,17 @@ def main():
         print_menu_item("7", "Multi-Player Comparison", "(Compare Multiple Players)")
         print_menu_item("8", "Fatigue Detection", "(Endurance & Performance)")
         print_menu_item("9", "Network Analysis", "(Connection Patterns)")
-        print_menu_item("10", "Opening Repertoire", "(Deep Opening Analysis)")
+        print_menu_item("10", "Opening Repertoire & DNA", "(Opening Analysis + Player DNA)")
         print_menu_item("11", "Tournament Inspector", "(Head-to-Head Analysis)")
         print_menu_item("12", "Head-to-Head Matchup", "(Detailed Matchup Report)")
         print_menu_item("13", "View Reports", "(Generated Analysis Files)")
         print_menu_item("14", "Settings", "(Configuration)")
         print_menu_item("15", "Anti-Repertoire Builder", "(Opponent Weakness Exploit)")
-        print_menu_item("16", "ML Cheat Detection", "(Neural Network Analysis)")
-        print_menu_item("18", "Interactive Opponent Simulator", "(Play Against Opponent)")
-        print_menu_item("17", "Exit", "(Close Application)")
+        print_menu_item("16", "Exit", "(Close Application)")
         
         print(f"\n{Colors.CYAN}{'─' * 65}{Colors.END}")
 
-        choice = input(f"{Colors.BOLD}🔍 Select investigation (1-18): {Colors.END}").strip()
+        choice = input(f"{Colors.BOLD}🔍 Select investigation (1-16): {Colors.END}").strip()
 
         if choice == "1":
             _analyze_player()
@@ -213,10 +211,6 @@ def main():
         elif choice == "15":
             _opponent_weakness_repertoire()
         elif choice == "16":
-            _ml_cheat_detection()
-        elif choice == "18":
-            _interactive_opponent_simulator()
-        elif choice == "17":
             print("\nGoodbye!\n")
             break
         else:
@@ -1564,16 +1558,121 @@ def _play_against_opponent():
     input("\nPress Enter to continue...")
 
 
-def _opening_repertoire_inspector():
-    """Hybrid Opening Repertoire Analysis - Tree + Statistics (v3.1)"""
+
+
+def _player_dna_analysis(username: str):
+    """Player DNA - Comprehensive Opening Tree Intelligence"""
     print("\n" + "="*70)
-    print("[REPERTOIRE] OPENING REPERTOIRE INSPECTOR v3.1")
-    print("Hybrid System: Opening Tree + Statistical Analysis")
+    print("[DNA] PLAYER DNA ANALYSIS")
+    print("Builds comprehensive statistical opening tree from thousands of games")
     print("="*70)
     
-    # Original repertoire analysis
+    try:
+        from .player_dna import build_player_dna
+        from .utils.helpers import load_config
+        
+        config = load_config()
+        
+        # Get games
+        game_count_str = input("\nGames to analyze (recommended 500+, default 1000): ").strip()
+        try:
+            game_count = int(game_count_str) if game_count_str else 1000
+        except:
+            game_count = 1000
+        
+        # Color selection
+        print("\nPlayer color:")
+        print("  1. White")
+        print("  2. Black")
+        print("  3. Both")
+        color_choice = input("Select (1-3, default 3): ").strip()
+        color_map = {'1': 'white', '2': 'black', '3': 'both'}
+        color = color_map.get(color_choice, 'both')
+        
+        # Fetch games
+        print(f"\n[FETCH] Fetching up to {game_count} games...")
+        player_games, counts = _fetch_games(username, game_count, config=config)
+        
+        if not player_games:
+            print(f"[ERROR] No games found for {username}")
+            input("\nPress Enter to continue...")
+            return
+        
+        print(f"[OK] Retrieved {len(player_games)} games")
+        
+        # Build DNA
+        print(f"\n[BUILD] Building Player DNA...")
+        dna = build_player_dna(username, player_games, color, min_games=20)
+        
+        if not dna:
+            print("[ERROR] Failed to build Player DNA")
+            input("\nPress Enter to continue...")
+            return
+        
+        # Display report
+        report = dna.get_tree_report(limit=15)
+        print("\n" + report)
+        
+        # Generate PGN with stats
+        print(f"\n[GENERATE] Creating professional PGN file...")
+        pgn_content = dna.generate_pgn_with_stats()
+        
+        os.makedirs('reports', exist_ok=True)
+        pgn_file = f"reports/{username}_player_dna.pgn"
+        with open(pgn_file, 'w') as f:
+            f.write(pgn_content)
+        print(f"[OK] Saved: {pgn_file}")
+        
+        # Export options
+        print(f"\n[EXPORT] Export tree report?")
+        export_choice = input("Save text report? (y/n, default y): ").strip().lower()
+        
+        if export_choice != 'n':
+            report_file = f"reports/{username}_player_dna_report.txt"
+            with open(report_file, 'w') as f:
+                f.write(report)
+            print(f"[OK] Saved: {report_file}")
+        
+        # Open files
+        open_choice = input("Open generated files? (y/n, default y): ").strip().lower()
+        if open_choice != 'n':
+            try:
+                import webbrowser
+                # Try to open PGN in default application
+                os.startfile(pgn_file) if os.name == 'nt' else os.system(f'open {pgn_file}')
+                print(f"[OK] Opened PGN file")
+            except:
+                print(f"[WARN] Could not open files. Manual location: reports/")
+        
+        print(f"\n[OK] Player DNA analysis complete!")
+        
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        import traceback
+        traceback.print_exc()
+    
+    input("\nPress Enter to continue...")
+
+
+def _opening_repertoire_inspector():
+    """Hybrid Opening Repertoire Analysis - Tree + Statistics + Player DNA"""
+    print("\n" + "="*70)
+    print("[REPERTOIRE] OPENING REPERTOIRE INSPECTOR v3.2")
+    print("Dual System: Opening Tree Analysis + Player DNA Intelligence")
+    print("="*70)
+    
+    # Choose analysis type
+    print("\nSelect analysis type:")
+    print("  1. Traditional Opening Repertoire (statistics + tree)")
+    print("  2. Player DNA (comprehensive move database)")
+    analysis_choice = input("Choose (1-2, default 1): ").strip()
+    
     username = input("\nEnter player username: ").strip()
     if not username:
+        return
+    
+    if analysis_choice == "2":
+        _player_dna_analysis(username)
         return
     
     print("\n[FILTERS]")

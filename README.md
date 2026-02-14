@@ -96,7 +96,7 @@ python run_menu.py
 
 ### Analysis Features
 1. **Analyze Player** - Detect suspicious activity patterns
-2. **Download All Games** - Export game history (PGN/CSV)
+2. **Download & Analyze Games** - Export and analyze game history
 3. **Exploit Your Opponent** - Opening & style analysis
 4. **Strength Profile** - Skill level assessment
 5. **Accuracy Report** - Move-by-move accuracy analysis
@@ -104,20 +104,33 @@ python run_menu.py
 7. **Multi-Player Comparison** - Compare multiple players side-by-side
 8. **Fatigue Detection** - Identify performance degradation patterns
 9. **Network Analysis** - Opponent network mapping
-10. **Opening Repertoire Inspector** - Deep opening analysis
-11. **Leaderboard Browser** - Lichess top players (by country)
-12. **Head-to-Head Matchup** ⭐ - Predict match outcomes with 5-factor analysis
+10. **Opening Repertoire & Player DNA** ⭐ - Deep opening analysis + statistical DNA
+11. **Tournament Inspector** - Head-to-Head Analysis
+12. **Head-to-Head Matchup** - Predict match outcomes with 5-factor analysis
 13. **View Reports** - Browse generated reports
 14. **Settings** - Configuration management
-15. **Exit** - Quit program
+15. **Anti-Repertoire Builder** - Build specialized repertoires against opponent weaknesses
+16. **Exit** - Quit program
 
-### Head-to-Head Matchup Analyzer ⭐ (NEW)
-Predict match outcomes with sophisticated analysis:
-- **ELO Probability** (40%): Classical rating differential
-- **Performance Probability** (40%): Historical win rate analysis
-- **Head-to-Head Record** (20%): Direct matchup history
-- **Opening Statistics**: Opening-specific performance
-- **Suspicious Activity Detection**: Flag unusual patterns
+### Opening Repertoire & Player DNA ⭐ (ENHANCED)
+Choose between two powerful opening analyses:
+
+**Option 1: Traditional Opening Repertoire**
+- Opening tree visualization
+- Win rates by opening
+- Performance statistics
+- D3.js interactive tree
+- Exportable CSV/Excel
+
+**Option 2: Player DNA (NEW)**
+Comprehensive opening intelligence system:
+- Merges 1000+ games into statistical tree
+- Shows exactly how player actually plays openings
+- Move statistics: frequency, win rate, draw %, loss %
+- Professional PGN generation with annotations
+- Tree depth: Full detail until move 15, medium until 20
+- Identifies: Most trusted openings, surprise weapons, weak lines, favorite variations
+- **Output**: PGN file + text report showing complete opening identity
 
 #### 4. **Strength Profile** - Skill Level Analysis
 - Estimated skill level classification
