@@ -1,338 +1,397 @@
 """
-Player DNA Analysis: Comprehensive Statistical Opening Tree
+Player DNA Analysis: Comprehensive Statistical Opening Repertoire
 
 Creates a detailed statistical profile of how a player actually plays openings
-by merging thousands of games into a single tree showing:
-- Move frequencies and win rates
-- Opening preferences and surprise weapons
-- Weak lines and areas for improvement
+by analyzing game collection to show:
+- Opening preferences and move frequencies
+- Win rates by opening and variation
+- Weak lines and strongest performances
+- Favorite vs risky lines
+- Complete opening identity profile
+
+Player DNA becomes increasingly accurate with more games:
+- 20-50 games: Basic repertoire outline
+- 50-200 games: Strong opening profile
+- 200+ games: Complete DNA profile
 """
 
 import chess
 import chess.pgn
 import json
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 from collections import defaultdict
 from pathlib import Path
 import io
 
-from .move_tree_builder import MoveTreeBuilder, MoveNode
 
-
-class PlayerDNABuilder:
-    """Build comprehensive player opening profile."""
+class PlayerDNAAnalyzer:
+    """Analyze and build player opening DNA profile."""
     
-    def __init__(self, config: Optional[Dict] = None):
-        """Initialize builder."""
-        self.config = config or {}
-        self.tree_builder = MoveTreeBuilder(config)
-        self.opening_tree = None
-        self.move_stats = defaultdict(lambda: {
-            'count': 0,
-            'wins': 0,
-            'draws': 0,
-            'losses': 0,
-        })
-    
-    def build_from_games(self, games: List[Dict], player_name: str, 
-                        color: Optional[str] = None, max_depth: int = 15) -> Dict:
+    def __init__(self, min_games: int = 1):
         """
-        Build player DNA from game collection.
+        Initialize analyzer.
         
         Args:
-            games: List of game dicts with 'pgn', 'result', 'headers' keys
-            player_name: Player being analyzed
-            color: 'white', 'black', or None for both
-            max_depth: Maximum move depth to analyze
-            
-        Returns:
-            DNA profile dict with opening tree and statistics
+            min_games: Minimum games required to include variation (default 1)
         """
-        print(f"Building Player DNA for {player_name}...")
-        print(f"Processing {len(games)} games...")
-        
-        valid_games = []
-        
-        for i, game_data in enumerate(games):
-            try:
-                # Parse PGN
-                pgn_str = game_data.get('pgn', '')
-                if not pgn_str:
-                    continue
-                
-                game = chess.pgn.read_game(io.StringIO(pgn_str))
-                if not game is None:
-                    valid_games.append(game)
-                    
-                if (i + 1) % 500 == 0:
-                    print(f"  Processed {i + 1} games...")
-            except Exception as e:
-                continue
-        
-        print(f"✓ Successfully parsed {len(valid_games)} games")
-        
-        # Build opening tree
-        self._build_opening_tree(valid_games, player_name, color, max_depth)
-        
-        # Generate statistics
-        stats = self._generate_statistics(valid_games, player_name, color)
-        
-        return {
-            'opening_tree': self.opening_tree.to_dict() if self.opening_tree else {},
-            'statistics': stats,
-            'games_analyzed': len(valid_games),
-            'player': player_name,
-        }
-    
-    def _build_opening_tree(self, games: List[chess.pgn.GameNode], 
-                           player_name: str, color: Optional[str],
-                           max_depth: int):
-        """Build opening repertoire tree."""
-        board = chess.Board()
-        root = MoveNode()
-        
-        for game in games:
-            board.reset()
-            current_node = root
-            move_count = 0
-            
-            # Check if player is in this game
-            white_name = game.headers.get('White', '').lower()
-            black_name = game.headers.get('Black', '').lower()
-            player_key = player_name.lower()
-            
-            player_color = None
-            if player_key in white_name:
-                player_color = 'white'
-            elif player_key in black_name:
-                player_color = 'black'
-            else:
-                continue
-            
-            # Filter by color if specified
-            if color and color.lower() != player_color:
-                continue
-            
-            # Process moves
-            is_player_turn_now = (player_color == 'white')
-            
-            for move in game.mainline_moves():
-                if move_count >= max_depth * 2:  # Moves are made by both colors
-                    break
-                
-                move_san = board.san(move)
-                
-                # Only track player's moves
-                if is_player_turn_now:
-                    # Get or create child node
-                    if move_san not in current_node.children:
-                        current_node.children[move_san] = MoveNode(move_san)
-                    
-                    child = current_node.children[move_san]
-                    child.count += 1
-                    
-                    # Track result outcome for this move
-                    result = game.headers.get('Result', '*')
-                    if player_color == 'white':
-                        if result == '1-0':
-                            child.wins += 1
-                        elif result == '0-1':
-                            child.losses += 1
-                        elif result == '1/2-1/2':
-                            child.draws += 1
-                    else:  # black
-                        if result == '0-1':
-                            child.wins += 1
-                        elif result == '1-0':
-                            child.losses += 1
-                        elif result == '1/2-1/2':
-                            child.draws += 1
-                
-                board.push(move)
-                is_player_turn_now = not is_player_turn_now
-                move_count += 1
-        
-        self.opening_tree = root
-    
-    def _generate_statistics(self, games: List[chess.pgn.GameNode],
-                            player_name: str, color: Optional[str]) -> Dict:
-        """Generate opening statistics."""
-        stats = {
-            'total_games': len(games),
-            'by_opening': {},
-            'by_result': {'wins': 0, 'draws': 0, 'losses': 0},
-            'favorite_openings': [],
-            'weak_lines': [],
-            'surprising_weapons': [],
-        }
-        
-        opening_stats = defaultdict(lambda: {
+        self.min_games = min_games
+        self.opening_tree = {}
+        self.opening_stats = defaultdict(lambda: {
             'games': 0,
             'wins': 0,
             'draws': 0,
             'losses': 0,
         })
+        self.move_sequences = []
+    
+    def analyze_games(self, games: List[Dict], player_name: str,
+                     color: Optional[str] = None) -> Dict:
+        """
+        Analyze games to build player DNA.
         
-        for game in games:
-            white_name = game.headers.get('White', '').lower()
-            black_name = game.headers.get('Black', '').lower()
-            player_key = player_name.lower()
+        Args:
+            games: List of game dicts with 'pgn' key containing PGN string
+            player_name: Player username to analyze
+            color: 'white', 'black', or None (both)
             
-            if player_key not in white_name and player_key not in black_name:
+        Returns:
+            DNA profile dict with openings and statistics
+        """
+        player_games_data = []
+        
+        # Parse all games and filter for player
+        for game_dict in games:
+            try:
+                pgn_str = game_dict.get('pgn', '')
+                if not pgn_str:
+                    continue
+                
+                # Parse PGN
+                game = chess.pgn.read_game(io.StringIO(pgn_str))
+                if not game:
+                    continue
+                
+                white = game.headers.get('White', '').lower()
+                black = game.headers.get('Black', '').lower()
+                player_key = player_name.lower()
+                
+                # Check if player is in game
+                player_is_white = player_key in white
+                player_is_black = player_key in black
+                
+                if not (player_is_white or player_is_black):
+                    continue
+                
+                # Filter by color if specified
+                if color == 'white' and not player_is_white:
+                    continue
+                elif color == 'black' and not player_is_black:
+                    continue
+                
+                # Get result
+                result = game.headers.get('Result', '*')
+                white_won = result == '1-0'
+                black_won = result == '0-1'
+                draw = result == '1/2-1/2'
+                
+                # Determine if player won
+                if player_is_white:
+                    player_won = white_won
+                    player_draw = draw
+                    player_lost = black_won
+                else:  # black
+                    player_won = black_won
+                    player_draw = draw
+                    player_lost = white_won
+                
+                player_games_data.append({
+                    'game': game,
+                    'is_white': player_is_white,
+                    'won': player_won,
+                    'draw': player_draw,
+                    'lost': player_lost,
+                })
+            
+            except Exception as e:
                 continue
-            
-            player_is_white = player_key in white_name
+        
+        if not player_games_data:
+            return {
+                'players': player_name,
+                'color': color or 'all',
+                'total_games': 0,
+                'openings': {},
+                'statistics': {},
+                'error': 'No games found for analysis'
+            }
+        
+        # Analyze openings
+        self._analyze_openings(player_games_data)
+        
+        # Generate reports
+        dna_profile = {
+            'player': player_name,
+            'color': color or 'both',
+            'total_games': len(player_games_data),
+            'openings': self.opening_stats,
+            'statistics': self._calculate_statistics(player_games_data),
+            'favorite_openings': self._get_favorite_openings(5),
+            'weak_lines': self._get_weak_lines(3),
+            'surprising_weapons': self._get_risky_openings(3),
+        }
+        
+        return dna_profile
+    
+    def _analyze_openings(self, player_games: List[Dict]):
+        """Extract opening statistics from games."""
+        for game_data in player_games:
+            game = game_data['game']
             
             # Get opening name
-            opening = game.headers.get('Opening', 'Unknown')
+            opening_name = game.headers.get('Opening', 'Unknown Opening')
+            opening_eco = game.headers.get('ECO', '')
             
-            result = game.headers.get('Result', '*')
+            # Full opening key
+            opening_key = opening_name
             
-            opening_stats[opening]['games'] += 1
+            # Update stats
+            self.opening_stats[opening_key]['games'] += 1
             
-            if player_is_white:
-                if result == '1-0':
-                    opening_stats[opening]['wins'] += 1
-                    stats['by_result']['wins'] += 1
-                elif result == '0-1':
-                    opening_stats[opening]['losses'] += 1
-                    stats['by_result']['losses'] += 1
-                elif result == '1/2-1/2':
-                    opening_stats[opening]['draws'] += 1
-                    stats['by_result']['draws'] += 1
-            else:  # black
-                if result == '0-1':
-                    opening_stats[opening]['wins'] += 1
-                    stats['by_result']['wins'] += 1
-                elif result == '1-0':
-                    opening_stats[opening]['losses'] += 1
-                    stats['by_result']['losses'] += 1
-                elif result == '1/2-1/2':
-                    opening_stats[opening]['draws'] += 1
-                    stats['by_result']['draws'] += 1
-        
-        # Calculate win rates
-        for opening, data in opening_stats.items():
-            if data['games'] > 0:
-                win_rate = data['wins'] / data['games']
-                stats['by_opening'][opening] = {
-                    'games': data['games'],
-                    'win_rate': win_rate,
-                    'wins': data['wins'],
-                    'draws': data['draws'],
-                    'losses': data['losses'],
-                }
-        
-        # Find favorite openings (most games with good win rate)
-        sorted_openings = sorted(
-            stats['by_opening'].items(),
-            key=lambda x: (x[1]['games'], x[1]['win_rate']),
-            reverse=True
-        )
-        
-        stats['favorite_openings'] = [
-            {
-                'name': name,
-                'games': data['games'],
-                'win_rate': data['win_rate'],
-            }
-            for name, data in sorted_openings[:5]
-        ]
-        
-        # Find weak lines (high game count but low win rate)
-        weak = sorted(
-            stats['by_opening'].items(),
-            key=lambda x: x[1]['win_rate']
-        )
-        
-        stats['weak_lines'] = [
-            {
-                'name': name,
-                'games': data['games'],
-                'win_rate': data['win_rate'],
-            }
-            for name, data in weak[:3]
-            if data['games'] >= 3
-        ]
-        
-        return stats
+            if game_data['won']:
+                self.opening_stats[opening_key]['wins'] += 1
+            elif game_data['draw']:
+                self.opening_stats[opening_key]['draws'] += 1
+            elif game_data['lost']:
+                self.opening_stats[opening_key]['losses'] += 1
     
-    def generate_pacing_report(self) -> str:
-        """Generate player DNA report."""
-        if not self.opening_tree:
-            return "No opening data available"
+    def _calculate_statistics(self, player_games: List[Dict]) -> Dict:
+        """Calculate overall statistics."""
+        wins = sum(1 for g in player_games if g['won'])
+        draws = sum(1 for g in player_games if g['draw'])
+        losses = sum(1 for g in player_games if g['lost'])
+        total = len(player_games)
         
+        return {
+            'wins': wins,
+            'draws': draws,
+            'losses': losses,
+            'total': total,
+            'win_rate': (wins / total * 100) if total > 0 else 0,
+            'draw_rate': (draws / total * 100) if total > 0 else 0,
+            'loss_rate': (losses / total * 100) if total > 0 else 0,
+        }
+    
+    def _get_favorite_openings(self, limit: int = 5) -> List[Dict]:
+        """Get most played openings with win rates."""
+        openings = []
+        
+        for opening, stats in self.opening_stats.items():
+            if stats['games'] >= self.min_games:
+                win_rate = stats['wins'] / stats['games'] * 100 if stats['games'] > 0 else 0
+                openings.append({
+                    'name': opening,
+                    'games': stats['games'],
+                    'wins': stats['wins'],
+                    'draws': stats['draws'],
+                    'losses': stats['losses'],
+                    'win_rate': round(win_rate, 1),
+                })
+        
+        # Sort by games played (most played first)
+        openings.sort(key=lambda x: x['games'], reverse=True)
+        return openings[:limit]
+    
+    def _get_weak_lines(self, limit: int = 3) -> List[Dict]:
+        """Get openings with lowest win rates (played multiple times)."""
+        openings = []
+        
+        for opening, stats in self.opening_stats.items():
+            if stats['games'] >= max(2, self.min_games):  # At least 2 games
+                win_rate = stats['wins'] / stats['games'] * 100 if stats['games'] > 0 else 0
+                openings.append({
+                    'name': opening,
+                    'games': stats['games'],
+                    'win_rate': round(win_rate, 1),
+                })
+        
+        # Sort by win rate (lowest first)
+        openings.sort(key=lambda x: x['win_rate'])
+        return openings[:limit]
+    
+    def _get_risky_openings(self, limit: int = 3) -> List[Dict]:
+        """Get openings played less frequently but with high win rate (bold choices)."""
+        openings = []
+        
+        for opening, stats in self.opening_stats.items():
+            if stats['games'] >= 1:  # At least 1 game
+                win_rate = stats['wins'] / stats['games'] * 100 if stats['games'] > 0 else 0
+                # Risky = fewer games but high win rate
+                if 1 <= stats['games'] <= 5 and win_rate >= 60:
+                    openings.append({
+                        'name': opening,
+                        'games': stats['games'],
+                        'wins': stats['wins'],
+                        'win_rate': round(win_rate, 1),
+                    })
+        
+        # Sort by win rate (highest first)
+        openings.sort(key=lambda x: x['win_rate'], reverse=True)
+        return openings[:limit]
+    
+    def generate_report(self) -> str:
+        """Generate text report of DNA analysis."""
         report = []
-        report.append("=" * 70)
-        report.append("PLAYER DNA ANALYSIS - OPENING REPERTOIRE")
-        report.append("=" * 70)
+        report.append("\n" + "="*70)
+        report.append("[DNA REPORT] Opening Repertoire Profile")
+        report.append("="*70)
         
-        report.append("\n📊 OPENING TREE STATISTICS\n")
+        if not self.opening_stats:
+            report.append("\n✗ No opening data found")
+            return "\n".join(report)
         
-        def print_tree(node: MoveNode, depth: int = 0, prefix: str = ""):
-            if depth > 8:  # Limit depth for readability
-                return
-            
-            if depth == 0:
-                children = sorted(node.children.items(), 
-                                 key=lambda x: x[1].count, 
-                                 reverse=True)
-            else:
-                children = sorted(node.children.items(),
-                                 key=lambda x: x[1].count,
-                                 reverse=True)[:5]  # Top 5 at each level
-            
-            for i, (move_san, child) in enumerate(children):
-                if child.count > 0:
-                    win_rate = (child.wins / child.count * 100) if child.count > 0 else 0
-                    line = f"{prefix}{move_san}: {child.count} games ({win_rate:.1f}% WR)"
-                    report.append(line)
-                    
-                    if depth < 3:
-                        new_prefix = prefix + "  "
-                        print_tree(child, depth + 1, new_prefix)
-        
-        print_tree(self.opening_tree)
+        report.append(f"\nTotal Openings: {len(self.opening_stats)}")
         
         return "\n".join(report)
 
 
-def build_player_dna(player_name: str, config: Optional[Dict] = None) -> Dict:
+def build_player_dna(player_name: str, games: List[Dict],
+                    color: Optional[str] = None,
+                    min_games: int = 1) -> Dict:
     """
-    Build comprehensive player opening DNA.
+    Build comprehensive player DNA from game collection.
     
     Args:
         player_name: Player username
-        config: Configuration dict with API credentials
+        games: List of game dicts with 'pgn' key
+        color: 'white', 'black', or None for both
+        min_games: Minimum games to include variation (default 1)
         
     Returns:
-        Player DNA profile dict
+        DNA profile dict with opening analysis
+        
+    Example:
+        >>> dna = build_player_dna('hikaru', games, color='white', min_games=2)
+        >>> print(dna['total_games'])
+        >>> print(dna['favorite_openings'])
     """
-    from .dual_fetcher import UnifiedFetcher
-    
-    config = config or {}
-    fetcher = UnifiedFetcher(config)
-    
-    print(f"\n{'='*70}")
-    print(f"[DNA] PLAYER DNA ANALYSIS")
-    print(f"Builds comprehensive statistical opening tree from games")
-    print(f"{'='*70}\n")
-    
-    # Get games
-    print(f"Fetching games for {player_name}...")
-    games = fetcher.get_player_games(player_name, max_games=1000)
     
     if not games:
-        print(f"✗ No games found for {player_name}")
-        return {}
+        return {
+            'player': player_name,
+            'color': color or 'both',
+            'total_games': 0,
+            'error': 'No games provided'
+        }
     
-    print(f"✓ Found {len(games)} games")
-    
-    # Build DNA
-    builder = PlayerDNABuilder(config)
-    dna = builder.build_from_games(games, player_name)
-    
-    # Generate report
-    print("\n" + builder.generate_pacing_report())
+    # Analyze
+    analyzer = PlayerDNAAnalyzer(min_games=min_games)
+    dna = analyzer.analyze_games(games, player_name, color)
     
     return dna
+
+
+def generate_player_dna_report(dna: Dict) -> str:
+    """
+    Generate detailed text report from DNA analysis.
+    
+    Args:
+        dna: DNA dict from build_player_dna()
+        
+    Returns:
+        Formatted text report
+    """
+    report = []
+    report.append("\n" + "="*70)
+    report.append(f"[DNA] {dna.get('player', 'Unknown').upper()} - OPENING REPERTOIRE PROFILE")
+    report.append("="*70)
+    
+    if 'error' in dna:
+        report.append(f"\n✗ {dna['error']}")
+        return "\n".join(report)
+    
+    # Summary
+    stats = dna.get('statistics', {})
+    report.append(f"\nColor: {dna.get('color', 'unknown').upper()}")
+    report.append(f"Total Games: {dna.get('total_games', 0)}")
+    report.append(f"Record: {stats.get('wins', 0)}W {stats.get('draws', 0)}D {stats.get('losses', 0)}L")
+    report.append(f"Win Rate: {stats.get('win_rate', 0):.1f}%")
+    
+    # Favorite openings
+    favorites = dna.get('favorite_openings', [])
+    if favorites:
+        report.append("\n📊 FAVORITE OPENINGS (Most Played)")
+        report.append("-" * 70)
+        for i, opening in enumerate(favorites, 1):
+            report.append(
+                f"{i}. {opening['name']:<40} "
+                f"{opening['games']}G {opening['win_rate']:.0f}%"
+            )
+    
+    # Weak lines
+    weak = dna.get('weak_lines', [])
+    if weak:
+        report.append("\n⚠️  WEAK LINES (Struggling Against)")
+        report.append("-" * 70)
+        for i, opening in enumerate(weak, 1):
+            report.append(
+                f"{i}. {opening['name']:<40} "
+                f"{opening['games']}G {opening['win_rate']:.0f}%"
+            )
+    
+    # Risky weapons
+    risky = dna.get('surprising_weapons', [])
+    if risky:
+        report.append("\n⚡ SURPRISING WEAPONS (Bold Choices)")
+        report.append("-" * 70)
+        for i, opening in enumerate(risky, 1):
+            report.append(
+                f"{i}. {opening['name']:<40} "
+                f"{opening['games']}G {opening['win_rate']:.0f}%"
+            )
+    
+    report.append("\n" + "="*70)
+    
+    return "\n".join(report)
+
+
+def generate_player_dna_json(dna: Dict, output_file: str):
+    """
+    Save DNA analysis to JSON file.
+    
+    Args:
+        dna: DNA dict from build_player_dna()
+        output_file: Path to save JSON
+    """
+    with open(output_file, 'w') as f:
+        json.dump(dna, f, indent=2)
+
+
+def generate_player_dna_pgn(dna: Dict, player_name: str) -> str:
+    """
+    Generate annotated PGN comment summarizing player DNA.
+    
+    Args:
+        dna: DNA dict from build_player_dna()
+        player_name: Player name
+        
+    Returns:
+        PGN comment string
+    """
+    lines = []
+    lines.append(f"[Event \"Player DNA Analysis: {player_name}\"]")
+    lines.append(f"[ECO \"Opening Analysis\"]")
+    lines.append(f"[Annotator \"Chess Fairplay Analyzer\"]")
+    lines.append("")
+    
+    stats = dna.get('statistics', {})
+    lines.append(f"Record: {stats.get('wins', 0)}W {stats.get('draws', 0)}D {stats.get('losses', 0)}L")
+    lines.append(f"Win Rate: {stats.get('win_rate', 0):.1f}%")
+    lines.append("")
+    
+    favorites = dna.get('favorite_openings', [])[:3]
+    if favorites:
+        lines.append("Favorite Openings:")
+        for opening in favorites:
+            lines.append(f"  {opening['name']}: {opening['win_rate']:.0f}% ({opening['games']}G)")
+    
+    return "\n".join(lines)
