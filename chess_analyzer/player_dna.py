@@ -254,9 +254,103 @@ class PlayerDNAAnalyzer:
         return "\n".join(report)
 
 
+class PlayerDNAProfile:
+    """
+    Wrapper class for player DNA profile data.
+    Provides convenient methods for accessing and formatting DNA analysis.
+    """
+    
+    def __init__(self, data: Dict):
+        """
+        Initialize with DNA data dict.
+        
+        Args:
+            data: DNA analysis dictionary
+        """
+        self.data = data
+    
+    def get_tree_report(self, limit: int = 15) -> str:
+        """
+        Get formatted tree report of opening lines.
+        
+        Args:
+            limit: Maximum openings to show
+            
+        Returns:
+            Formatted report string
+        """
+        report = []
+        report.append(f"\n{'='*70}")
+        report.append(f"[OPENING TREE] {self.data.get('player', 'Unknown').upper()}")
+        report.append(f"{'='*70}\n")
+        
+        total = self.data.get('total_games', 0)
+        report.append(f"Total Games: {total}")
+        report.append(f"Color: {self.data.get('color', 'both').upper()}")
+        report.append("")
+        
+        # Statistics
+        stats = self.data.get('statistics', {})
+        report.append(f"Record: {stats.get('wins', 0)}W {stats.get('draws', 0)}D {stats.get('losses', 0)}L")
+        report.append(f"Win Rate: {stats.get('win_rate', 0):.1f}%")
+        report.append("")
+        
+        # Favorite openings
+        report.append("⭐ FAVORITE OPENINGS (Best Performance):")
+        favorites = self.data.get('favorite_openings', [])[:limit]
+        for i, opening in enumerate(favorites, 1):
+            report.append(f"  {i:2d}. {opening['name']:<40} ({opening['games']:3d}G) {opening['win_rate']:5.1f}%")
+        
+        report.append("")
+        
+        # Weak lines
+        report.append("⚠️  WEAK LINES (Needs Improvement):")
+        weak = self.data.get('weak_openings', [])[:limit]
+        for i, opening in enumerate(weak, 1):
+            report.append(f"  {i:2d}. {opening['name']:<40} ({opening['games']:3d}G) {opening['win_rate']:5.1f}%")
+        
+        report.append("")
+        
+        # Risky lines
+        report.append("🎲 RISKY LINES (High Variance):")
+        risky = self.data.get('risky_openings', [])[:limit]
+        for i, opening in enumerate(risky, 1):
+            report.append(f"  {i:2d}. {opening['name']:<40} ({opening['games']:3d}G) Draw%: {opening.get('draw_rate', 0):.1f}%")
+        
+        report.append("")
+        report.append("="*70)
+        
+        return "\n".join(report)
+    
+    def get_statistics(self) -> Dict:
+        """Get player statistics."""
+        return self.data.get('statistics', {})
+    
+    def get_favorite_openings(self, limit: int = 10) -> List[Dict]:
+        """Get favorite openings."""
+        return self.data.get('favorite_openings', [])[:limit]
+    
+    def get_weak_openings(self, limit: int = 10) -> List[Dict]:
+        """Get weak openings."""
+        return self.data.get('weak_openings', [])[:limit]
+    
+    def to_dict(self) -> Dict:
+        """Convert to dictionary."""
+        return self.data
+    
+    def save_json(self, output_file: str):
+        """Save profile to JSON file."""
+        import json
+        with open(output_file, 'w') as f:
+            json.dump(self.data, f, indent=2)
+    
+    def __repr__(self) -> str:
+        return f"<PlayerDNAProfile: {self.data.get('player', 'Unknown')} ({self.data.get('total_games', 0)} games)>"
+
+
 def build_player_dna(player_name: str, games: List[Dict],
                     color: Optional[str] = None,
-                    min_games: int = 1) -> Dict:
+                    min_games: int = 1) -> 'PlayerDNAProfile':
     """
     Build comprehensive player DNA from game collection.
     
@@ -267,27 +361,33 @@ def build_player_dna(player_name: str, games: List[Dict],
         min_games: Minimum games to include variation (default 1)
         
     Returns:
-        DNA profile dict with opening analysis
+        PlayerDNAProfile with opening analysis
         
     Example:
         >>> dna = build_player_dna('hikaru', games, color='white', min_games=2)
-        >>> print(dna['total_games'])
-        >>> print(dna['favorite_openings'])
+        >>> print(dna.data['total_games'])
+        >>> print(dna.get_favorite_openings())
     """
     
     if not games:
-        return {
+        empty_data = {
             'player': player_name,
             'color': color or 'both',
             'total_games': 0,
-            'error': 'No games provided'
+            'error': 'No games provided',
+            'statistics': {'wins': 0, 'draws': 0, 'losses': 0, 'win_rate': 0},
+            'favorite_openings': [],
+            'weak_openings': [],
+            'risky_openings': [],
         }
+        return PlayerDNAProfile(empty_data)
     
     # Analyze
     analyzer = PlayerDNAAnalyzer(min_games=min_games)
-    dna = analyzer.analyze_games(games, player_name, color)
+    dna_data = analyzer.analyze_games(games, player_name, color)
     
-    return dna
+    # Wrap in profile object
+    return PlayerDNAProfile(dna_data)
 
 
 def generate_player_dna_report(dna: Dict) -> str:

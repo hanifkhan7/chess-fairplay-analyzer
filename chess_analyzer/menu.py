@@ -1604,45 +1604,47 @@ def _player_dna_analysis(username: str):
         print(f"\n[BUILD] Building Player DNA...")
         dna = build_player_dna(username, player_games, color, min_games=20)
         
-        if not dna:
+        if not dna or dna.data.get('total_games', 0) == 0:
             print("[ERROR] Failed to build Player DNA")
             input("\nPress Enter to continue...")
             return
         
-        # Display report
-        report = dna.get_tree_report(limit=15)
-        print("\n" + report)
+        # Display tree report
+        tree_report = dna.get_tree_report(limit=15)
+        print(tree_report)
         
-        # Generate PGN with stats
-        print(f"\n[GENERATE] Creating professional PGN file...")
-        pgn_content = dna.generate_pgn_with_stats()
+        # Generate detailed text report
+        from chess_analyzer.player_dna import generate_player_dna_report
+        text_report = generate_player_dna_report(dna.to_dict())
         
+        # Create reports directory
         os.makedirs('reports', exist_ok=True)
-        pgn_file = f"reports/{username}_player_dna.pgn"
-        with open(pgn_file, 'w') as f:
-            f.write(pgn_content)
-        print(f"[OK] Saved: {pgn_file}")
         
-        # Export options
-        print(f"\n[EXPORT] Export tree report?")
-        export_choice = input("Save text report? (y/n, default y): ").strip().lower()
+        # Save text report
+        print(f"\n[EXPORT] Saving reports...")
+        report_file = f"reports/{username}_player_dna_report.txt"
+        with open(report_file, 'w') as f:
+            f.write(tree_report)
+            f.write("\n\n" + text_report)
+        print(f"[OK] Saved: {report_file}")
         
-        if export_choice != 'n':
-            report_file = f"reports/{username}_player_dna_report.txt"
-            with open(report_file, 'w') as f:
-                f.write(report)
-            print(f"[OK] Saved: {report_file}")
+        # Save JSON profile
+        json_file = f"reports/{username}_player_dna.json"
+        dna.save_json(json_file)
+        print(f"[OK] Saved: {json_file}")
         
         # Open files
-        open_choice = input("Open generated files? (y/n, default y): ").strip().lower()
+        print(f"\n[VIEW] Opening reports...")
+        open_choice = input("Open report file? (y/n, default y): ").strip().lower()
         if open_choice != 'n':
             try:
-                import webbrowser
-                # Try to open PGN in default application
-                os.startfile(pgn_file) if os.name == 'nt' else os.system(f'open {pgn_file}')
-                print(f"[OK] Opened PGN file")
-            except:
-                print(f"[WARN] Could not open files. Manual location: reports/")
+                if os.name == 'nt':
+                    os.startfile(report_file)
+                else:
+                    os.system(f'open {report_file}')
+                print(f"[OK] Opened report")
+            except Exception as e:
+                print(f"[WARN] Could not open file automatically. Manual location: {report_file}")
         
         print(f"\n[OK] Player DNA analysis complete!")
         
