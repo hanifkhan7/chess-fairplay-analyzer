@@ -400,12 +400,12 @@ def _analyze_player():
             
             if fmt == "json":
                 filename = export_dir / f"analysis_{username}_{timestamp}.json"
-                with open(filename, 'w') as f:
+                with open(filename, 'w', encoding='utf-8') as f:
                     json.dump(results, f, indent=2)
                 print(f"✓ Saved to {filename.name}")
             else:
                 filename = export_dir / f"analysis_{username}_{timestamp}.txt"
-                with open(filename, 'w') as f:
+                with open(filename, 'w', encoding='utf-8') as f:
                     f.write(f"ANALYSIS REPORT: {username}\n")
                     f.write(f"Time Control: {tc_name} | Depth: {depth}\n")
                     f.write(f"Timestamp: {results.get('analysis_timestamp', 'N/A')}\n\n")
@@ -506,7 +506,7 @@ def _download_games():
         if fmt_choice == "1":
             # PGN file
             filename = export_dir / f"{username}_games_{timestamp}.pgn"
-            with open(filename, "w") as f:
+            with open(filename, "w", encoding='utf-8') as f:
                 for i, game in enumerate(games):
                     if i > 0:
                         f.write("\n\n")
@@ -516,7 +516,7 @@ def _download_games():
         elif fmt_choice == "2":
             # CSV file
             filename = export_dir / f"{username}_games_{timestamp}.csv"
-            with open(filename, "w", newline='') as f:
+            with open(filename, "w", newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 writer.writerow(["Date", "White", "Black", "Result", "Time Control", "Moves", "URL"])
                 for game in games:
@@ -545,7 +545,7 @@ def _download_games():
                     "url": game.headers.get("Link", ""),
                     "eco": game.headers.get("ECO", ""),
                 })
-            with open(filename, "w") as f:
+            with open(filename, "w", encoding='utf-8') as f:
                 json.dump(games_data, f, indent=2)
             print(f"\n✓ Exported {len(games)} games to {filename.name}")
         
@@ -1602,10 +1602,21 @@ def _player_dna_analysis(username: str):
         
         # Build DNA
         print(f"\n[BUILD] Building Player DNA...")
-        dna = build_player_dna(username, player_games, color, min_games=20)
-        
-        if not dna or dna.data.get('total_games', 0) == 0:
-            print("[ERROR] Failed to build Player DNA")
+        try:
+            dna = build_player_dna(username, player_games, color, min_games=20)
+            
+            if not dna or dna.data.get('total_games', 0) == 0:
+                error_msg = dna.data.get('error', 'Unknown error') if dna else 'None returned'
+                print(f"[ERROR] Failed to build Player DNA: {error_msg}")
+                print(f"\nDebug info:")
+                print(f"  - Games passed: {len(player_games)}")
+                print(f"  - First game type: {type(player_games[0]) if player_games else 'N/A'}")
+                input("\nPress Enter to continue...")
+                return
+        except Exception as e:
+            print(f"[ERROR] Exception during DNA build: {str(e)}")
+            import traceback
+            traceback.print_exc()
             input("\nPress Enter to continue...")
             return
         
@@ -1623,7 +1634,7 @@ def _player_dna_analysis(username: str):
         # Save text report
         print(f"\n[EXPORT] Saving reports...")
         report_file = f"reports/{username}_player_dna_report.txt"
-        with open(report_file, 'w') as f:
+        with open(report_file, 'w', encoding='utf-8') as f:
             f.write(tree_report)
             f.write("\n\n" + text_report)
         print(f"[OK] Saved: {report_file}")
@@ -1633,18 +1644,58 @@ def _player_dna_analysis(username: str):
         dna.save_json(json_file)
         print(f"[OK] Saved: {json_file}")
         
+        # AI Enhancement Option
+        ai_report_path = None
+        try:
+            from .ai_menu_integration import AIReportGenerator
+            
+            ai_gen = AIReportGenerator()
+            if ai_gen.prompt_for_ai(f"'{username}' opening repertoire"):
+                ai_explanation = ai_gen.generate_ai_explanation(
+                    'player_dna',
+                    dna.to_dict(),
+                    username,
+                    f"Analysis of {username}'s opening preferences and performance"
+                )
+                
+                if ai_explanation:
+                    # Save to file with AI explanation
+                    ai_report_file = f"reports/{username}_player_dna_with_ai.txt"
+                    with open(ai_report_file, 'w', encoding='utf-8') as f:
+                        f.write(tree_report)
+                        f.write("\n\n" + text_report)
+                        f.write("\n\n" + "="*70 + "\n")
+                        f.write(f"[AI ANALYSIS] Powered by {ai_gen.current_provider.upper()}\n")
+                        f.write("="*70 + "\n\n")
+                        f.write(ai_explanation)
+                        f.write("\n\n" + "="*70 + "\n")
+                        f.write("Note: AI analysis is for reference. Verify important findings with experts.\n")
+                    
+                    print(f"\n[AI] Explanation generated")
+                    print(f"[OK] Saved: {ai_report_file}")
+                    ai_report_path = ai_report_file
+                    
+                    # Show AI explanation
+                    print(f"\n{'-'*70}")
+                    print("[AI EXPLANATION]")
+                    print(f"{'-'*70}")
+                    print(ai_explanation)
+        except Exception as e:
+            print(f"\n[WARN] AI enhancement failed: {str(e)}")
+        
         # Open files
         print(f"\n[VIEW] Opening reports...")
+        file_to_open = ai_report_path or report_file
         open_choice = input("Open report file? (y/n, default y): ").strip().lower()
         if open_choice != 'n':
             try:
                 if os.name == 'nt':
-                    os.startfile(report_file)
+                    os.startfile(file_to_open)
                 else:
-                    os.system(f'open {report_file}')
+                    os.system(f'open {file_to_open}')
                 print(f"[OK] Opened report")
             except Exception as e:
-                print(f"[WARN] Could not open file automatically. Manual location: {report_file}")
+                print(f"[WARN] Could not open file automatically. Manual location: {file_to_open}")
         
         print(f"\n[OK] Player DNA analysis complete!")
         
@@ -2528,14 +2579,14 @@ def _export_suspicious_games(results, username, all_games):
             # Individual PGN files
             for i, game in enumerate(suspicious_games, 1):
                 filename = export_dir / f"{username}_suspicious_{i:02d}.pgn"
-                with open(filename, "w") as f:
+                with open(filename, "w", encoding='utf-8') as f:
                     f.write(str(game))
             print(f"\n✓ Exported {len(suspicious_games)} PGN files to exports/")
         
         elif choice == "2":
             # Single PGN file
             filename = export_dir / f"{username}_suspicious_games_{timestamp}.pgn"
-            with open(filename, "w") as f:
+            with open(filename, "w", encoding='utf-8') as f:
                 for i, game in enumerate(suspicious_games):
                     if i > 0:
                         f.write("\n\n")
@@ -2763,11 +2814,7 @@ def _head_to_head_matchup():
             import os
             os.makedirs("reports", exist_ok=True)
             
-            with open(report_filename, 'w') as f:
-                json.dump(report, f, indent=2, default=str)
-            
-            print(f"\n[SAVED] Matchup report: {report_filename}")
-        except Exception as e:
+            with open(report_filename, 'w', encoding='utf-8') as f:
             print(f"[WARNING] Could not save JSON report: {e}")
         
         # Generate professional HTML report

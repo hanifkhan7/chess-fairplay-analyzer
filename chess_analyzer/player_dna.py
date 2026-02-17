@@ -44,13 +44,13 @@ class PlayerDNAAnalyzer:
         })
         self.move_sequences = []
     
-    def analyze_games(self, games: List[Dict], player_name: str,
+    def analyze_games(self, games: List, player_name: str,
                      color: Optional[str] = None) -> Dict:
         """
         Analyze games to build player DNA.
         
         Args:
-            games: List of game dicts with 'pgn' key containing PGN string
+            games: List of games - either chess.pgn.Game objects or dicts with 'pgn' key
             player_name: Player username to analyze
             color: 'white', 'black', or None (both)
             
@@ -60,16 +60,23 @@ class PlayerDNAAnalyzer:
         player_games_data = []
         
         # Parse all games and filter for player
-        for game_dict in games:
+        for game_item in games:
             try:
-                pgn_str = game_dict.get('pgn', '')
-                if not pgn_str:
-                    continue
-                
-                # Parse PGN
-                game = chess.pgn.read_game(io.StringIO(pgn_str))
-                if not game:
-                    continue
+                # Handle both chess.pgn.Game objects and dict format
+                if isinstance(game_item, dict):
+                    pgn_str = game_item.get('pgn', '')
+                    if not pgn_str:
+                        continue
+                    game = chess.pgn.read_game(io.StringIO(pgn_str))
+                    if not game:
+                        continue
+                elif isinstance(game_item, chess.pgn.Game):
+                    game = game_item
+                else:
+                    # Try to handle as string PGN
+                    game = chess.pgn.read_game(io.StringIO(str(game_item)))
+                    if not game:
+                        continue
                 
                 white = game.headers.get('White', '').lower()
                 black = game.headers.get('Black', '').lower()
@@ -341,8 +348,8 @@ class PlayerDNAProfile:
     def save_json(self, output_file: str):
         """Save profile to JSON file."""
         import json
-        with open(output_file, 'w') as f:
-            json.dump(self.data, f, indent=2)
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(self.data, f, indent=2, ensure_ascii=False)
     
     def __repr__(self) -> str:
         return f"<PlayerDNAProfile: {self.data.get('player', 'Unknown')} ({self.data.get('total_games', 0)} games)>"
@@ -462,8 +469,8 @@ def generate_player_dna_json(dna: Dict, output_file: str):
         dna: DNA dict from build_player_dna()
         output_file: Path to save JSON
     """
-    with open(output_file, 'w') as f:
-        json.dump(dna, f, indent=2)
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(dna, f, indent=2, ensure_ascii=False)
 
 
 def generate_player_dna_pgn(dna: Dict, player_name: str) -> str:
