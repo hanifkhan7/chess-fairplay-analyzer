@@ -2815,6 +2815,9 @@ def _head_to_head_matchup():
             os.makedirs("reports", exist_ok=True)
             
             with open(report_filename, 'w', encoding='utf-8') as f:
+                json.dump(report, f, indent=2)
+            print(f"[OK] Saved H2H report: {report_filename}")
+        except Exception as e:
             print(f"[WARNING] Could not save JSON report: {e}")
         
         # Generate professional HTML report
