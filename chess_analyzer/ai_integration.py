@@ -90,12 +90,13 @@ class OpenAIProvider(LLMProvider):
         self._init_client()
     
     def _init_client(self):
-        """Initialize OpenAI client."""
+        """Initialize OpenAI client using v1.0.0+ API."""
         try:
-            import openai
+            from openai import OpenAI
             if self.api_key:
-                openai.api_key = self.api_key
-            self.client = openai
+                self.client = OpenAI(api_key=self.api_key)
+            else:
+                self.client = OpenAI()
         except ImportError:
             logger.warning("OpenAI library not installed. Install with: pip install openai")
     
@@ -105,13 +106,13 @@ class OpenAIProvider(LLMProvider):
             return False
         
         try:
-            import openai
+            from openai import OpenAI
+            client = OpenAI(api_key=self.api_key)
             # Try a simple API call to validate
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": "test"}],
-                max_tokens=5,
-                api_key=self.api_key
+                max_tokens=5
             )
             return True
         except Exception as e:
@@ -134,10 +135,7 @@ class OpenAIProvider(LLMProvider):
                     error="OpenAI client not initialized or API key missing"
                 )
             
-            import openai
-            openai.api_key = self.api_key
-            
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=max_tokens,

@@ -1,16 +1,16 @@
 
 ======================================================================
-[OPENING TREE] HIKARU
+[OPENING TREE] ROHAN_ASIF
 ======================================================================
 
-Total Games: 42
-Color: WHITE
+Total Games: 50
+Color: BOTH
 
-Record: 39W 1D 2L
-Win Rate: 92.9%
+Record: 24W 2D 24L
+Win Rate: 48.0%
 
 ⭐ FAVORITE OPENINGS (Best Performance):
-   1. Unknown Opening                          ( 42G)  92.9%
+   1. Unknown Opening                          ( 50G)  48.0%
 
 ⚠️  WEAK LINES (Needs Improvement):
 
@@ -20,20 +20,20 @@ Win Rate: 92.9%
 
 
 ======================================================================
-[DNA] HIKARU - OPENING REPERTOIRE PROFILE
+[DNA] ROHAN_ASIF - OPENING REPERTOIRE PROFILE
 ======================================================================
 
-Color: WHITE
-Total Games: 42
-Record: 39W 1D 2L
-Win Rate: 92.9%
+Color: BOTH
+Total Games: 50
+Record: 24W 2D 24L
+Win Rate: 48.0%
 
 📊 FAVORITE OPENINGS (Most Played)
 ----------------------------------------------------------------------
-1. Unknown Opening                          42G 93%
+1. Unknown Opening                          50G 48%
 
 ⚠️  WEAK LINES (Struggling Against)
 ----------------------------------------------------------------------
-1. Unknown Opening                          42G 93%
+1. Unknown Opening                          50G 48%
 
 ======================================================================

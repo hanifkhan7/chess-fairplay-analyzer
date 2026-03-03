@@ -1603,6 +1603,15 @@ def _player_dna_analysis(username: str):
         # Build DNA
         print(f"\n[BUILD] Building Player DNA...")
         try:
+            # Debug: Show game format
+            if player_games:
+                first_game = player_games[0]
+                print(f"  Debug: First game type = {type(first_game).__name__}")
+                if hasattr(first_game, 'headers'):
+                    print(f"  Debug: Game has {len(first_game.headers)} headers")
+                    print(f"  Debug: White = '{first_game.headers.get('White', 'N/A')}'")
+                    print(f"  Debug: Black = '{first_game.headers.get('Black', 'N/A')}'")
+            
             dna = build_player_dna(username, player_games, color, min_games=20)
             
             if not dna or dna.data.get('total_games', 0) == 0:
@@ -1610,7 +1619,13 @@ def _player_dna_analysis(username: str):
                 print(f"[ERROR] Failed to build Player DNA: {error_msg}")
                 print(f"\nDebug info:")
                 print(f"  - Games passed: {len(player_games)}")
-                print(f"  - First game type: {type(player_games[0]) if player_games else 'N/A'}")
+                print(f"  - Games with DNA: {dna.data.get('total_games', 0) if dna else 'N/A'}")
+                print(f"  - Statistics: {dna.data.get('statistics', {}) if dna else 'N/A'}")
+                if dna and player_games:
+                    print(f"\nTroubleshooting:")
+                    print(f"  • Ensure player username matches PGN headers exactly")
+                    print(f"  • Try searching for player in '\\' + username to check valid names")
+                    print(f"  • Username is case-insensitive, spaces may matter")
                 input("\nPress Enter to continue...")
                 return
         except Exception as e:
@@ -1643,6 +1658,24 @@ def _player_dna_analysis(username: str):
         json_file = f"reports/{username}_player_dna.json"
         dna.save_json(json_file)
         print(f"[OK] Saved: {json_file}")
+        
+        # Generate and save PGN opening book
+        try:
+            from .opening_tree import build_opening_tree_from_games
+            pgn_file = f"reports/{username}_opening_book.pgn"
+            print(f"\n[PGN] Building opening tree...")
+            tree = build_opening_tree_from_games(player_games, username)
+            
+            # Get tree statistics
+            tree_stats = tree.get_stats_summary()
+            print(f"  ├─ Unique positions: {tree_stats['unique_positions']}")
+            print(f"  ├─ Tree depth: {tree_stats['max_depth']} half-moves")
+            
+            # Save PGN
+            tree.save_pgn(pgn_file, username)
+            print(f"[OK] Saved: {pgn_file}")
+        except Exception as e:
+            print(f"[WARN] Could not generate PGN: {str(e)}")
         
         # AI Enhancement Option
         ai_report_path = None

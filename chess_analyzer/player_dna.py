@@ -78,13 +78,14 @@ class PlayerDNAAnalyzer:
                     if not game:
                         continue
                 
-                white = game.headers.get('White', '').lower()
-                black = game.headers.get('Black', '').lower()
-                player_key = player_name.lower()
+                white = game.headers.get('White', '').strip().lower()
+                black = game.headers.get('Black', '').strip().lower()
+                player_key = player_name.strip().lower()
                 
                 # Check if player is in game
-                player_is_white = player_key in white
-                player_is_black = player_key in black
+                # Use both exact match and 'in' match for flexibility
+                player_is_white = (player_key == white) or (player_key in white)
+                player_is_black = (player_key == black) or (player_key in black)
                 
                 if not (player_is_white or player_is_black):
                     continue

@@ -1,0 +1,27 @@
+
+======================================================================
+[OPENING TREE] HIKARU
+======================================================================
+
+Total Games: 248
+Color: WHITE
+
+Record: 196W 18D 34L
+Win Rate: 79.0%
+
+⭐ FAVORITE OPENINGS (Best Performance):
+   1. Unknown Opening                          (248G)  79.0%
+
+⚠️  WEAK LINES (Needs Improvement):
+
+🎲 RISKY LINES (High Variance):
+
+======================================================================
+
+
+
+[DNA REPORT] Opening Repertoire Profile
+========================================
+Player: hikaru
+Total Games: 248
+Record: 196W 18D 34L

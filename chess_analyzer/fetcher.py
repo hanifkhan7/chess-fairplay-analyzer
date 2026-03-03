@@ -181,23 +181,65 @@ def _parse_games_from_cache(cache_data: Dict, max_games: int = 0) -> List[chess.
 
 @rate_limiter(1.0)
 def _fetch_player_info(username: str, api_base: str, delay: float, headers: Dict) -> Optional[Dict]:
-    """Fetch basic player information."""
-    try:
-        url = f"{api_base}/{username}"
-        response = requests.get(url, headers=headers, timeout=15)
-        
-        if response.status_code == 200:
-            return response.json()
-        elif response.status_code == 404:
-            logger.error(f"Player {username} not found on Chess.com (404)")
-            return None
-        else:
-            logger.error(f"HTTP {response.status_code} fetching player info for {username}")
-            return None
+    """Fetch basic player information with retry logic."""
+    max_retries = 3
+    retry_delay = 2  # Start with 2 seconds
+    
+    for attempt in range(max_retries):
+        try:
+            url = f"{api_base}/{username}"
+            logger.debug(f"Fetching player info (attempt {attempt + 1}/{max_retries}): {url}")
             
-    except Exception as e:
-        logger.error(f"Error fetching player info for {username}: {e}")
-        return None
+            response = requests.get(url, headers=headers, timeout=30)  # Increased timeout to 30s
+            
+            if response.status_code == 200:
+                logger.debug(f"Successfully fetched player info for {username}")
+                return response.json()
+            elif response.status_code == 404:
+                logger.error(f"Player {username} not found on Chess.com (404)")
+                return None
+            elif response.status_code == 429:  # Rate limited
+                logger.warning(f"Rate limited (429). Waiting {retry_delay}s before retry...")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+                continue
+            else:
+                logger.warning(f"HTTP {response.status_code} fetching player info. Attempt {attempt + 1}/{max_retries}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                return None
+            
+        except requests.exceptions.Timeout as e:
+            logger.warning(f"Timeout fetching player info (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                logger.info(f"Retrying in {retry_delay}s...")
+                time.sleep(retry_delay)
+                retry_delay *= 2
+            else:
+                logger.error(f"Max retries exceeded for fetching player info")
+                return None
+                
+        except requests.exceptions.ConnectionError as e:
+            logger.warning(f"Connection error fetching player info (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                logger.info(f"Retrying in {retry_delay}s...")
+                time.sleep(retry_delay)
+                retry_delay *= 2
+            else:
+                return None
+                
+        except Exception as e:
+            logger.error(f"Unexpected error fetching player info: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+                retry_delay *= 2
+            else:
+                return None
+    
+    logger.error(f"Failed to fetch player info after {max_retries} attempts")
+    return None
 
 @rate_limiter(1.0)
 def _fetch_game_archives(username: str, api_base: str, delay: float, headers: Dict) -> List[str]:
