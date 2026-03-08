@@ -10,6 +10,7 @@ Hybrid system for analyzing player opening behavior
 
 import json
 import os
+import logging
 from collections import defaultdict, Counter
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
@@ -17,6 +18,8 @@ from io import StringIO
 
 import chess
 import chess.pgn
+
+logger = logging.getLogger(__name__)
 
 try:
     import pandas as pd
@@ -169,12 +172,25 @@ class OpeningTree:
             move_uci = move.uci()
             move_count += 1
             
-            if move_uci not in node.children:
-                node.children[move_uci] = OpeningNode(move_uci, node.depth + 1)
-                node.children[move_uci].parent = node
-            
-            node = node.children[move_uci]
-            board.push(move)
+            # Validate move is legal before processing
+            try:
+                # Check if move is in legal moves
+                if move not in board.legal_moves:
+                    # Skip games with invalid moves
+                    logger.debug(f"Invalid move {move_uci} in game {white_player} vs {black_player}")
+                    break
+                
+                if move_uci not in node.children:
+                    node.children[move_uci] = OpeningNode(move_uci, node.depth + 1)
+                    node.children[move_uci].parent = node
+                
+                node = node.children[move_uci]
+                board.push(move)
+                
+            except (AssertionError, ValueError, IndexError) as e:
+                # Skip games with move parsing errors
+                logger.debug(f"Error processing move {move_uci}: {e}")
+                break
         
         # Add result to all nodes in the path with ECO/opening info
         node = self.root
@@ -446,13 +462,27 @@ class OpeningAnalyzer:
         # Build trees
         if player_color in ["white", "both"]:
             self.white_tree = OpeningTree("white")
+            invalid_games = 0
             for game in filtered_games:
-                self.white_tree.add_game(game, player_name, "white", min_moves)
+                try:
+                    self.white_tree.add_game(game, player_name, "white", min_moves)
+                except Exception as e:
+                    logger.debug(f"Error adding game: {e}")
+                    invalid_games += 1
+            if invalid_games > 0:
+                logger.warning(f"Skipped {invalid_games} invalid games (White)")
         
         if player_color in ["black", "both"]:
             self.black_tree = OpeningTree("black")
+            invalid_games = 0
             for game in filtered_games:
-                self.black_tree.add_game(game, player_name, "black", min_moves)
+                try:
+                    self.black_tree.add_game(game, player_name, "black", min_moves)
+                except Exception as e:
+                    logger.debug(f"Error adding game: {e}")
+                    invalid_games += 1
+            if invalid_games > 0:
+                logger.warning(f"Skipped {invalid_games} invalid games (Black)")
         
         # Compile results
         return self._compile_results(player_name, player_color)
