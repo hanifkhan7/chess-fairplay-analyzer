@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FEN Chess Position Analyzer - Advanced</title>
     
-    <!-- Chessboard.js & Supporting Libraries -->
-    <link rel="stylesheet" href="https://chessboardjs.com/dist/chessboard-1.0.0.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://chessboardjs.com/dist/chessboard-1.0.0.js"></script>
+    <!-- Chess Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.js"></script>
     
     <!-- Icons & Charts -->
@@ -322,30 +319,42 @@
         
         #board {
             width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
             border-radius: 8px;
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            background: #1a1a1a;
+            padding: 10px;
         }
         
-        /* Wooden ChessBase Style Board - Override Chessboard.js with maximum specificity */
-        #board, #board .board, #board table {
-            background: linear-gradient(135deg, #72453d 0%, #5d3a2f 100%) !important;
+        #boardSvg {
+            width: 100%;
+            height: auto;
+            display: block;
         }
         
-        .board > div > div > div.square-55d63 {
-            background-color: #e8d7c3 !important;
+        /* ChessBase Color Scheme */
+        .light-square {
+            fill: #f0e6d2;
         }
         
-        .board > div > div > div.square-55d63.dark-square {
-            background-color: #8b6914 !important;
+        .dark-square {
+            fill: #a67c52;
         }
         
-        .board > div > div > div.square-55d63.light-square {
-            background-color: #e8d7c3 !important;
+        .piece-text {
+            font-size: 56px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            user-select: none;
+            pointer-events: none;
         }
         
-        /* Ensure piece visibility on wooden board */
-        .board > div > div > div {
-            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
+        .board-label {
+            font-size: 12px;
+            fill: #999;
+            font-family: 'Courier New', monospace;
         }
         
         .board-controls {
@@ -855,7 +864,11 @@ Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
             <div class="board-section">
                 <h2><i class="fas fa-chess-board"></i> Board Position</h2>
                 <div class="board-container">
-                    <div id="board" style="width: 100%;"></div>
+                    <div id="board">
+                        <svg id="boardSvg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Board will be rendered here by JavaScript -->
+                        </svg>
+                    </div>
                 </div>
                 <div class="board-controls">
                     <button class="btn btn-primary btn-small" onclick="flipBoard()">
@@ -1005,42 +1018,84 @@ Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
     <script>
         // GLOBAL STATE
         let currentFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-        let board = null;
         let game = null;
         let analysisHistory = [];
+        let boardOrientation = 'white';
         const MAX_HISTORY = 10;
+
+        // Piece Unicode symbols
+        const pieces = {
+            'P': '♙', 'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔',
+            'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚'
+        };
 
         // Initialize board
         function initBoard() {
-            board = ChessBoard('board', {
-                position: currentFEN,
-                pieceTheme: 'https://chessboardjs.com/examples/5000/img/chesspieces/wikipedia/{piece}.png',
-                orientation: 'white'
-            });
             game = new Chess(currentFEN);
-            
-            // Apply wooden board colors after board initializes
-            setTimeout(applyWoodenBoardColors, 100);
+            renderBoard();
         }
-        
-        // Apply wooden ChessBase colors to the board
-        function applyWoodenBoardColors() {
-            const squares = document.querySelectorAll('.board > div > div > div.square-55d63');
-            squares.forEach(square => {
-                if (square.classList.contains('dark-square')) {
-                    square.style.backgroundColor = '#8b6914';
-                } else {
-                    square.style.backgroundColor = '#e8d7c3';
-                }
-                // Add subtle border
-                square.style.boxShadow = 'inset 0 0 0 1px rgba(0, 0, 0, 0.1)';
-            });
+
+        // Render SVG board with ChessBase colors
+        function renderBoard() {
+            const svg = document.getElementById('boardSvg');
+            svg.innerHTML = '';
             
-            // Color the board container
-            const boardContainer = document.querySelector('.board');
-            if (boardContainer) {
-                boardContainer.style.background = 'linear-gradient(135deg, #72453d 0%, #5d3a2f 100%)';
-                boardContainer.style.borderRadius = '8px';
+            const squareSize = 50;
+            const ranks = boardOrientation === 'white' ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
+            const files = boardOrientation === 'white' ? [0, 1, 2, 3, 4, 5, 6, 7] : [7, 6, 5, 4, 3, 2, 1, 0];
+
+            // ChessBase color scheme
+            const lightColor = '#f0e6d2';
+            const darkColor = '#a67c52';
+            
+            let squareIndex = 0;
+            
+            // Draw squares and pieces
+            for (let rank of ranks) {
+                for (let file of files) {
+                    const x = files.indexOf(file) * squareSize;
+                    const y = ranks.indexOf(rank) * squareSize;
+                    const isLight = (rank + file) % 2 === 0;
+                    const color = isLight ? lightColor : darkColor;
+                    
+                    // Draw square
+                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttribute('x', x);
+                    rect.setAttribute('y', y);
+                    rect.setAttribute('width', squareSize);
+                    rect.setAttribute('height', squareSize);
+                    rect.setAttribute('fill', color);
+                    rect.setAttribute('class', isLight ? 'light-square' : 'dark-square');
+                    svg.appendChild(rect);
+                    
+                    // Draw square label
+                    if (rank === 0 || file === 0) {
+                        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        const fileChar = String.fromCharCode(97 + file);
+                        const rankChar = (rank + 1).toString();
+                        label.setAttribute('x', x + squareSize - 4);
+                        label.setAttribute('y', y + squareSize - 2);
+                        label.setAttribute('class', 'board-label');
+                        label.setAttribute('fill', isLight ? '#ccc' : '#ddd');
+                        label.textContent = file === 0 && rank !== 0 ? rankChar : file === 0 && rank === 0 ? '' : file !== 0 && rank === 0 ? fileChar : '';
+                        if (label.textContent) svg.appendChild(label);
+                    }
+                    
+                    // Draw piece
+                    const square = String.fromCharCode(97 + file) + (rank + 1);
+                    const piece = game.get(square);
+                    if (piece) {
+                        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        text.setAttribute('x', x + squareSize / 2);
+                        text.setAttribute('y', y + squareSize / 2);
+                        text.setAttribute('class', 'piece-text');
+                        text.setAttribute('fill', piece.color === 'w' ? '#222' : '#eee');
+                        text.textContent = pieces[piece.type.toUpperCase()] + (piece.color === 'w' ? '' : '');
+                        svg.appendChild(text);
+                    }
+                    
+                    squareIndex++;
+                }
             }
         }
 
@@ -1075,10 +1130,7 @@ Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
                 }
                 
                 currentFEN = game.fen();
-                board.position(currentFEN);
-                
-                // Re-apply wooden colors
-                setTimeout(applyWoodenBoardColors, 50);
+                renderBoard();
                 
                 // Update UI
                 updateStatistics();
@@ -1269,13 +1321,13 @@ Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
 
         // Utility functions
         function flipBoard() {
-            board.orientation(board.orientation() === 'white' ? 'black' : 'white');
-            setTimeout(applyWoodenBoardColors, 50);
+            boardOrientation = boardOrientation === 'white' ? 'black' : 'white';
+            renderBoard();
         }
 
         function resetBoard() {
-            board.position(currentFEN);
-            setTimeout(applyWoodenBoardColors, 50);
+            game = new Chess(currentFEN);
+            renderBoard();
             showAlert('Board reset to current position', 'info');
         }
 
