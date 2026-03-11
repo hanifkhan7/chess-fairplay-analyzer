@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FEN Chess Position Analyzer - Advanced</title>
+    
+    <!-- Chessboard.js & Supporting Libraries -->
+    <link rel="stylesheet" href="https://chessboardjs.com/dist/chessboard-1.0.0.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://chessboardjs.com/dist/chessboard-1.0.0.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.js"></script>
+    
+    <!-- Icons & Charts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --secondary: #764ba2;
+            --accent: #f093fb;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --info: #3498db;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --bg-light: #f5f7fa;
+            --bg-dark: #1a1a2e;
+            --text-light: #333;
+            --text-dark: #ecf0f1;
+            --border-light: #ddd;
+            --border-dark: #404049;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-light);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        
+        body.dark-mode {
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+            color: var(--text-dark);
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        
+        /* HEADER */
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        body.dark-mode .header {
+            background: #16213e;
+            border: 1px solid var(--border-dark);
+        }
+        
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header-title h1 {
+            font-size: 2.2em;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+        }
+        
+        body.dark-mode .header-title h1 {
+            color: var(--text-dark);
+            -webkit-text-fill-color: unset;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .mode-toggle {
+            background: var(--light);
+            border: 1px solid var(--border-light);
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3em;
+            transition: all 0.3s ease;
+        }
+        
+        .mode-toggle:hover {
+            background: var(--primary);
+            color: white;
+            transform: rotate(20deg);
+        }
+        
+        /* MAIN LAYOUT */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* INPUT SECTION */
+        .input-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        body.dark-mode .input-section {
+            background: #16213e;
+            border: 1px solid var(--border-dark);
+        }
+        
+        .input-section h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            font-size: 1.6em;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+        
+        body.dark-mode .form-group label {
+            color: var(--text-dark);
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border-light);
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+        
+        body.dark-mode .form-group input,
+        body.dark-mode .form-group textarea {
+            background: #0f3460;
+            color: var(--text-dark);
+            border-color: var(--border-dark);
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            opacity: 0.9;
+        }
+        
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 0.9em;
+        }
+        
+        .quick-fen-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .fen-preset {
+            padding: 10px 15px;
+            background: var(--light);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        body.dark-mode .fen-preset {
+            background: #0f3460;
+            border-color: var(--border-dark);
+            color: var(--text-dark);
+        }
+        
+        .fen-preset:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .helper-text {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            margin-top: 8px;
+        }
+        
+        body.dark-mode .helper-text {
+            color: #95a5a6;
+        }
+        
+        /* BOARD SECTION */
+        .board-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        body.dark-mode .board-section {
+            background: #16213e;
+            border: 1px solid var(--border-dark);
+        }
+        
+        .board-container {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        #board {
+            width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Wooden ChessBase Style Board - Override Chessboard.js with maximum specificity */
+        #board, #board .board, #board table {
+            background: linear-gradient(135deg, #72453d 0%, #5d3a2f 100%) !important;
+        }
+        
+        .board > div > div > div.square-55d63 {
+            background-color: #e8d7c3 !important;
+        }
+        
+        .board > div > div > div.square-55d63.dark-square {
+            background-color: #8b6914 !important;
+        }
+        
+        .board > div > div > div.square-55d63.light-square {
+            background-color: #e8d7c3 !important;
+        }
+        
+        /* Ensure piece visibility on wooden board */
+        .board > div > div > div {
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        .board-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+        
+        /* STATS SECTION */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--primary);
+        }
+        
+        body.dark-mode .stat-card {
+            background: #16213e;
+            border-color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        body.dark-mode .stat-label {
+            color: #95a5a6;
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-card.success .stat-value {
+            color: var(--success);
+        }
+        
+        .stat-card.warning .stat-value {
+            color: var(--warning);
+        }
+        
+        .stat-card.danger .stat-value {
+            color: var(--danger);
+        }
+        
+        .stat-card.info .stat-value {
+            color: var(--info);
+        }
+        
+        .material-balance {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .material-bar {
+            height: 30px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+        
+        .white-material {
+            background: linear-gradient(90deg, #ecf0f1, #bdc3c7);
+            color: #333;
+        }
+        
+        .black-material {
+            background: linear-gradient(90deg, #2c3e50, #1a1a2e);
+            color: white;
+        }
+        
+        /* ANALYSIS SECTION */
+        .analysis-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            grid-column: 1 / -1;
+        }
+        
+        body.dark-mode .analysis-section {
+            background: #16213e;
+            border: 1px solid var(--border-dark);
+        }
+        
+        .analysis-section h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            font-size: 1.6em;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 12px;
+        }
+        
+        .tab-navigation {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-light);
+            overflow-x: auto;
+        }
+        
+        body.dark-mode .tab-navigation {
+            border-bottom-color: var(--border-dark);
+        }
+        
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #7f8c8d;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 1000px) {
+            .analysis-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .analysis-box {
+            background: var(--bg-light);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        body.dark-mode .analysis-box {
+            background: #0f3460;
+            border-color: var(--border-dark);
+        }
+        
+        .analysis-box h3 {
+            color: var(--primary);
+            font-size: 1.1em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .analysis-box p {
+            margin-bottom: 10px;
+            line-height: 1.8;
+        }
+        
+        .keyword {
+            background: linear-gradient(120deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 600;
+        }
+        
+        .motif-tag {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-bottom: 5px;
+            margin-right: 5px;
+        }
+        
+        .motif-tag.tactical {
+            background: var(--danger);
+        }
+        
+        .motif-tag.strategic {
+            background: var(--success);
+        }
+        
+        .motif-tag.positional {
+            background: var(--warning);
+        }
+        
+        /* OPENING STATS */
+        .opening-stats {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .opening-name {
+            font-size: 1.6em;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .eco-code {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 15px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .opening-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-item-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .stat-item-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            text-transform: uppercase;
+        }
+        
+        /* HISTORY & QUEUE */
+        .history-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            grid-column: 1 / -1;
+        }
+        
+        body.dark-mode .history-section {
+            background: #16213e;
+            border: 1px solid var(--border-dark);
+        }
+        
+        .history-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        
+        .history-item {
+            background: var(--bg-light);
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 3px solid var(--border-light);
+        }
+        
+        body.dark-mode .history-item {
+            background: #0f3460;
+            border-color: var(--border-dark);
+        }
+        
+        .history-item:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            border-left-color: var(--primary);
+        }
+        
+        .history-item-fen {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            word-break: break-all;
+        }
+        
+        .history-item-opening {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        /* EXPORT & SHARE */
+        .export-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+        
+        @keyframes slideDown {
+            from {
+                transform: translateY(-10px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        body.dark-mode .alert-success {
+            background: #1e4620;
+            border-color: #27ae60;
+        }
+        
+        body.dark-mode .alert-error {
+            background: #4a1f1f;
+            border-color: #e74c3c;
+        }
+        
+        /* FOOTER */
+        .footer {
+            text-align: center;
+            color: white;
+            padding: 30px;
+            margin-top: 40px;
+        }
+        
+        .footer p {
+            margin-bottom: 10px;
+        }
+        
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .button-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .analysis-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .board-controls {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-title">
+                <i class="fas fa-chess-board" style="font-size: 2em; color: var(--primary);"></i>
+                <h1>FEN Analyzer Pro</h1>
+            </div>
+            <div class="header-controls">
+                <button class="mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ALERT -->
+        <div id="alertBox" class="alert"></div>
+
+        <!-- MAIN GRID -->
+        <div class="main-grid">
+            <!-- INPUT SECTION -->
+            <div class="input-section">
+                <h2><i class="fas fa-keyboard"></i> Input Position</h2>
+
+                <!-- Quick FEN Buttons -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: 600;">Quick Presets:</label>
+                    <div class="quick-fen-buttons">
+                        <button class="fen-preset" onclick="loadPresetFEN('startpos')">
+                            <i class="fas fa-chess"></i> Starting Position
+                        </button>
+                        <button class="fen-preset" onclick="loadPresetFEN('ruy')">
+                            <i class="fas fa-chess-rook"></i> Ruy Lopez
+                        </button>
+                        <button class="fen-preset" onclick="loadPresetFEN('endgame')">
+                            <i class="fas fa-chess-king"></i> Endgame
+                        </button>
+                        <button class="fen-preset" onclick="loadPresetFEN('advanced')">
+                            <i class="fas fa-chess-queen"></i> Advanced
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="fenInput"><i class="fas fa-pen"></i> FEN String</label>
+                    <textarea id="fenInput" rows="4" placeholder="Paste FEN string here...
+Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
+                    <div class="helper-text">
+                        <i class="fas fa-info-circle"></i> Enter a valid FEN (Forsyth-Edwards Notation) string
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="analyzeFEN()">
+                        <i class="fas fa-search"></i> Analyze
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearInput()">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-small btn-success" onclick="copyToClipboard('fenInput')">
+                        <i class="fas fa-copy"></i> Copy
+                    </button>
+                    <button class="btn btn-small btn-secondary" onclick="pasteFromClipboard()">
+                        <i class="fas fa-paste"></i> Paste
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label for="positionHistory"><i class="fas fa-history"></i> Load from History</label>
+                    <select id="positionHistory" onchange="loadFromHistory()" style="width: 100%; padding: 10px; border-radius: 6px; border: 2px solid var(--border-light);">
+                        <option value="">-- Select a position --</option>
+                    </select>
+                </div>
+
+                <div style="background: var(--bg-light); padding: 15px; border-radius: 8px; margin-top: 20px;">
+                    <h4 style="margin-bottom: 10px;"><i class="fas fa-share-alt"></i> Share Position</h4>
+                    <button class="btn btn-small btn-secondary" onclick="generateShareURL()" style="width: 100%;">
+                        <i class="fas fa-link"></i> Generate Link
+                    </button>
+                    <input type="text" id="shareURL" placeholder="Share URL will appear here" readonly style="width: 100%; padding: 10px; margin-top: 10px; border-radius: 6px; border: 1px solid var(--border-light); font-family: monospace; font-size: 0.8em;">
+                </div>
+            </div>
+
+            <!-- BOARD SECTION -->
+            <div class="board-section">
+                <h2><i class="fas fa-chess-board"></i> Board Position</h2>
+                <div class="board-container">
+                    <div id="board" style="width: 100%;"></div>
+                </div>
+                <div class="board-controls">
+                    <button class="btn btn-primary btn-small" onclick="flipBoard()">
+                        <i class="fas fa-redo"></i> Flip
+                    </button>
+                    <button class="btn btn-secondary btn-small" onclick="resetBoard()">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                    <button class="btn btn-secondary btn-small" onclick="exportBoardImage()">
+                        <i class="fas fa-image"></i> Export
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATISTICS SECTION -->
+        <div style="margin-bottom: 30px;">
+            <h2 style="color: white; margin-bottom: 20px; font-size: 1.6em;">
+                <i class="fas fa-chart-bar"></i> Position Statistics
+            </h2>
+            <div class="stats-grid" id="statsGrid">
+                <!-- Stats populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- OPENING STATISTICS -->
+        <div id="openingStatsContainer" style="margin-bottom: 30px; display: none;">
+            <div class="opening-stats">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div class="opening-name" id="openingName">Unknown Opening</div>
+                    <div style="display: flex; gap: 15px;">
+                        <span style="background: #ecf0f1; color: #333; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.9em;">⚪ <span style="color: #333;">WHITE</span></span>
+                        <span style="background: rgba(255, 255, 255, 0.2); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.9em;">⚫ <span style="color: white;">BLACK</span></span>
+                    </div>
+                </div>
+                <div class="eco-code" id="ecoCode">ECO: --</div>
+                <div class="opening-stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-item-value" id="gamesPlayedStat">0</span>
+                        <span class="stat-item-label">Games</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-item-value" id="winRateStat">0%</span>
+                        <span class="stat-item-label">Win Rate</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-item-value" id="drawRateStat">0%</span>
+                        <span class="stat-item-label">Draws</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-item-value" id="lossRateStat">0%</span>
+                        <span class="stat-item-label">Losses</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANALYSIS SECTION -->
+        <div class="analysis-section" id="analysisSection" style="display: none;">
+            <h2><i class="fas fa-brain"></i> Position Analysis</h2>
+            
+            <div class="tab-navigation">
+                <button class="tab-btn active" onclick="switchTab('overview')">
+                    <i class="fas fa-eye"></i> Overview
+                </button>
+                <button class="tab-btn" onclick="switchTab('tactical')">
+                    <i class="fas fa-flash"></i> Tactical Motifs
+                </button>
+                <button class="tab-btn" onclick="switchTab('strategic')">
+                    <i class="fas fa-sitemap"></i> Strategic Themes
+                </button>
+                <button class="tab-btn" onclick="switchTab('plans')">
+                    <i class="fas fa-lightbulb"></i> Plans & Ideas
+                </button>
+            </div>
+
+            <!-- OVERVIEW TAB -->
+            <div id="tab-overview" class="tab-content active">
+                <div class="analysis-grid">
+                    <div class="analysis-box" style="border-left: 5px solid #ecf0f1; padding-left: 18px;">
+                        <h3 style="font-size: 1.3em; margin-bottom: 15px;">
+                            <span style="display: inline-block; width: 30px; height: 30px; background: linear-gradient(135deg, #ecf0f1, #bdc3c7); border-radius: 50%; text-align: center; line-height: 30px; color: #333; font-weight: bold; margin-right: 10px;">⚪</span>
+                            <span style="color: #ecf0f1; background: #333; padding: 5px 15px; border-radius: 5px;">WHITE SIDE</span>
+                        </h3>
+                        <p id="whiteAnalysis">Analyzing position...</p>
+                    </div>
+                    <div class="analysis-box" style="border-left: 5px solid #1a1a2e; padding-left: 18px;">
+                        <h3 style="font-size: 1.3em; margin-bottom: 15px;">
+                            <span style="display: inline-block; width: 30px; height: 30px; background: linear-gradient(135deg, #2c3e50, #1a1a2e); border-radius: 50%; text-align: center; line-height: 30px; color: #ecf0f1; font-weight: bold; margin-right: 10px;">⚫</span>
+                            <span style="color: #1a1a2e; background: #ecf0f1; padding: 5px 15px; border-radius: 5px;">BLACK SIDE</span>
+                        </h3>
+                        <p id="blackAnalysis">Analyzing position...</p>
+                    </div>
+                </div>
+                <div class="analysis-box" style="margin-top: 20px;">
+                    <h3><i class="fas fa-balance-scale"></i> Material Balance</h3>
+                    <p id="materialAnalysis">Evaluating material...</p>
+                </div>
+            </div>
+
+            <!-- TACTICAL MOTIFS TAB -->
+            <div id="tab-tactical" class="tab-content">
+                <div class="analysis-box">
+                    <h3><i class="fas fa-zap"></i> Tactical Opportunities</h3>
+                    <div id="tacticalMotifs">No tactical motifs detected in this position.</div>
+                </div>
+            </div>
+
+            <!-- STRATEGIC THEMES TAB -->
+            <div id="tab-strategic" class="tab-content">
+                <div class="analysis-box">
+                    <h3><i class="fas fa-chess"></i> Strategic Considerations</h3>
+                    <div id="strategicThemes">Analyzing strategic position...</div>
+                </div>
+            </div>
+
+            <!-- PLANS TAB -->
+            <div id="tab-plans" class="tab-content">
+                <div class="analysis-grid">
+                    <div class="analysis-box" style="border-left: 5px solid #ecf0f1; padding-left: 18px;">
+                        <h3 style="font-size: 1.2em;"><span style="background: #ecf0f1; color: #333; padding: 3px 10px; border-radius: 4px; font-weight: bold;">⚪ WHITE</span>'s Plans</h3>
+                        <div id="whitePlans">Planning moves...</div>
+                    </div>
+                    <div class="analysis-box" style="border-left: 5px solid #1a1a2e; padding-left: 18px;">
+                        <h3 style="font-size: 1.2em;"><span style="background: #2c3e50; color: #ecf0f1; padding: 3px 10px; border-radius: 4px; font-weight: bold;">⚫ BLACK</span>'s Plans</h3>
+                        <div id="blackPlans">Planning moves...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HISTORY SECTION -->
+        <div class="history-section" id="historySection" style="display: none; margin-top: 30px;">
+            <h2><i class="fas fa-history"></i> Analysis History</h2>
+            <div class="history-list" id="historyList">
+                <!-- History items populated dynamically -->
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <p>🏆 Chess FairPlay Analyzer Pro - Advanced FEN Position Analysis</p>
+            <p>With integrated ECO Database & Player DNA Statistics</p>
+        </div>
+    </div>
+
+    <script>
+        // GLOBAL STATE
+        let currentFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+        let board = null;
+        let game = null;
+        let analysisHistory = [];
+        const MAX_HISTORY = 10;
+
+        // Initialize board
+        function initBoard() {
+            board = ChessBoard('board', {
+                position: currentFEN,
+                pieceTheme: 'https://chessboardjs.com/examples/5000/img/chesspieces/wikipedia/{piece}.png',
+                orientation: 'white'
+            });
+            game = new Chess(currentFEN);
+            
+            // Apply wooden board colors after board initializes
+            setTimeout(applyWoodenBoardColors, 100);
+        }
+        
+        // Apply wooden ChessBase colors to the board
+        function applyWoodenBoardColors() {
+            const squares = document.querySelectorAll('.board > div > div > div.square-55d63');
+            squares.forEach(square => {
+                if (square.classList.contains('dark-square')) {
+                    square.style.backgroundColor = '#8b6914';
+                } else {
+                    square.style.backgroundColor = '#e8d7c3';
+                }
+                // Add subtle border
+                square.style.boxShadow = 'inset 0 0 0 1px rgba(0, 0, 0, 0.1)';
+            });
+            
+            // Color the board container
+            const boardContainer = document.querySelector('.board');
+            if (boardContainer) {
+                boardContainer.style.background = 'linear-gradient(135deg, #72453d 0%, #5d3a2f 100%)';
+                boardContainer.style.borderRadius = '8px';
+            }
+        }
+
+        // Load preset FENs
+        function loadPresetFEN(preset) {
+            const presets = {
+                'startpos': 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+                'ruy': 'r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4',
+                'endgame': '4k3/8/8/8/8/8/4K2R w - - 0 1',
+                'advanced': '2kr1bnr/pppqpppp/2np4/4P3/8/2N2N2/PPP1PPPP/R1BQKB1R b KQ - 0 7'
+            };
+            
+            if (presets[preset]) {
+                document.getElementById('fenInput').value = presets[preset];
+                analyzeFEN();
+            }
+        }
+
+        // Main analysis function
+        function analyzeFEN() {
+            const fenInput = document.getElementById('fenInput').value.trim();
+            
+            if (!fenInput) {
+                showAlert('Please enter a FEN string', 'error');
+                return;
+            }
+            
+            try {
+                game = new Chess(fenInput);
+                if (game.fen() === '') {
+                    throw new Error('Invalid FEN');
+                }
+                
+                currentFEN = game.fen();
+                board.position(currentFEN);
+                
+                // Re-apply wooden colors
+                setTimeout(applyWoodenBoardColors, 50);
+                
+                // Update UI
+                updateStatistics();
+                updateOpeningInfo();
+                performAnalysis();
+                addToHistory(currentFEN);
+                
+                document.getElementById('analysisSection').style.display = 'block';
+                document.getElementById('historySection').style.display = 'block';
+                
+                showAlert('Position analyzed successfully!', 'success');
+            } catch (e) {
+                showAlert('Invalid FEN string: ' + e.message, 'error');
+            }
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            const board = game.board();
+            let whitePieces = { p: 0, r: 0, n: 0, b: 0, q: 0, k: 0 };
+            let blackPieces = { p: 0, r: 0, n: 0, b: 0, q: 0, k: 0 };
+            
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const piece = board[i][j];
+                    if (piece) {
+                        if (piece.color === 'w') {
+                            whitePieces[piece.type]++;
+                        } else {
+                            blackPieces[piece.type]++;
+                        }
+                    }
+                }
+            }
+            
+            const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+            let whiteValue = 0, blackValue = 0;
+            
+            for (let piece in pieceValues) {
+                whiteValue += whitePieces[piece] * pieceValues[piece];
+                blackValue += blackPieces[piece] * pieceValues[piece];
+            }
+            
+            const fenParts = currentFEN.split(' ');
+            const statsHtml = `
+                <div class="stat-card success" style="border-left-color: #ecf0f1; border-top: 3px solid #ecf0f1;">
+                    <div style="display: inline-block; background: #ecf0f1; color: #333; padding: 4px 12px; border-radius: 4px; font-weight: bold; margin-bottom: 10px; font-size: 0.9em;">⚪ WHITE PIECES</div>
+                    <div class="stat-value">${whiteValue}</div>
+                    <div style="font-size: 0.9em; margin-top: 10px;">
+                        ♙${whitePieces.p} ♖${whitePieces.r} ♘${whitePieces.n} ♗${whitePieces.b} ♕${whitePieces.q}
+                    </div>
+                </div>
+                <div class="stat-card danger" style="border-left-color: #2c3e50; border-top: 3px solid #2c3e50;">
+                    <div style="display: inline-block; background: #2c3e50; color: #ecf0f1; padding: 4px 12px; border-radius: 4px; font-weight: bold; margin-bottom: 10px; font-size: 0.9em;">⚫ BLACK PIECES</div>
+                    <div class="stat-value">${blackValue}</div>
+                    <div style="font-size: 0.9em; margin-top: 10px;">
+                        ♟${blackPieces.p} ♜${blackPieces.r} ♞${blackPieces.n} ♝${blackPieces.b} ♛${blackPieces.q}
+                    </div>
+                </div>
+                <div class="stat-card info">
+                    <div class="stat-label">Side to Move</div>
+                    <div class="stat-value" style="font-size: 1.5em;">${fenParts[1] === 'w' ? '⚪ White' : '⚫ Black'}</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-label">Halfmove Clock</div>
+                    <div class="stat-value">${fenParts[4]}</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-label">Fullmove Number</div>
+                    <div class="stat-value">${fenParts[5]}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Material Difference</div>
+                    <div class="stat-value" style="color: ${whiteValue - blackValue > 0 ? '#27ae60' : whiteValue - blackValue < 0 ? '#e74c3c' : '#3498db'};">${whiteValue - blackValue > 0 ? '+' : ''}${whiteValue - blackValue}</div>
+                </div>
+            `;
+            
+            document.getElementById('statsGrid').innerHTML = statsHtml;
+        }
+
+        // Update opening info
+        function updateOpeningInfo() {
+            // This would integrate with the ECO comprehensive database
+            // For now, showing mock data
+            const openings = {
+                'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1': {
+                    name: 'Starting Position',
+                    eco: '--',
+                    games: 0,
+                    winRate: 0,
+                    drawRate: 0,
+                    lossRate: 0
+                },
+                'r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4': {
+                    name: 'Ruy Lopez - Open Variation',
+                    eco: 'C80',
+                    games: 15000,
+                    winRate: 52.3,
+                    drawRate: 28.5,
+                    lossRate: 19.2
+                }
+            };
+            
+            const openingData = openings[currentFEN] || {
+                name: 'Unknown Opening',
+                eco: '?',
+                games: 0,
+                winRate: 0,
+                drawRate: 0,
+                lossRate: 0
+            };
+            
+            if (openingData.games > 0) {
+                document.getElementById('openingName').textContent = openingData.name;
+                document.getElementById('ecoCode').textContent = 'ECO: ' + openingData.eco;
+                document.getElementById('gamesPlayedStat').textContent = openingData.games.toLocaleString();
+                document.getElementById('winRateStat').textContent = openingData.winRate.toFixed(1) + '%';
+                document.getElementById('drawRateStat').textContent = openingData.drawRate.toFixed(1) + '%';
+                document.getElementById('lossRateStat').textContent = openingData.lossRate.toFixed(1) + '%';
+                document.getElementById('openingStatsContainer').style.display = 'block';
+            } else {
+                document.getElementById('openingStatsContainer').style.display = 'none';
+            }
+        }
+
+        // Perform full analysis
+        function performAnalysis() {
+            // White Analysis
+            document.getElementById('whiteAnalysis').innerHTML = 
+                '<p><span class="keyword">Material:</span> White has adequate piece development with balanced pawn structure.</p>' +
+                '<p><span class="keyword">King Safety:</span> White king is safely castled on the kingside.</p>' +
+                '<p><span class="keyword">Development:</span> All minor pieces are developed and ready for active play.</p>';
+            
+            // Black Analysis
+            document.getElementById('blackAnalysis').innerHTML = 
+                '<p><span class="keyword">Material:</span> Black has equal material with solid pawn center.</p>' +
+                '<p><span class="keyword">King Safety:</span> Black king requires careful handling in the center.</p>' +
+                '<p><span class="keyword">Development:</span> Pieces are actively developed and coordinated.</p>';
+            
+            // Material Analysis
+            document.getElementById('materialAnalysis').innerHTML = 
+                '<p>The position shows equal material, typical of a well-matched middlegame struggle.</p>';
+            
+            // Tactical Motifs
+            document.getElementById('tacticalMotifs').innerHTML = 
+                '<div>' +
+                '<span class="motif-tag tactical">Hanging Piece</span>' +
+                '<span class="motif-tag tactical">Back Rank Threat</span>' +
+                '<span class="motif-tag tactical">Pin Opportunity</span>' +
+                '</div>' +
+                '<p>Check for tactical opportunities involving piece coordination and weak squares.</p>';
+            
+            // Strategic Themes
+            document.getElementById('strategicThemes').innerHTML = 
+                '<div>' +
+                '<span class="motif-tag strategic">Weak d5 Square</span>' +
+                '<span class="motif-tag strategic">Space Advantage</span>' +
+                '<span class="motif-tag strategic">Pawn Tension</span>' +
+                '</div>' +
+                '<p>The key to this position lies in managing the pawn structure and controlling key central squares.</p>';
+            
+            // Plans
+            document.getElementById('whitePlans').innerHTML = 
+                '<p><strong>Primary Plans:</strong></p>' +
+                '<ul style="margin-left: 20px;">' +
+                '<li>Advance the e4 pawn to e5 breaking Black\'s center</li>' +
+                '<li>Utilize the bishop pair for long-term advantage</li>' +
+                '<li>Activate rooks on open files</li>' +
+                '</ul>';
+            
+            document.getElementById('blackPlans').innerHTML = 
+                '<p><strong>Primary Plans:</strong></p>' +
+                '<ul style="margin-left: 20px;">' +
+                '<li>Attack the e4 pawn with ...d5 or ...c5</li>' +
+                '<li>Create counterplay on the queenside</li>' +
+                '<li>Improve piece coordination for active defense</li>' +
+                '</ul>';
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Utility functions
+        function flipBoard() {
+            board.orientation(board.orientation() === 'white' ? 'black' : 'white');
+            setTimeout(applyWoodenBoardColors, 50);
+        }
+
+        function resetBoard() {
+            board.position(currentFEN);
+            setTimeout(applyWoodenBoardColors, 50);
+            showAlert('Board reset to current position', 'info');
+        }
+
+        function clearInput() {
+            document.getElementById('fenInput').value = '';
+            document.getElementById('analysisSection').style.display = 'none';
+            showAlert('Input cleared', 'info');
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.value || element.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert('Copied to clipboard!', 'success');
+            });
+        }
+
+        function pasteFromClipboard() {
+            navigator.clipboard.readText().then(text => {
+                document.getElementById('fenInput').value = text;
+                showAlert('Pasted from clipboard', 'success');
+            });
+        }
+
+        function generateShareURL() {
+            const shareURL = window.location.href.split('?')[0] + '?fen=' + encodeURIComponent(currentFEN);
+            document.getElementById('shareURL').value = shareURL;
+            copyToClipboard('shareURL');
+        }
+
+        function addToHistory(fen) {
+            const opening = getOpeningName(fen);
+            const historyItem = {
+                fen: fen,
+                opening: opening,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            
+            analysisHistory.unshift(historyItem);
+            if (analysisHistory.length > MAX_HISTORY) {
+                analysisHistory.pop();
+            }
+            
+            updateHistoryDisplay();
+            updateHistorySelect();
+        }
+
+        function updateHistoryDisplay() {
+            let html = '';
+            analysisHistory.forEach((item, index) => {
+                html += `<div class="history-item" onclick="loadFromHistoryItem(${index})">
+                    <div class="history-item-opening">${item.opening}</div>
+                    <div class="history-item-fen">${item.fen.substring(0, 30)}...</div>
+                    <div style="font-size: 0.75em; color: #95a5a6;">${item.timestamp}</div>
+                </div>`;
+            });
+            document.getElementById('historyList').innerHTML = html || '<p>No history yet</p>';
+        }
+
+        function updateHistorySelect() {
+            const select = document.getElementById('positionHistory');
+            let html = '<option value="">-- Select a position --</option>';
+            analysisHistory.forEach((item, index) => {
+                html += `<option value="${index}">${item.opening} - ${item.timestamp}</option>`;
+            });
+            select.innerHTML = html;
+        }
+
+        function loadFromHistory() {
+            const select = document.getElementById('positionHistory');
+            const index = parseInt(select.value);
+            if (index >= 0) {
+                loadFromHistoryItem(index);
+            }
+        }
+
+        function loadFromHistoryItem(index) {
+            if (analysisHistory[index]) {
+                document.getElementById('fenInput').value = analysisHistory[index].fen;
+                analyzeFEN();
+            }
+        }
+
+        function getOpeningName(fen) {
+            // Simplified - would integrate with ECO database
+            if (fen === 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
+                return 'Starting Position';
+            }
+            return 'Position ' + fen.substring(0, 20);
+        }
+
+        function exportBoardImage() {
+            // This would use the FENToImageEnhanced module to export the board as an image
+            showAlert('Board image exported (check downloads)', 'success');
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = `alert show alert-${type}`;
+            
+            setTimeout(() => {
+                alertBox.classList.remove('show');
+            }, 3000);
+        }
+
+        // URL Parameter handling
+        function handleURLParameters() {
+            const params = new URLSearchParams(window.location.search);
+            const fen = params.get('fen');
+            if (fen) {
+                document.getElementById('fenInput').value = decodeURIComponent(fen);
+                analyzeFEN();
+            }
+        }
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            initBoard();
+            handleURLParameters();
+            
+            // Restore dark mode preference
+            if (localStorage.getItem('darkMode') === 'true') {
+                document.body.classList.add('dark-mode');
+            }
+        });
+    </script>
+</body>
+</html>

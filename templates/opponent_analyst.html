@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opponent Chess Analysis & Exploitation</title>
+    
+    <!-- Dependencies -->
+    <link rel="stylesheet" href="https://chessboardjs.com/dist/chessboard-1.0.0.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://chessboardjs.com/dist/chessboard-1.0.0.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --secondary: #764ba2;
+            --accent: #f093fb;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --bg-light: #f5f7fa;
+            --bg-dark: #1a1a2e;
+            --text-light: #333;
+            --text-dark: #ecf0f1;
+            --border-light: #ddd;
+            --border-dark: #404049;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-light);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        
+        body.dark-mode {
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+            color: var(--text-dark);
+        }
+        
+        .wrapper {
+            max-width: 1900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 12px 12px 0 0;
+            padding: 40px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        body.dark-mode .header {
+            background: #16213e;
+            border: 1px solid var(--border-dark);
+        }
+        
+        .header-title h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        body.dark-mode .header-title h1 {
+            color: var(--accent);
+            -webkit-text-fill-color: unset;
+        }
+        
+        .header-subtitle {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        body.dark-mode .header-subtitle {
+            color: #aaa;
+        }
+        
+        .theme-toggle {
+            background: var(--light);
+            border: none;
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.3em;
+            transition: all 0.3s ease;
+        }
+        
+        body.dark-mode .theme-toggle {
+            background: #303040;
+            color: var(--accent);
+        }
+        
+        .theme-toggle:hover {
+            transform: scale(1.15);
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 1600px) {
+            .main-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (max-width: 1000px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        body.dark-mode .section {
+            background: #16213e;
+            border: 1px solid var(--border-dark);
+        }
+        
+        .section h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        body.dark-mode .section h2 {
+            color: var(--accent);
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, var(--bg-light), white);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 5px solid var(--primary);
+            text-align: center;
+        }
+        
+        body.dark-mode .stat-card {
+            background: linear-gradient(135deg, #0f0f23, #16213e);
+            border-left-color: var(--accent);
+        }
+        
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        
+        body.dark-mode .stat-label {
+            color: #aaa;
+        }
+        
+        .stat-value {
+            font-size: 2.2em;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        
+        body.dark-mode .stat-value {
+            color: var(--accent);
+        }
+        
+        .strength-gauge {
+            width: 100%;
+            height: 8px;
+            background: var(--border-light);
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        body.dark-mode .strength-gauge {
+            background: var(--border-dark);
+        }
+        
+        .gauge-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), var(--warning), var(--danger));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .data-item {
+            background: var(--bg-light);
+            padding: 15px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        body.dark-mode .data-item {
+            background: #0f0f23;
+        }
+        
+        .data-label {
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        body.dark-mode .data-label {
+            color: var(--text-dark);
+        }
+        
+        .data-value {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        body.dark-mode .data-value {
+            color: var(--accent);
+        }
+        
+        .weakness-list {
+            list-style: none;
+        }
+        
+        .weakness-item {
+            padding: 12px;
+            background: var(--bg-light);
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 4px solid var(--warning);
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        
+        body.dark-mode .weakness-item {
+            background: #0f0f23;
+        }
+        
+        .weakness-icon {
+            flex-shrink: 0;
+            width: 30px;
+            height: 30px;
+            background: var(--warning);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .weakness-content {
+            flex: 1;
+        }
+        
+        .weakness-content strong {
+            color: var(--dark);
+            display: block;
+            margin-bottom: 3px;
+        }
+        
+        body.dark-mode .weakness-content strong {
+            color: var(--text-dark);
+        }
+        
+        .weakness-content small {
+            color: #666;
+            font-size: 0.85em;
+        }
+        
+        body.dark-mode .weakness-content small {
+            color: #aaa;
+        }
+        
+        .opening-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .opening-card {
+            background: linear-gradient(135deg, var(--bg-light), white);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid var(--border-light);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        body.dark-mode .opening-card {
+            background: linear-gradient(135deg, #0f0f23, #16213e);
+            border-color: var(--border-dark);
+        }
+        
+        .opening-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.2);
+        }
+        
+        .opening-name {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        
+        body.dark-mode .opening-name {
+            color: var(--accent);
+        }
+        
+        .opening-stats {
+            font-size: 0.85em;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .opening-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px;
+            background: white;
+            border-radius: 3px;
+        }
+        
+        body.dark-mode .opening-stat {
+            background: #0f0f23;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--light);
+            color: var(--dark);
+            border: 2px solid var(--border-light);
+        }
+        
+        body.dark-mode .btn-secondary {
+            background: #0f0f23;
+            color: var(--text-dark);
+            border-color: var(--border-dark);
+        }
+        
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .btn-full {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        #opponentChart {
+            max-height: 300px;
+        }
+        
+        .footer {
+            background: white;
+            border-radius: 0 0 12px 12px;
+            padding: 25px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            border-top: 2px solid var(--border-light);
+        }
+        
+        body.dark-mode .footer {
+            background: #16213e;
+            border-top-color: var(--border-dark);
+            color: #aaa;
+        }
+        
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        body.dark-mode .footer a {
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="header">
+            <div class="header-title">
+                <h1>🎯 Opponent Analysis & Exploitation</h1>
+                <div class="header-subtitle">Feature #3: Opening Style & Weakness Detection</div>
+            </div>
+            <div>
+                <button class="theme-toggle" id="themeToggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="main-grid">
+            <!-- Overall Profile -->
+            <section class="section">
+                <h2><i class="fas fa-user-circle"></i> Opponent Profile</h2>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Opponent Rating</div>
+                    <div class="stat-value" id="oppRating">2100</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Strength Level</div>
+                    <div class="stat-value" id="oppLevel">Master</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Win Rate (You vs Opponent)</div>
+                    <div class="stat-value" id="winRate">45%</div>
+                    <div class="strength-gauge">
+                        <div class="gauge-fill" style="width: 45%;"></div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Games Analyzed</div>
+                    <div class="stat-value" id="gamesCount">12</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Favorite Color</div>
+                    <div class="stat-value" id="favColor">♖ White</div>
+                </div>
+            </section>
+            
+            <!-- Opening Preferences -->
+            <section class="section">
+                <h2><i class="fas fa-book-open"></i> Favorite Openings</h2>
+                
+                <div class="opening-grid" id="favoriteOpenings">
+                    <div class="opening-card">
+                        <div class="opening-name">Ruy Lopez</div>
+                        <div class="opening-stats">
+                            <div class="opening-stat">
+                                <span>Played:</span>
+                                <strong>8</strong>
+                            </div>
+                            <div class="opening-stat">
+                                <span>Score:</span>
+                                <strong style="color: var(--success);">65%</strong>
+                            </div>
+                            <div class="opening-stat">
+                                <span>W:</span>
+                                <strong>5</strong>
+                            </div>
+                            <div class="opening-stat">
+                                <span>D:</span>
+                                <strong>1</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Weaknesses & Tactics -->
+            <section class="section">
+                <h2><i class="fas fa-exclamation-triangle"></i> Exploitable Weaknesses</h2>
+                
+                <ul class="weakness-list">
+                    <li class="weakness-item">
+                        <div class="weakness-icon">⚠️</div>
+                        <div class="weakness-content">
+                            <strong>Weak Opening Reppertoire</strong>
+                            <small>Struggles in 1...c5 Sicilian variations. Target with 2.Nc3</small>
+                        </div>
+                    </li>
+                    <li class="weakness-item">
+                        <div class="weakness-icon">⚠️</div>
+                        <div class="weakness-content">
+                            <strong>Time Management Issues</strong>
+                            <small>Makes errors after move 35. Play positionally to reach endgame.</small>
+                        </div>
+                    </li>
+                    <li class="weakness-item">
+                        <div class="weakness-icon">⚠️</div>
+                        <div class="weakness-content">
+                            <strong>Endgame Weakness</strong>
+                            <small>R+P vs R endgames: 40% win rate. Push for these positions.</small>
+                        </div>
+                    </li>
+                    <li class="weakness-item">
+                        <div class="weakness-icon">⚠️</div>
+                        <div class="weakness-content">
+                            <strong>Tactical Blindness</strong>
+                            <small>Misses knight forks in closed positions. Use this pattern.</small>
+                        </div>
+                    </li>
+                </ul>
+            </section>
+        </div>
+        
+        <!-- Detailed Statistics -->
+        <section class="section">
+            <h2><i class="fas fa-chart-bar"></i> Detailed Performance Breakdown</h2>
+            
+            <canvas id="opponentChart"></canvas>
+        </section>
+        
+        <div class="footer">
+            <p>🎯 Opponent Analysis Tool | Feature #3: Opening & Style Analysis | 
+            <a href="#" onclick="alert('Build custom exploitation strategies based on opponent data'); return false;">Learn More</a></p>
+        </div>
+    </div>
+    
+    <script>
+        // Initialize theme
+        document.getElementById('themeToggle').addEventListener('click', function() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        });
+        
+        // Load saved theme
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('themeToggle').innerHTML = '<i class="fas fa-sun"></i>';
+        }
+        
+        // Chart initialization
+        const ctx = document.getElementById('opponentChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['White', 'Black', 'First 15 Moves', 'Middlegame', 'Endgame', 'Time Pressure'],
+                datasets: [
+                    {
+                        label: 'Win Rate (%)',
+                        data: [58, 52, 62, 48, 35, 45],
+                        backgroundColor: [
+                            'rgba(39, 174, 96, 0.7)',
+                            'rgba(39, 174, 96, 0.6)',
+                            'rgba(39, 174, 96, 0.8)',
+                            'rgba(243, 156, 18, 0.7)',
+                            'rgba(231, 76, 60, 0.7)',
+                            'rgba(231, 76, 60, 0.6)'
+                        ],
+                        borderColor: '#333',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

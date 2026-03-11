@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FEN Chess Position Analyzer</title>
+    
+    <!-- Chessboard.js -->
+    <link rel="stylesheet" href="https://chessboardjs.com/dist/chessboard-1.0.0.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://chessboardjs.com/dist/chessboard-1.0.0.js"></script>
+    
+    <!-- Chess.js for position analysis -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.js"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --secondary: #764ba2;
+            --accent: #f093fb;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --bg-light: #f5f7fa;
+            --bg-dark: #1a1a2e;
+            --text-light: #333;
+            --text-dark: #ecf0f1;
+            --border-light: #ddd;
+            --border-dark: #404049;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-light);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        
+        body.dark-mode {
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+            color: var(--text-dark);
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 12px 12px 0 0;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        body.dark-mode .header {
+            background: #1a1a2e;
+            border: 1px solid var(--border-dark);
+        }
+        
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header-title h1 {
+            font-size: 2.2em;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+        }
+        
+        body.dark-mode .header-title h1 {
+            color: var(--text-dark);
+            -webkit-text-fill-color: unset;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .theme-toggle {
+            background: var(--light);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+        }
+        
+        body.dark-mode .theme-toggle {
+            background: #303040;
+            color: var(--text-dark);
+        }
+        
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        body.dark-mode .section {
+            background: #16213e;
+            border: 1px solid var(--border-dark);
+        }
+        
+        .input-section {
+            grid-column: 1 / -1;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.95em;
+        }
+        
+        body.dark-mode .form-group label {
+            color: var(--text-dark);
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            padding: 12px 15px;
+            border: 2px solid var(--border-light);
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.3s ease;
+            background: white;
+            color: var(--text-light);
+        }
+        
+        body.dark-mode .form-group input,
+        body.dark-mode .form-group textarea {
+            background: #0f0f23;
+            border-color: var(--border-dark);
+            color: var(--text-dark);
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .input-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        
+        @media (max-width: 768px) {
+            .input-controls {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--light);
+            color: var(--dark);
+        }
+        
+        body.dark-mode .btn-secondary {
+            background: #303040;
+            color: var(--text-dark);
+        }
+        
+        .btn-secondary:hover {
+            background: #ddd;
+        }
+        
+        body.dark-mode .btn-secondary:hover {
+            background: #404050;
+        }
+        
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 0.85em;
+        }
+        
+        .btn-icon {
+            background: transparent;
+            color: var(--primary);
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        body.dark-mode .btn-icon {
+            color: var(--accent);
+        }
+        
+        .btn-icon:hover {
+            background: var(--light);
+            border-radius: 6px;
+        }
+        
+        body.dark-mode .btn-icon:hover {
+            background: #303040;
+        }
+        
+        /* Board Styles */
+        .board-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            grid-column: span 1;
+        }
+        
+        #board {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            background: #8ca08c;
+        }
+        
+        .board-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .control-btn {
+            padding: 10px;
+            background: white;
+            border: 2px solid var(--border-light);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: var(--dark);
+        }
+        
+        body.dark-mode .control-btn {
+            background: #0f0f23;
+            border-color: var(--border-dark);
+            color: var(--text-dark);
+        }
+        
+        .control-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        /* Stats Section */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            background: var(--bg-light);
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary);
+            text-align: center;
+        }
+        
+        body.dark-mode .stat-item {
+            background: #0f0f23;
+            border-left-color: var(--accent);
+        }
+        
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        body.dark-mode .stat-label {
+            color: #aaa;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        body.dark-mode .stat-value {
+            color: var(--accent);
+        }
+        
+        /* Analysis Section */
+        .analysis-section {
+            grid-column: 2;
+        }
+        
+        @media (max-width: 1200px) {
+            .analysis-section {
+                grid-column: span 1;
+            }
+        }
+        
+        .subsection {
+            margin-bottom: 25px;
+        }
+        
+        .subsection h3 {
+            font-size: 1.1em;
+            color: var(--primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border-light);
+        }
+        
+        body.dark-mode .subsection h3 {
+            color: var(--accent);
+            border-bottom-color: var(--border-dark);
+        }
+        
+        .text-content {
+            font-size: 0.95em;
+            line-height: 1.7;
+            color: #555;
+        }
+        
+        body.dark-mode .text-content {
+            color: #bbb;
+        }
+        
+        .list-item {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: var(--bg-light);
+            border-radius: 6px;
+        }
+        
+        body.dark-mode .list-item {
+            background: #0f0f23;
+        }
+        
+        .list-icon {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .list-text {
+            flex: 1;
+            font-size: 0.9em;
+        }
+        
+        /* Material Balance */
+        .material-balance {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .material-side {
+            flex: 1;
+        }
+        
+        .material-side h4 {
+            font-size: 0.9em;
+            color: var(--dark);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        body.dark-mode .material-side h4 {
+            color: var(--text-dark);
+        }
+        
+        .material-pieces {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        
+        .piece {
+            font-size: 1.8em;
+            line-height: 1;
+        }
+        
+        .material-value {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        body.dark-mode .material-value {
+            color: #aaa;
+        }
+        
+        /* History List */
+        .history-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            padding: 10px;
+        }
+        
+        body.dark-mode .history-list {
+            border-color: var(--border-dark);
+        }
+        
+        .history-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: var(--bg-light);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9em;
+            border-left: 3px solid transparent;
+            font-family: 'Courier New', monospace;
+        }
+        
+        body.dark-mode .history-item {
+            background: #0f0f23;
+        }
+        
+        .history-item:hover {
+            background: white;
+            border-left-color: var(--primary);
+            transform: translateX(5px);
+        }
+        
+        body.dark-mode .history-item:hover {
+            background: #1a2332;
+        }
+        
+        .history-item.active {
+            background: white;
+            border-left-color: var(--primary);
+            font-weight: 600;
+        }
+        
+        body.dark-mode .history-item.active {
+            background: #1a2332;
+            border-left-color: var(--accent);
+        }
+        
+        /* Tooltips */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            border-bottom: 1px dotted #999;
+            cursor: help;
+        }
+        
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--primary);
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.85em;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Messages */
+        .message {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        
+        .message.info {
+            background: #dbeafe;
+            color: #075985;
+            border-left: 4px solid #0284c7;
+        }
+        
+        body.dark-mode .message.info {
+            background: #0c2340;
+            color: #9fd8ff;
+        }
+        
+        .message.success {
+            background: #dcfce7;
+            color: #166534;
+            border-left: 4px solid #16a34a;
+        }
+        
+        body.dark-mode .message.success {
+            background: #064e3b;
+            color: #86efac;
+        }
+        
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #dc2626;
+        }
+        
+        body.dark-mode .message.error {
+            background: #7f1d1d;
+            color: #fca5a5;
+        }
+        
+        .message-icon {
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+        
+        .message-content {
+            flex: 1;
+            font-size: 0.95em;
+        }
+        
+        /* Piece Symbols */
+        .piece-symbol {
+            font-size: 1.2em;
+        }
+        
+        /* Footer */
+        .footer {
+            background: white;
+            border-radius: 0 0 12px 12px;
+            padding: 20px 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            border-top: 1px solid var(--border-light);
+        }
+        
+        body.dark-mode .footer {
+            background: #1a1a2e;
+            border-top-color: var(--border-dark);
+            color: #aaa;
+        }
+        
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        body.dark-mode .footer a {
+            color: var(--accent);
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--light);
+        }
+        
+        body.dark-mode ::-webkit-scrollbar-track {
+            background: #0f0f23;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px;
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .header-title h1 {
+                font-size: 1.8em;
+            }
+            
+            .input-controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .board-container {
+                order: -1;
+            }
+            
+            #board {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h1>♞ FEN Chess Position Analyzer</h1>
+            </div>
+            <div class="header-controls">
+                <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- Input Section -->
+            <section class="section input-section">
+                <div class="form-group">
+                    <label for="fenInput">
+                        <i class="fas fa-chess-board"></i> Enter FEN String
+                        <span class="tooltip">?
+                            <span class="tooltip-text">
+                                Forsyth-Edwards Notation (FEN) describes a chess position. 
+                                Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+                            </span>
+                        </span>
+                    </label>
+                    <textarea id="fenInput" placeholder="Paste a FEN string here or load from URL query parameter..."></textarea>
+                </div>
+                
+                <div class="input-controls">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="gameCount">Times Played</label>
+                        <input type="number" id="gameCount" value="0" min="0">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="openingName">Opening Name</label>
+                        <input type="text" id="openingName" placeholder="E.g., Ruy Lopez...">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="resultRate">Results (W/D/L)</label>
+                        <input type="text" id="resultRate" placeholder="E.g., 50/30/20">
+                    </div>
+                    <button class="btn btn-primary" onclick="analyzeFEN()">
+                        <i class="fas fa-play"></i> Analyze
+                    </button>
+                </div>
+                
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="copyFENToClipboard()">
+                    <i class="fas fa-copy"></i> Copy FEN
+                </button>
+                
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="generateShareLink()">
+                    <i class="fas fa-share-alt"></i> Generate Share Link
+                </button>
+                
+                <div id="message" style="margin-top: 15px;"></div>
+            </section>
+            
+            <!-- Board Section -->
+            <section class="section board-container">
+                <div id="board"></div>
+                
+                <div class="board-controls">
+                    <button class="control-btn" onclick="flipBoard()">
+                        <i class="fas fa-sync-alt"></i> Flip Board
+                    </button>
+                    <button class="control-btn" onclick="resetBoard()">
+                        <i class="fas fa-redo"></i> Reset
+                    </button>
+                </div>
+                
+                <div class="subsection">
+                    <h3><i class="fas fa-balance-scale"></i> Material Balance</h3>
+                    <div class="material-balance">
+                        <div class="material-side">
+                            <h4>White</h4>
+                            <div class="material-pieces" id="whitePieces"></div>
+                            <div class="material-value">Value: <span id="whiteValue">0</span></div>
+                        </div>
+                        <div class="material-side">
+                            <h4>Black</h4>
+                            <div class="material-pieces" id="blackPieces"></div>
+                            <div class="material-value">Value: <span id="blackValue">0</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Analysis Section -->
+            <section class="section analysis-section">
+                <!-- Opening Info -->
+                <div class="subsection">
+                    <h3><i class="fas fa-book"></i> Opening Information</h3>
+                    <div id="openingInfo" class="text-content">
+                        <p style="color: #999;">Analyze a position to see opening details</p>
+                    </div>
+                </div>
+                
+                <!-- Position Stats -->
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">Fullmove Number</div>
+                        <div class="stat-value" id="fullmove">1</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Halfmove Clock</div>
+                        <div class="stat-value" id="halfmove">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Board State</div>
+                        <div class="stat-value" id="boardState">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Total Pieces</div>
+                        <div class="stat-value" id="pieceCount">32</div>
+                    </div>
+                </div>
+                
+                <!-- Tactical Motifs -->
+                <div class="subsection">
+                    <h3><i class="fas fa-explosion"></i> Tactical Motifs</h3>
+                    <div id="tacticalMotifs" class="text-content">
+                        <p style="color: #999;">Position not yet analyzed</p>
+                    </div>
+                </div>
+                
+                <!-- Strategic Themes -->
+                <div class="subsection">
+                    <h3><i class="fas fa-chess"></i> Strategic Themes</h3>
+                    <div id="strategicThemes" class="text-content">
+                        <p style="color: #999;">Position not yet analyzed</p>
+                    </div>
+                </div>
+                
+                <!-- Plans -->
+                <div class="subsection">
+                    <h3><i class="fas fa-lightbulb"></i> Suggested Plans</h3>
+                    <div id="suggestedPlans" class="text-content">
+                        <p style="color: #999;">Position not yet analyzed</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <!-- History Section -->
+        <section class="section" style="grid-column: 1 / -1; margin-top: 20px;">
+            <h3><i class="fas fa-history"></i> Analysis History</h3>
+            <div class="history-list" id="historyList" style="margin-top: 15px;">
+                <p style="color: #999; text-align: center;">No positions analyzed yet</p>
+            </div>
+        </section>
+        
+        <div class="footer">
+            <p>♟️ FEN Chess Position Analyzer | Powered by Chess.js & Chessboard.js | 
+            <a href="#" onclick="showHelp(); return false;">Help</a></p>
+        </div>
+    </div>
+    
+    <script>
+        // Global state
+        let game = new Chess();
+        let board = null;
+        let analysisHistory = [];
+        let currentFEN = '';
+        
+        // Piece values for material count
+        const pieceValues = {
+            'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 0,
+            'P': 1, 'N': 3, 'B': 3, 'R': 5, 'Q': 9, 'K': 0
+        };
+        
+        // Opening classifications
+        const openingDatabase = {
+            'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR': 'Italian Game / Ruy Lopez Opening',
+            'rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR': 'Queens Gambit / D4 Opening',
+            'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR': 'Starting Position',
+        };
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeBoardUI();
+            setupThemeToggle();
+            loadFENFromURL();
+            setupEventListeners();
+        });
+        
+        function initializeBoardUI() {
+            const config = {
+                draggable: false,
+                position: 'start',
+                showNotation: true,
+            };
+            board = ChessBoard('board', config);
+        }
+        
+        function setupThemeToggle() {
+            const toggle = document.getElementById('themeToggle');
+            const isDark = localStorage.getItem('darkMode') === 'true';
+            
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                toggle.innerHTML = '<i class="fas fa-sun"></i>';
+            }
+            
+            toggle.addEventListener('click', function() {
+                document.body.classList.toggle('dark-mode');
+                const isDark = document.body.classList.contains('dark-mode');
+                localStorage.setItem('darkMode', isDark);
+                toggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            });
+        }
+        
+        function setupEventListeners() {
+            document.getElementById('fenInput').addEventListener('keypress', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    analyzeFEN();
+                }
+            });
+        }
+        
+        function loadFENFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const fenParam = params.get('fen');
+            if (fenParam) {
+                document.getElementById('fenInput').value = decodeURIComponent(fenParam);
+                analyzeFEN();
+            }
+        }
+        
+        function analyzeFEN() {
+            const fenStr = document.getElementById('fenInput').value.trim();
+            
+            if (!fenStr) {
+                showMessage('Please enter a FEN string', 'error');
+                return;
+            }
+            
+            // Try to load the FEN
+            if (!game.load(fenStr)) {
+                showMessage('Invalid FEN string. Please check the format.', 'error');
+                return;
+            }
+            
+            currentFEN = fenStr;
+            
+            // Update board
+            board.position(game.fen());
+            
+            // Perform analysis
+            performFullAnalysis();
+            
+            // Add to history
+            addToHistory(fenStr);
+            
+            showMessage('Position analyzed successfully!', 'success');
+        }
+        
+        function performFullAnalysis() {
+            updateMaterialBalance();
+            updatePositionStats();
+            analyzeOpeningInfo();
+            analyzeTacticalMotifs();
+            analyzeStrategicThemes();
+            suggestPlans();
+        }
+        
+        function updateMaterialBalance() {
+            const board_array = game.board();
+            let whitePieces = {};
+            let blackPieces = {};
+            let whiteValue = 0;
+            let blackValue = 0;
+            
+            // Count pieces
+            board_array.forEach(row => {
+                row.forEach(piece => {
+                    if (piece) {
+                        const isWhite = piece.color === 'w';
+                        const target = isWhite ? whitePieces : blackPieces;
+                        target[piece.type] = (target[piece.type] || 0) + 1;
+                        
+                        const value = pieceValues[piece.color === 'w' ? piece.type.toUpperCase() : piece.type];
+                        if (isWhite) whiteValue += value;
+                        else blackValue += value;
+                    }
+                });
+            });
+            
+            // Render white pieces
+            const whitePiecesEl = document.getElementById('whitePieces');
+            whitePiecesEl.innerHTML = '';
+            const pieceSymbols = {
+                'p': '♙', 'r': '♖', 'n': '♘', 'b': '♗', 'q': '♕', 'k': '♔'
+            };
+            
+            for (const [type, count] of Object.entries(whitePieces)) {
+                for (let i = 0; i < count; i++) {
+                    whitePiecesEl.innerHTML += `<span class="piece-symbol">${pieceSymbols[type]}</span>`;
+                }
+            }
+            
+            // Render black pieces
+            const blackPiecesEl = document.getElementById('blackPieces');
+            blackPiecesEl.innerHTML = '';
+            const blackSymbols = {
+                'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚'
+            };
+            
+            for (const [type, count] of Object.entries(blackPieces)) {
+                for (let i = 0; i < count; i++) {
+                    blackPiecesEl.innerHTML += `<span class="piece-symbol">${blackSymbols[type]}</span>`;
+                }
+            }
+            
+            document.getElementById('whiteValue').textContent = whiteValue;
+            document.getElementById('blackValue').textContent = blackValue;
+        }
+        
+        function updatePositionStats() {
+            const fen = game.fen();
+            const fenParts = fen.split(' ');
+            const fullmove = fenParts[5] || '1';
+            const halfmove = fenParts[4] || '0';
+            const toMove = fenParts[1] === 'w' ? 'White' : 'Black';
+            
+            const board_array = game.board();
+            let pieceCount = 0;
+            board_array.forEach(row => {
+                row.forEach(piece => {
+                    if (piece) pieceCount++;
+                });
+            });
+            
+            document.getElementById('fullmove').textContent = fullmove;
+            document.getElementById('halfmove').textContent = halfmove;
+            document.getElementById('boardState').textContent = toMove + ' to Move';
+            document.getElementById('pieceCount').textContent = pieceCount;
+        }
+        
+        function analyzeOpeningInfo() {
+            const openingNameInput = document.getElementById('openingName').value;
+            const gameCountInput = document.getElementById('gameCount').value;
+            const resultRateInput = document.getElementById('resultRate').value;
+            
+            let html = '';
+            
+            if (openingNameInput) {
+                html += `<div class="list-item">
+                    <div class="list-icon">O</div>
+                    <div class="list-text"><strong>${openingNameInput}</strong></div>
+                </div>`;
+            } else {
+                html += `<div class="list-item">
+                    <div class="list-icon">O</div>
+                    <div class="list-text"><strong>Opening:</strong> Not classified</div>
+                </div>`;
+            }
+            
+            if (gameCountInput && gameCountInput > 0) {
+                html += `<div class="list-item">
+                    <div class="list-icon">G</div>
+                    <div class="list-text"><strong>Games Played:</strong> ${gameCountInput}</div>
+                </div>`;
+            }
+            
+            if (resultRateInput) {
+                html += `<div class="list-item">
+                    <div class="list-icon">R</div>
+                    <div class="list-text"><strong>Results:</strong> ${resultRateInput}</div>
+                </div>`;
+            }
+            
+            if (!html) {
+                html = '<p style="color: #999;">Provide opening details for comprehensive analysis</p>';
+            }
+            
+            document.getElementById('openingInfo').innerHTML = html;
+        }
+        
+        function analyzeTacticalMotifs() {
+            const board_array = game.board();
+            const moves = game.moves({ verbose: true });
+            let motifs = [];
+            
+            // Check for checks
+            if (game.in_check()) {
+                motifs.push({
+                    name: 'Checks Available',
+                    icon: '⚠️',
+                    desc: 'The position involves checks - examine forcing moves carefully'
+                });
+            }
+            
+            // Count attacking moves
+            const capturingMoves = moves.filter(m => game.get(m.to) !== null);
+            if (capturingMoves.length > 0) {
+                motifs.push({
+                    name: 'Captures Possible',
+                    icon: '⚔️',
+                    desc: `${capturingMoves.length} capturing move(s) available in this position`
+                });
+            }
+            
+            // Calculate pawn advancement
+            const whitePawns = game.moves().filter(m => {
+                const piece = game.get(m.substring(0, 2));
+                return piece && piece.type === 'p';
+            }).length;
+            
+            if (whitePawns > 0) {
+                motifs.push({
+                    name: 'Pawn Moves',
+                    icon: '♙',
+                    desc: 'Pawn structure and advancement possibilities present'
+                });
+            }
+            
+            // Check for pins (simplified)
+            motifs.push({
+                name: 'Position Complexity',
+                icon: '🧩',
+                desc: `${moves.length} legal moves available - position has good tactical complexity`
+            });
+            
+            if (motifs.length === 0) {
+                motifs.push({
+                    name: 'Quiet Position',
+                    icon: '😌',
+                    desc: 'This is a quiet position with limited tactical opportunities'
+                });
+            }
+            
+            let html = motifs.map(m => `
+                <div class="list-item">
+                    <div class="list-icon">${m.icon}</div>
+                    <div class="list-text"><strong>${m.name}:</strong> ${m.desc}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('tacticalMotifs').innerHTML = html;
+        }
+        
+        function analyzeStrategicThemes() {
+            const board_array = game.board();
+            const moves = game.moves({ verbose: true });
+            let themes = [];
+            
+            // Pawn structure analysis
+            const wPawnCount = countPiece('P');
+            const bPawnCount = countPiece('p');
+            
+            if (wPawnCount > bPawnCount) {
+                themes.push({
+                    name: 'White Pawn Advantage',
+                    icon: '♙',
+                    desc: 'White has a pawn majority - good for endgame prospects'
+                });
+            } else if (bPawnCount > wPawnCount) {
+                themes.push({
+                    name: 'Black Pawn Advantage',
+                    icon: '♟',
+                    desc: 'Black has a pawn majority - strong endgame potential'
+                });
+            }
+            
+            // Space advantage
+            const openSquares = 64 - countTotalPieces();
+            if (openSquares > 32) {
+                themes.push({
+                    name: 'Open Position',
+                    icon: '📐',
+                    desc: 'Many open squares - suitable for piece play and tactics'
+                });
+            } else if (openSquares < 16) {
+                themes.push({
+                    name: 'Closed Position',
+                    icon: '🔒',
+                    desc: 'Position is congested - planning is more important than tactics'
+                });
+            }
+            
+            // Material balance feedback
+            const wValue = calculateMaterialValue('w');
+            const bValue = calculateMaterialValue('b');
+            const diff = Math.abs(wValue - bValue);
+            
+            if (diff > 5) {
+                themes.push({
+                    name: 'Material Imbalance',
+                    icon: '⚖️',
+                    desc: `Significant material difference (${diff} points) - affects strategy`
+                });
+            }
+            
+            // King safety
+            themes.push({
+                name: 'King Position',
+                icon: '♔',
+                desc: 'Evaluate king safety and castling rights for both sides'
+            });
+            
+            if (themes.length === 0) {
+                themes.push({
+                    name: 'Balanced Position',
+                    icon: '⚡',
+                    desc: 'The position is relatively balanced with no dominant strategic feature'
+                });
+            }
+            
+            let html = themes.map(t => `
+                <div class="list-item">
+                    <div class="list-icon">${t.icon}</div>
+                    <div class="list-text"><strong>${t.name}:</strong> ${t.desc}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('strategicThemes').innerHTML = html;
+        }
+        
+        function suggestPlans() {
+            const toMove = game.turn() === 'w' ? 'White' : 'Black';
+            const opponent = toMove === 'White' ? 'Black' : 'White';
+            const moves = game.moves();
+            
+            let plans = [];
+            
+            // Defensive plans
+            if (game.in_check()) {
+                plans.push({
+                    side: 'Defensive',
+                    icon: '🛡️',
+                    desc: `${toMove} must address the check immediately. Prioritize safe moves.`
+                });
+            }
+            
+            // Offensive plans
+            if (moves.length > 20) {
+                plans.push({
+                    side: 'Offensive',
+                    icon: '⚔️',
+                    desc: `${toMove} has many options. Look for moves that improve piece placement and attacking chances.`
+                });
+            }
+            
+            // Structural plans
+            plans.push({
+                side: 'Structural',
+                icon: '🏗️',
+                desc: 'Consider improving pawn structure and piece coordination for long-term advantage.'
+            });
+            
+            // Prophylactic planning
+            plans.push({
+                side: 'Opponent\'s Ideas',
+                icon: '🔮',
+                desc: `Anticipate ${opponent}'s threats and preventative measures to neutralize their best plans.`
+            });
+            
+            let html = plans.map((p, idx) => `
+                <div class="list-item">
+                    <div class="list-icon">${p.icon}</div>
+                    <div class="list-text"><strong>Plan ${idx + 1} (${p.side}):</strong> ${p.desc}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('suggestedPlans').innerHTML = html;
+        }
+        
+        function flipBoard() {
+            board.flip();
+        }
+        
+        function resetBoard() {
+            game.reset();
+            board.start();
+            document.getElementById('fenInput').value = '';
+            document.getElementById('openingName').value = '';
+            document.getElementById('gameCount').value = '0';
+            document.getElementById('resultRate').value = '';
+            performFullAnalysis();
+        }
+        
+        function copyFENToClipboard() {
+            const fen = document.getElementById('fenInput').value;
+            if (!fen) {
+                showMessage('No FEN string to copy', 'error');
+                return;
+            }
+            
+            navigator.clipboard.writeText(fen).then(() => {
+                showMessage('FEN copied to clipboard!', 'success');
+            });
+        }
+        
+        function generateShareLink() {
+            const fen = document.getElementById('fenInput').value;
+            if (!fen) {
+                showMessage('Analyze a position first', 'error');
+                return;
+            }
+            
+            const encoded = encodeURIComponent(fen);
+            const url = `${window.location.origin}${window.location.pathname}?fen=${encoded}`;
+            
+            navigator.clipboard.writeText(url).then(() => {
+                showMessage('Share link copied to clipboard!', 'success');
+            });
+        }
+        
+        function showMessage(text, type) {
+            const msgEl = document.getElementById('message');
+            const icon = {
+                'success': '<i class="fas fa-check-circle"></i>',
+                'error': '<i class="fas fa-exclamation-circle"></i>',
+                'info': '<i class="fas fa-info-circle"></i>'
+            };
+            
+            msgEl.innerHTML = `
+                <div class="message ${type}">
+                    <div class="message-icon">${icon[type]}</div>
+                    <div class="message-content">${text}</div>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                msgEl.innerHTML = '';
+            }, 5000);
+        }
+        
+        function addToHistory(fen) {
+            const opening = document.getElementById('openingName').value || 'Position';
+            const item = {
+                fen: fen,
+                opening: opening,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            
+            analysisHistory.unshift(item);
+            if (analysisHistory.length > 20) analysisHistory.pop();
+            
+            updateHistoryDisplay();
+        }
+        
+        function updateHistoryDisplay() {
+            const historyEl = document.getElementById('historyList');
+            
+            if (analysisHistory.length === 0) {
+                historyEl.innerHTML = '<p style="color: #999; text-align: center;">No positions analyzed yet</p>';
+                return;
+            }
+            
+            historyEl.innerHTML = analysisHistory.map((item, idx) => `
+                <div class="history-item ${idx === 0 ? 'active' : ''}" onclick="loadHistoryItem(${idx})">
+                    <strong>${item.opening}</strong><br>
+                    <small>${item.timestamp}</small><br>
+                    <code style="font-size: 0.8em;">${item.fen.substring(0, 40)}...</code>
+                </div>
+            `).join('');
+        }
+        
+        function loadHistoryItem(idx) {
+            const item = analysisHistory[idx];
+            document.getElementById('fenInput').value = item.fen;
+            document.getElementById('openingName').value = item.opening;
+            analyzeFEN();
+        }
+        
+        function showHelp() {
+            alert(`📚 FEN Chess Position Analyzer Help
+
+1. ENTER FEN: Paste a valid FEN string into the input box
+2. ANALYZE: Click the Analyze button (or press Ctrl+Enter)
+3. VIEW STATS: See material balance, piece count, and move information
+4. BOARD CONTROLS: Flip the board or reset to starting position
+5. COPY/SHARE: Copy the FEN or generate a shareable link
+
+FEN FORMAT:
+- Position: piece placement (e.g., rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR)
+- Turn: w (white) or b (black)
+- Castling: KQkq (white kingside/queenside, black kingside/queenside)
+- En passant: square or -
+- Halfmove: clock for 50-move rule
+- Fullmove: move number
+
+Example: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1`);
+        }
+        
+        // Helper functions
+        function countPiece(piece) {
+            let count = 0;
+            game.board().forEach(row => {
+                row.forEach(p => {
+                    if (p && p.type === piece.toLowerCase() && 
+                        ((piece === piece.toUpperCase() && p.color === 'w') ||
+                         (piece === piece.toLowerCase() && p.color === 'b'))) {
+                        count++;
+                    }
+                });
+            });
+            return count;
+        }
+        
+        function countTotalPieces() {
+            let count = 0;
+            game.board().forEach(row => {
+                row.forEach(p => {
+                    if (p) count++;
+                });
+            });
+            return count;
+        }
+        
+        function calculateMaterialValue(color) {
+            let value = 0;
+            game.board().forEach(row => {
+                row.forEach(p => {
+                    if (p && ((color === 'w' && p.color === 'w') || (color === 'b' && p.color === 'b'))) {
+                        value += pieceValues[p.type.toUpperCase()];
+                    }
+                });
+            });
+            return value;
+        }
+    </script>
+</body>
+</html>

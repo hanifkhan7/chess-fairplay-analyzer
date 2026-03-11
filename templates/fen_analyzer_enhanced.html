@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FEN Chess Position Analyzer Pro</title>
+    
+    <!-- Chessboard.js & Dependencies -->
+    <link rel="stylesheet" href="https://chessboardjs.com/dist/chessboard-1.0.0.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://chessboardjs.com/dist/chessboard-1.0.0.js"></script>
+    
+    <!-- Chess.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.js"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js for statistics -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --secondary: #764ba2;
+            --accent: #f093fb;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --bg-light: #f5f7fa;
+            --bg-dark: #1a1a2e;
+            --text-light: #333;
+            --text-dark: #ecf0f1;
+            --border-light: #ddd;
+            --border-dark: #404049;
+        }
+        
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-light);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        
+        body.dark-mode {
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+            color: var(--text-dark);
+        }
+        
+        .wrapper {
+            max-width: 1900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 12px 12px 0 0;
+            padding: 40px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        body.dark-mode .header {
+            background: #16213e;
+            border: 1px solid var(--border-dark);
+        }
+        
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header-title h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+        }
+        
+        body.dark-mode .header-title h1 {
+            color: var(--accent);
+            -webkit-text-fill-color: unset;
+        }
+        
+        .header-subtitle {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        body.dark-mode .header-subtitle {
+            color: #aaa;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .theme-toggle {
+            background: var(--light);
+            border: none;
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.3em;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        body.dark-mode .theme-toggle {
+            background: #303040;
+            color: var(--accent);
+        }
+        
+        .theme-toggle:hover {
+            transform: scale(1.15);
+        }
+        
+        .main-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            flex: 1;
+        }
+        
+        @media (max-width: 1600px) {
+            .main-wrapper {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (max-width: 1000px) {
+            .main-wrapper {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        body.dark-mode .section {
+            background: #16213e;
+            border: 1px solid var(--border-dark);
+        }
+        
+        .section:hover {
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+        }
+        
+        .input-full {
+            grid-column: 1 / -1;
+        }
+        
+        .board-section {
+            grid-row: 2 / 4;
+        }
+        
+        @media (max-width: 1600px) {
+            .board-section {
+                grid-row: auto;
+                grid-column: 1;
+            }
+        }
+        
+        .analysis-section {
+            grid-column: 2 / -1;
+        }
+        
+        @media (max-width: 1600px) {
+            .analysis-section {
+                grid-column: 2;
+            }
+        }
+        
+        @media (max-width: 1000px) {
+            .analysis-section {
+                grid-column: 1;
+            }
+            .board-section {
+                grid-column: 1;
+            }
+        }
+        
+        /* Form Styles */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.95em;
+        }
+        
+        body.dark-mode .form-group label {
+            color: var(--text-dark);
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            padding: 12px 15px;
+            border: 2px solid var(--border-light);
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s ease;
+            background: white;
+            color: var(--text-light);
+        }
+        
+        body.dark-mode .form-group input,
+        body.dark-mode .form-group textarea {
+            background: #0f0f23;
+            border-color: var(--border-dark);
+            color: var(--text-dark);
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .input-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .input-grid .form-group {
+            margin-bottom: 0;
+        }
+        
+        /* Button Styles */
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--light);
+            color: var(--dark);
+            border: 2px solid var(--border-light);
+        }
+        
+        body.dark-mode .btn-secondary {
+            background: #0f0f23;
+            color: var(--text-dark);
+            border-color: var(--border-dark);
+        }
+        
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .btn-full {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        /* Board Styles */
+        .board-display {
+            margin-bottom: 20px;
+        }
+        
+        #board {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            background: #8ca08c;
+            border: 8px solid #654321;
+        }
+        
+        .board-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .control-btn {
+            padding: 10px;
+            background: white;
+            border: 2px solid var(--border-light);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        body.dark-mode .control-btn {
+            background: #0f0f23;
+            border-color: var(--border-dark);
+            color: var(--text-dark);
+        }
+        
+        .control-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-item {
+            background: linear-gradient(135deg, var(--bg-light), white);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid var(--primary);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        body.dark-mode .stat-item {
+            background: linear-gradient(135deg, #0f0f23, #16213e);
+            border-left-color: var(--accent);
+        }
+        
+        .stat-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+        }
+        
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        body.dark-mode .stat-label {
+            color: #aaa;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        body.dark-mode .stat-value {
+            color: var(--accent);
+        }
+        
+        .stat-subtext {
+            font-size: 0.8em;
+            color: #999;
+        }
+        
+        body.dark-mode .stat-subtext {
+            color: #777;
+        }
+        
+        /* Material Balance */
+        .material-section {
+            background: var(--bg-light);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        body.dark-mode .material-section {
+            background: #0f0f23;
+        }
+        
+        .material-balance {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .material-side {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 2px solid var(--border-light);
+        }
+        
+        body.dark-mode .material-side {
+            background: #16213e;
+            border-color: var(--border-dark);
+        }
+        
+        .material-side h4 {
+            font-size: 0.95em;
+            color: var(--dark);
+            margin-bottom: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 2px solid var(--border-light);
+            padding-bottom: 8px;
+        }
+        
+        body.dark-mode .material-side h4 {
+            color: var(--text-dark);
+            border-bottom-color: var(--border-dark);
+        }
+        
+        .material-pieces {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .piece {
+            font-size: 2em;
+            line-height: 1;
+            display: inline-block;
+        }
+        
+        .material-value {
+            font-size: 0.9em;
+            color: var(--primary);
+            font-weight: 600;
+            padding: 8px;
+            background: var(--bg-light);
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        body.dark-mode .material-value {
+            background: #0f0f23;
+            color: var(--accent);
+        }
+        
+        /* Subsections */
+        .subsection {
+            margin-bottom: 30px;
+        }
+        
+        .subsection h3 {
+            font-size: 1.2em;
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid var(--border-light);
+        }
+        
+        body.dark-mode .subsection h3 {
+            color: var(--accent);
+            border-bottom-color: var(--border-dark);
+        }
+        
+        .subsection h3 i {
+            color: var(--secondary);
+            font-size: 1.1em;
+        }
+        
+        /* List Items */
+        .list-item {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: var(--bg-light);
+            border-radius: 6px;
+            border-left: 3px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+        
+        body.dark-mode .list-item {
+            background: #0f0f23;
+            border-left-color: var(--accent);
+        }
+        
+        .list-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .list-icon {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 50%;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
+        .list-text {
+            flex: 1;
+            font-size: 0.95em;
+        }
+        
+        .list-text strong {
+            color: var(--dark);
+        }
+        
+        body.dark-mode .list-text strong {
+            color: var(--text-dark);
+        }
+        
+        /* Message Styles */
+        .message {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.success {
+            background: #dcfce7;
+            color: #166534;
+            border-left: 5px solid #16a34a;
+        }
+        
+        body.dark-mode .message.success {
+            background: #064e3b;
+            color: #86efac;
+        }
+        
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 5px solid #dc2626;
+        }
+        
+        body.dark-mode .message.error {
+            background: #7f1d1d;
+            color: #fca5a5;
+        }
+        
+        .message.info {
+            background: #dbeafe;
+            color: #075985;
+            border-left: 5px solid #0284c7;
+        }
+        
+        body.dark-mode .message.info {
+            background: #0c2340;
+            color: #9fd8ff;
+        }
+        
+        .message-icon {
+            font-size: 1.3em;
+            flex-shrink: 0;
+        }
+        
+        /* History */
+        .history-section {
+            grid-column: 1 / -1;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        
+        .history-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        
+        .history-item {
+            background: var(--bg-light);
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            font-size: 0.9em;
+        }
+        
+        body.dark-mode .history-item {
+            background: #0f0f23;
+        }
+        
+        .history-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+        }
+        
+        .history-item.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .history-fen {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        body.dark-mode .history-fen {
+            color: #aaa;
+        }
+        
+        .history-item.active .history-fen {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        /* Footer */
+        .footer {
+            background: white;
+            border-radius: 0 0 12px 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            border-top: 2px solid var(--border-light);
+        }
+        
+        body.dark-mode .footer {
+            background: #16213e;
+            border-top-color: var(--border-dark);
+            color: #aaa;
+        }
+        
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        body.dark-mode .footer a {
+            color: var(--accent);
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--light);
+        }
+        
+        body.dark-mode ::-webkit-scrollbar-track {
+            background: #0f0f23;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px;
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .header-title h1 {
+                font-size: 1.8em;
+            }
+            
+            .input-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .material-balance {
+                grid-template-columns: 1fr;
+            }
+            
+            #board {
+                max-width: 100%;
+            }
+        }
+        
+        /* Opening Info Cards */
+        .opening-card {
+            background: linear-gradient(135deg, var(--bg-light), white);
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid var(--border-light);
+            margin-bottom: 15px;
+        }
+        
+        body.dark-mode .opening-card {
+            background: linear-gradient(135deg, #0f0f23, #16213e);
+            border-color: var(--border-dark);
+        }
+        
+        .opening-code {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        
+        body.dark-mode .opening-code {
+            background: #0f0f23;
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="header">
+            <div class="header-title">
+                <h1>♞ FEN Position Analyzer Pro</h1>
+                <div class="header-subtitle">Advanced Chess Position Analysis & Repertoire Insights</div>
+            </div>
+            <div class="header-controls">
+                <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="main-wrapper">
+            <!-- INPUT SECTION -->
+            <section class="section input-full">
+                <h3 style="margin-bottom: 20px; color: var(--primary);">
+                    <i class="fas fa-chess-board"></i> Position Input & Analysis
+                </h3>
+                
+                <div class="form-group">
+                    <label for="fenInput">
+                        <i class="fas fa-keyboard"></i> Enter FEN String
+                    </label>
+                    <textarea id="fenInput" placeholder="Paste a FEN string here (e.g., rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e3 0 1)"></textarea>
+                </div>
+                
+                <div class="input-grid">
+                    <div class="form-group">
+                        <label for="gameCount"><i class="fas fa-trophy"></i> Times Played</label>
+                        <input type="number" id="gameCount" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="openingName"><i class="fas fa-book"></i> Opening Name</label>
+                        <input type="text" id="openingName" placeholder="E.g., Ruy Lopez...">
+                    </div>
+                    <div class="form-group">
+                        <label for="resultRate"><i class="fas fa-chart-pie"></i> Results (W/D/L)</label>
+                        <input type="text" id="resultRate" placeholder="E.g., 50/30/20">
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-primary btn-full" onclick="analyzeFEN()">
+                        <i class="fas fa-play"></i> Analyze Position
+                    </button>
+                    <button class="btn btn-secondary btn-full" onclick="loadExample()">
+                        <i class="fas fa-star"></i> Load Example
+                    </button>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-secondary btn-full" onclick="copyFENToClipboard()">
+                        <i class="fas fa-copy"></i> Copy FEN
+                    </button>
+                    <button class="btn btn-secondary btn-full" onclick="generateShareLink()">
+                        <i class="fas fa-share-alt"></i> Share Link
+                    </button>
+                </div>
+                
+                <div id="message" style="margin-top: 15px;"></div>
+            </section>
+            
+            <!-- BOARD SECTION -->
+            <section class="section board-section">
+                <h3 style="margin-bottom: 20px; color: var(--primary);">
+                    <i class="fas fa-chess-board"></i> Board Position
+                </h3>
+                
+                <div class="board-display">
+                    <div id="board"></div>
+                    <div class="board-controls">
+                        <button class="control-btn" onclick="flipBoard()">
+                            <i class="fas fa-sync-alt"></i> Flip
+                        </button>
+                        <button class="control-btn" onclick="resetBoard()">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Material Balance -->
+                <div class="material-section">
+                    <h4 style="color: var(--primary); margin-bottom: 15px;">
+                        <i class="fas fa-balance-scale"></i> Material Balance
+                    </h4>
+                    <div class="material-balance">
+                        <div class="material-side">
+                            <h4>♖ White</h4>
+                            <div class="material-pieces" id="whitePieces"></div>
+                            <div class="material-value">Value: <strong id="whiteValue">0</strong></div>
+                        </div>
+                        <div class="material-side">
+                            <h4>♜ Black</h4>
+                            <div class="material-pieces" id="blackPieces"></div>
+                            <div class="material-value">Value: <strong id="blackValue">0</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- ANALYSIS SECTION -->
+            <section class="section analysis-section">
+                <h3 style="margin-bottom: 20px; color: var(--primary);">
+                    <i class="fas fa-microscope"></i> Position Analysis
+                </h3>
+                
+                <!-- Position Statistics -->
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">Fullmove #</div>
+                        <div class="stat-value" id="fullmove">1</div>
+                        <div class="stat-subtext">Move Number</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Halfmove</div>
+                        <div class="stat-value" id="halfmove">0</div>
+                        <div class="stat-subtext">50-Move Rule</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">To Move</div>
+                        <div class="stat-value" id="boardState">-</div>
+                        <div class="stat-subtext">Active Color</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Pieces</div>
+                        <div class="stat-value" id="pieceCount">32</div>
+                        <div class="stat-subtext">On Board</div>
+                    </div>
+                </div>
+                
+                <!-- Opening Information -->
+                <div class="subsection">
+                    <h3><i class="fas fa-book-open"></i> Opening Details</h3>
+                    <div id="openingInfo" class="opening-card">
+                        <p style="color: #999; text-align: center;">Analyze a position to see opening details</p>
+                    </div>
+                </div>
+                
+                <!-- Tactical Motifs -->
+                <div class="subsection">
+                    <h3><i class="fas fa-explosion"></i> Tactical Motifs</h3>
+                    <div id="tacticalMotifs">
+                        <p style="color: #999; text-align: center; padding: 20px;">Position not yet analyzed</p>
+                    </div>
+                </div>
+                
+                <!-- Strategic Themes -->
+                <div class="subsection">
+                    <h3><i class="fas fa-chess"></i> Strategic Themes</h3>
+                    <div id="strategicThemes">
+                        <p style="color: #999; text-align: center; padding: 20px;">Position not yet analyzed</p>
+                    </div>
+                </div>
+                
+                <!-- Suggested Plans -->
+                <div class="subsection">
+                    <h3><i class="fas fa-lightbulb"></i> Suggested Plans</h3>
+                    <div id="suggestedPlans">
+                        <p style="color: #999; text-align: center; padding: 20px;">Position not yet analyzed</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <!-- HISTORY SECTION -->
+        <section class="section history-section">
+            <h3 style="margin-bottom: 15px; color: var(--primary);">
+                <i class="fas fa-history"></i> Analysis History
+            </h3>
+            <div class="history-list" id="historyList">
+                <div style="grid-column: 1 / -1; text-align: center; color: #999; padding: 30px;">
+                    <i class="fas fa-inbox"></i> No positions analyzed yet
+                </div>
+            </div>
+        </section>
+        
+        <div class="footer">
+            <p>♟️ FEN Chess Position Analyzer Pro | Powered by <strong>Chess.js</strong>, <strong>Chessboard.js</strong>, & <strong>Chart.js</strong> | 
+            <a href="#" onclick="showHelp(); return false;">Help</a> • 
+            <a href="#" onclick="loadExample(); return false;">Examples</a></p>
+        </div>
+    </div>
+    
+    <script>
+        // Global state
+        let game = new Chess();
+        let board = null;
+        let analysisHistory = [];
+        let currentFEN = '';
+        
+        // Piece values for material count
+        const pieceValues = {
+            'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 0,
+            'P': 1, 'N': 3, 'B': 3, 'R': 5, 'Q': 9, 'K': 0
+        };
+        
+        // Common opening names
+        const openingNames = {
+            'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR': 'Italian Game / Ruy Lopez Variation',
+            'rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR': 'Queens Gambit / D4 Opening',
+            'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR': 'King\"s Pawn Opening - E4',
+            'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR': 'Starting Position',
+        };
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeBoard();
+            setupThemeToggle();
+            loadFENFromURL();
+            setupEventListeners();
+        });
+        
+        function initializeBoard() {
+            const config = {
+                draggable: false,
+                position: 'start',
+                showNotation: true,
+            };
+            board = ChessBoard('board', config);
+        }
+        
+        function setupThemeToggle() {
+            const toggle = document.getElementById('themeToggle');
+            const isDark = localStorage.getItem('darkMode') === 'true';
+            
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                toggle.innerHTML = '<i class="fas fa-sun"></i>';
+            }
+            
+            toggle.addEventListener('click', function() {
+                document.body.classList.toggle('dark-mode');
+                const isDark = document.body.classList.contains('dark-mode');
+                localStorage.setItem('darkMode', isDark);
+                toggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            });
+        }
+        
+        function setupEventListeners() {
+            document.getElementById('fenInput').addEventListener('keypress', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    analyzeFEN();
+                }
+            });
+        }
+        
+        function loadFENFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const fenParam = params.get('fen');
+            if (fenParam) {
+                document.getElementById('fenInput').value = decodeURIComponent(fenParam);
+                analyzeFEN();
+            }
+        }
+        
+        function loadExample() {
+            const fen = 'r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1';
+            document.getElementById('fenInput').value = fen;
+            document.getElementById('openingName').value = 'Italian Game - Two Knights Defence';
+            document.getElementById('gameCount').value = 15;
+            document.getElementById('resultRate').value = '8/4/3';
+            analyzeFEN();
+        }
+        
+        function analyzeFEN() {
+            const fenStr = document.getElementById('fenInput').value.trim();
+            
+            if (!fenStr) {
+                showMessage('Please enter a FEN string', 'error');
+                return;
+            }
+            
+            if (!game.load(fenStr)) {
+                showMessage('Invalid FEN string. Please check the format.', 'error');
+                return;
+            }
+            
+            currentFEN = fenStr;
+            board.position(game.fen());
+            performFullAnalysis();
+            addToHistory(fenStr);
+            showMessage('✓ Position analyzed successfully!', 'success');
+        }
+        
+        function performFullAnalysis() {
+            updateMaterialBalance();
+            updatePositionStats();
+            analyzeOpeningInfo();
+            analyzeTacticalMotifs();
+            analyzeStrategicThemes();
+            suggestPlans();
+        }
+        
+        function updateMaterialBalance() {
+            const board_array = game.board();
+            let whitePieces = {};
+            let blackPieces = {};
+            let whiteValue = 0;
+            let blackValue = 0;
+            
+            board_array.forEach(row => {
+                row.forEach(piece => {
+                    if (piece) {
+                        const isWhite = piece.color === 'w';
+                        const target = isWhite ? whitePieces : blackPieces;
+                        target[piece.type] = (target[piece.type] || 0) + 1;
+                        
+                        const value = pieceValues[piece.color === 'w' ? piece.type.toUpperCase() : piece.type];
+                        if (isWhite) whiteValue += value;
+                        else blackValue += value;
+                    }
+                });
+            });
+            
+            // Render white pieces
+            const whitePiecesEl = document.getElementById('whitePieces');
+            whitePiecesEl.innerHTML = '';
+            const pieceSymbols = {
+                'p': '♙', 'r': '♖', 'n': '♘', 'b': '♗', 'q': '♕', 'k': '♔'
+            };
+            
+            for (const [type, count] of Object.entries(whitePieces)) {
+                for (let i = 0; i < count; i++) {
+                    whitePiecesEl.innerHTML += `<span class="piece">${pieceSymbols[type]}</span>`;
+                }
+            }
+            
+            // Render black pieces
+            const blackPiecesEl = document.getElementById('blackPieces');
+            blackPiecesEl.innerHTML = '';
+            const blackSymbols = {
+                'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚'
+            };
+            
+            for (const [type, count] of Object.entries(blackPieces)) {
+                for (let i = 0; i < count; i++) {
+                    blackPiecesEl.innerHTML += `<span class="piece">${blackSymbols[type]}</span>`;
+                }
+            }
+            
+            document.getElementById('whiteValue').textContent = whiteValue;
+            document.getElementById('blackValue').textContent = blackValue;
+        }
+        
+        function updatePositionStats() {
+            const fen = game.fen();
+            const fenParts = fen.split(' ');
+            const fullmove = fenParts[5] || '1';
+            const halfmove = fenParts[4] || '0';
+            const toMove = fenParts[1] === 'w' ? '♖ White' : '♜ Black';
+            
+            const board_array = game.board();
+            let pieceCount = 0;
+            board_array.forEach(row => {
+                row.forEach(piece => {
+                    if (piece) pieceCount++;
+                });
+            });
+            
+            document.getElementById('fullmove').textContent = fullmove;
+            document.getElementById('halfmove').textContent = halfmove;
+            document.getElementById('boardState').textContent = toMove;
+            document.getElementById('pieceCount').textContent = pieceCount;
+        }
+        
+        function analyzeOpeningInfo() {
+            const openingNameInput = document.getElementById('openingName').value;
+            const gameCountInput = document.getElementById('gameCount').value;
+            const resultRateInput = document.getElementById('resultRate').value;
+            const fen = game.fen().split(' ').slice(0, 1).join(' ');
+            
+            let html = '';
+            
+            if (openingNameInput) {
+                html += `<div class="list-item">
+                    <div class="list-icon">🎯</div>
+                    <div class="list-text">
+                        <strong>Opening:</strong> ${openingNameInput}
+                    </div>
+                </div>`;
+            }
+            
+            if (gameCountInput && gameCountInput > 0) {
+                html += `<div class="list-item">
+                    <div class="list-icon">📊</div>
+                    <div class="list-text">
+                        <strong>Times Played:</strong> ${gameCountInput} games
+                    </div>
+                </div>`;
+            }
+            
+            if (resultRateInput) {
+                const parts = resultRateInput.split('/');
+                html += `<div class="list-item">
+                    <div class="list-icon">📈</div>
+                    <div class="list-text">
+                        <strong>Results:</strong> <span style="color: var(--success);">W: ${parts[0]}</span> / <span style="color: #f39c12;">D: ${parts[1] || '0'}</span> / <span style="color: var(--danger);">L: ${parts[2] || '0'}</span>
+                    </div>
+                </div>`;
+            }
+            
+            if (!html) {
+                html = '<p style="color: #999; text-align: center; padding: 20px;">Provide opening details for comprehensive analysis</p>';
+            }
+            
+            document.getElementById('openingInfo').innerHTML = html;
+        }
+        
+        function analyzeTacticalMotifs() {
+            const moves = game.moves({ verbose: true });
+            let motifs = [];
+            
+            if (game.in_check()) {
+                motifs.push({
+                    icon: '⚠️',
+                    name: 'King in Check',
+                    desc: 'Critical! The king is in check - handle this immediately.'
+                });
+            }
+            
+            const capturingMoves = moves.filter(m => game.get(m.to) !== null);
+            if (capturingMoves.length > 0) {
+                motifs.push({
+                    icon: '⚔️',
+                    name: 'Captures Available',
+                    desc: `${capturingMoves.length} capturing opportunity(-ies) in this position.`
+                });
+            }
+            
+            const checkingMoves = moves.filter(m => {
+                game.move(m);
+                const inCheck = game.in_check();
+                game.undo();
+                return inCheck;
+            });
+            
+            if (checkingMoves.length > 0) {
+                motifs.push({
+                    icon: '🎯',
+                    name: 'Checks Possible',
+                    desc: `${checkingMoves.length} move(s) that deliver check available.`
+                });
+            }
+            
+            if (moves.length > 25) {
+                motifs.push({
+                    icon: '🌳',
+                    name: 'High Complexity',
+                    desc: `${moves.length} legal moves - a highly tactical position.`
+                });
+            }
+            
+            if (motifs.length === 0) {
+                motifs.push({
+                    icon: '😌',
+                    name: 'Quiet Position',
+                    desc: 'This is a relatively quiet position with limited forcing moves.'
+                });
+            }
+            
+            const html = motifs.map(m => `
+                <div class="list-item">
+                    <div class="list-icon">${m.icon}</div>
+                    <div class="list-text">
+                        <strong>${m.name}:</strong> ${m.desc}
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('tacticalMotifs').innerHTML = html;
+        }
+        
+        function analyzeStrategicThemes() {
+            const board_array = game.board();
+            let themes = [];
+            
+            const wPawnCount = countPiece('P');
+            const bPawnCount = countPiece('p');
+            
+            if (Math.abs(wPawnCount - bPawnCount) > 1) {
+                if (wPawnCount > bPawnCount) {
+                    themes.push({
+                        icon: '♙',
+                        name: 'White Pawn Advantage',
+                        desc: 'White has more pawns - strong for endgame prospects.'
+                    });
+                } else {
+                    themes.push({
+                        icon: '♟',
+                        name: 'Black Pawn Advantage',
+                        desc: 'Black has more pawns - strong for endgame potential.'
+                    });
+                }
+            }
+            
+            const totalPieces = countTotalPieces();
+            const openSquares = 64 - totalPieces;
+            
+            if (openSquares > 40) {
+                themes.push({
+                    icon: '📐',
+                    name: 'Open Position',
+                    desc: 'Many open squares favor piece play and tactical opportunities.'
+                });
+            } else if (openSquares < 20) {
+                themes.push({
+                    icon: '🔒',
+                    name: 'Closed Position',
+                    desc: 'Congested position - strategy and planning are critical.'
+                });
+            } else {
+                themes.push({
+                    icon: '⚡',
+                    name: 'Balanced Position',
+                    desc: 'Mix of open and closed structures - dynamic play likely.'
+                });
+            }
+            
+            const wValue = calculateMaterialValue('w');
+            const bValue = calculateMaterialValue('b');
+            const diff = Math.abs(wValue - bValue);
+            
+            if (diff > 5) {
+                const leader = wValue > bValue ? 'White' : 'Black';
+                themes.push({
+                    icon: '⚖️',
+                    name: 'Material Imbalance',
+                    desc: `${leader} is ahead by ${diff} points - significant advantage.`
+                });
+            }
+            
+            themes.push({
+                icon: '♔',
+                name: 'King Safety',
+                desc: 'Evaluate castling rights and king position for both sides.'
+            });
+            
+            const html = themes.map(t => `
+                <div class="list-item">
+                    <div class="list-icon">${t.icon}</div>
+                    <div class="list-text">
+                        <strong>${t.name}:</strong> ${t.desc}
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('strategicThemes').innerHTML = html;
+        }
+        
+        function suggestPlans() {
+            const toMove = game.turn() === 'w' ? 'White' : 'Black';
+            const opponent = toMove === 'White' ? 'Black' : 'White';
+            const moves = game.moves();
+            
+            let plans = [];
+            
+            if (game.in_check()) {
+                plans.push({
+                    icon: '🛡️',
+                    side: 'Defensive',
+                    desc: `${toMove} MUST address the check. Explore all safe moves.`
+                });
+            } else {
+                plans.push({
+                    icon: '⚔️',
+                    side: 'Offensive',
+                    desc: `Look for ${toMove}'s strongest attacking ideas and piece placements.`
+                });
+            }
+            
+            plans.push({
+                icon: '🏗️',
+                side: 'Structural',
+                desc: 'Improve pawn structure, centralization, and piece coordination.'
+            });
+            
+            plans.push({
+                icon: '🔮',
+                side: 'Prophylaxis',
+                desc: `Anticipate and neutralize ${opponent}'s most dangerous threats.`
+            });
+            
+            plans.push({
+                icon: '🎯',
+                side: 'Tactical',
+                desc: 'Exploit weaknesses, pins, forks, and back rank threats if available.'
+            });
+            
+            const html = plans.map((p, idx) => `
+                <div class="list-item">
+                    <div class="list-icon">${p.icon}</div>
+                    <div class="list-text">
+                        <strong>${p.side}:</strong> ${p.desc}
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('suggestedPlans').innerHTML = html;
+        }
+        
+        function flipBoard() {
+            board.flip();
+        }
+        
+        function resetBoard() {
+            game.reset();
+            board.start();
+            document.getElementById('fenInput').value = '';
+            document.getElementById('openingName').value = '';
+            document.getElementById('gameCount').value = '0';
+            document.getElementById('resultRate').value = '';
+            performFullAnalysis();
+        }
+        
+        function copyFENToClipboard() {
+            const fen = document.getElementById('fenInput').value;
+            if (!fen) {
+                showMessage('No FEN string to copy', 'error');
+                return;
+            }
+            
+            navigator.clipboard.writeText(fen).then(() => {
+                showMessage('✓ FEN copied to clipboard!', 'success');
+            });
+        }
+        
+        function generateShareLink() {
+            const fen = document.getElementById('fenInput').value;
+            if (!fen) {
+                showMessage('Analyze a position first', 'error');
+                return;
+            }
+            
+            const encoded = encodeURIComponent(fen);
+            const url = `${window.location.origin}${window.location.pathname}?fen=${encoded}`;
+            
+            navigator.clipboard.writeText(url).then(() => {
+                showMessage('✓ Share link copied to clipboard!', 'success');
+            });
+        }
+        
+        function showMessage(text, type) {
+            const msgEl = document.getElementById('message');
+            
+            msgEl.innerHTML = `
+                <div class="message ${type}">
+                    <div class="message-icon">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                    </div>
+                    <div style="flex: 1;">${text}</div>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                msgEl.innerHTML = '';
+            }, 4000);
+        }
+        
+        function addToHistory(fen) {
+            const opening = document.getElementById('openingName').value || 'Position';
+            const item = {
+                fen: fen,
+                opening: opening,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            
+            analysisHistory.unshift(item);
+            if (analysisHistory.length > 20) analysisHistory.pop();
+            
+            updateHistoryDisplay();
+        }
+        
+        function updateHistoryDisplay() {
+            const historyEl = document.getElementById('historyList');
+            
+            if (analysisHistory.length === 0) {
+                historyEl.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #999; padding: 30px;"><i class="fas fa-inbox"></i> No positions analyzed yet</div>';
+                return;
+            }
+            
+            historyEl.innerHTML = analysisHistory.map((item, idx) => `
+                <div class="history-item ${idx === 0 ? 'active' : ''}" onclick="loadHistoryItem(${idx})">
+                    <strong>${item.opening}</strong>
+                    <div style="font-size: 0.85em; color: #666; margin: 5px 0;">
+                        <i class="fas fa-clock"></i> ${item.timestamp}
+                    </div>
+                    <div class="history-fen">${item.fen.substring(0, 35)}...</div>
+                </div>
+            `).join('');
+        }
+        
+        function loadHistoryItem(idx) {
+            const item = analysisHistory[idx];
+            document.getElementById('fenInput').value = item.fen;
+            document.getElementById('openingName').value = item.opening;
+            analyzeFEN();
+        }
+        
+        function showHelp() {
+            alert(`📚 FEN CHESS POSITION ANALYZER PRO - HELP GUIDE
+
+🎯 HOW TO USE:
+1. Enter a FEN string in the input field
+2. (Optional) Add opening name, games played, and results
+3. Click "Analyze Position" or press Ctrl+Enter
+4. Review the detailed analysis below
+
+📋 FEN FORMAT (Forsyth-Edwards Notation):
+The FEN contains 6 space-separated components:
+1. Piece Placement: Board position (file-rank, 8→1)
+2. Active Color: w (white) or b (black)
+3. Castling Rights: KQkq (- if none)
+4. En Passant: Target square or -
+5. Halfmove Clock: Moves since pawn move/capture
+6. Fullmove Number: Current move number
+
+📌 EXAMPLE FEN:
+rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1
+
+🔗 FEATURES:
+✓ Copy FEN to clipboard
+✓ Generate shareable links with ?fen= parameter
+✓ Dark/Light mode toggle
+✓ Board flip & reset
+✓ Material balance analysis
+✓ Tactical motif detection
+✓ Strategic theme analysis
+✓ Suggested plans for both sides
+✓ Analysis history
+✓ Mobile responsive
+
+💡 TIPS:
+- Use ChessBase or Lichess to export FEN strings
+- Load examples to see how analysis works
+- Check history to review previous positions
+- Share links to discuss positions online`);
+        }
+        
+        // Helper functions
+        function countPiece(piece) {
+            let count = 0;
+            game.board().forEach(row => {
+                row.forEach(p => {
+                    if (p && p.type === piece.toLowerCase() && 
+                        ((piece === piece.toUpperCase() && p.color === 'w') ||
+                         (piece === piece.toLowerCase() && p.color === 'b'))) {
+                        count++;
+                    }
+                });
+            });
+            return count;
+        }
+        
+        function countTotalPieces() {
+            let count = 0;
+            game.board().forEach(row => {
+                row.forEach(p => {
+                    if (p) count++;
+                });
+            });
+            return count;
+        }
+        
+        function calculateMaterialValue(color) {
+            let value = 0;
+            game.board().forEach(row => {
+                row.forEach(p => {
+                    if (p && ((color === 'w' && p.color === 'w') || (color === 'b' && p.color === 'b'))) {
+                        value += pieceValues[p.type.toUpperCase()];
+                    }
+                });
+            });
+            return value;
+        }
+    </script>
+</body>
+</html>
