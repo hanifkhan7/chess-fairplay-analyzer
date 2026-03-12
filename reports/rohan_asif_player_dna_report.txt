@@ -3,14 +3,14 @@
 [OPENING TREE] ROHAN_ASIF
 ======================================================================
 
-Total Games: 50
-Color: BOTH
+Total Games: 24
+Color: WHITE
 
-Record: 24W 2D 24L
-Win Rate: 48.0%
+Record: 13W 1D 10L
+Win Rate: 54.2%
 
 ⭐ FAVORITE OPENINGS (Best Performance):
-   1. Unknown Opening                          ( 50G)  48.0%
+   1. Unknown Opening                          ( 24G)  54.2%
 
 ⚠️  WEAK LINES (Needs Improvement):
 
@@ -23,17 +23,17 @@ Win Rate: 48.0%
 [DNA] ROHAN_ASIF - OPENING REPERTOIRE PROFILE
 ======================================================================
 
-Color: BOTH
-Total Games: 50
-Record: 24W 2D 24L
-Win Rate: 48.0%
+Color: WHITE
+Total Games: 24
+Record: 13W 1D 10L
+Win Rate: 54.2%
 
 📊 FAVORITE OPENINGS (Most Played)
 ----------------------------------------------------------------------
-1. Unknown Opening                          50G 48%
+1. Unknown Opening                          24G 54%
 
 ⚠️  WEAK LINES (Struggling Against)
 ----------------------------------------------------------------------
-1. Unknown Opening                          50G 48%
+1. Unknown Opening                          24G 54%
 
 ======================================================================

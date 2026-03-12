@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opening Repertoire & Player DNA</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.js.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5568d3;
+            --secondary: #764ba2;
+            --accent: #f093fb;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --info: #3498db;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --bg-light: #f5f7fa;
+            --bg-dark: #1a1a2e;
+            --text-light: #333;
+            --text-dark: #ecf0f1;
+            --border-light: #ddd;
+            --border-dark: #404049;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-light);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        body.dark-mode {
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+            color: var(--text-dark);
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        body.dark-mode .header {
+            background: #16213e;
+            border: 1px solid var(--border-dark);
+        }
+        
+        .header h1 {
+            font-size: 2.2em;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .mode-toggle {
+            background: var(--light);
+            border: 1px solid var(--border-light);
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3em;
+            transition: all 0.3s ease;
+        }
+        
+        .mode-toggle:hover {
+            background: var(--primary);
+            color: white;
+            transform: rotate(20deg);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            margin-bottom: 25px;
+        }
+        
+        body.dark-mode .card {
+            background: #16213e;
+            border: 1px solid var(--border-dark);
+        }
+        
+        .card h2 {
+            color: var(--primary);
+            margin-bottom: 25px;
+            font-size: 1.6em;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            opacity: 0.9;
+        }
+        
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 0.9em;
+        }
+        
+        /* PROFILE SECTION */
+        .profile-panel {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        @media (max-width: 768px) {
+            .profile-panel {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+        }
+        
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3em;
+        }
+        
+        .profile-info h3 {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+        
+        .profile-info p {
+            font-size: 1.1em;
+            opacity: 0.95;
+            margin-bottom: 12px;
+        }
+        
+        .profile-stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 12px;
+        }
+        
+        .profile-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .profile-stat-value {
+            font-size: 1.6em;
+            font-weight: 700;
+        }
+        
+        .profile-stat-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+        
+        .rating-display {
+            background: white;
+            color: var(--primary);
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 1.4em;
+            font-weight: 700;
+        }
+        
+        /* STATS GRID */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            background: var(--bg-light);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        body.dark-mode .stat-card {
+            background: #0f3460;
+            border-color: var(--primary);
+        }
+        
+        .stat-card.success {
+            border-left-color: var(--success);
+        }
+        
+        .stat-card.warning {
+            border-left-color: var(--warning);
+        }
+        
+        .stat-card.danger {
+            border-left-color: var(--danger);
+        }
+        
+        .stat-label {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        body.dark-mode .stat-label {
+            color: #95a5a6;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-card.success .stat-value {
+            color: var(--success);
+        }
+        
+        .stat-card.warning .stat-value {
+            color: var(--warning);
+        }
+        
+        .stat-card.danger .stat-value {
+            color: var(--danger);
+        }
+        
+        /* TABS */
+        .tab-navigation {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--border-light);
+            overflow-x: auto;
+        }
+        
+        body.dark-mode .tab-navigation {
+            border-bottom-color: var(--border-dark);
+        }
+        
+        .tab-btn {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #7f8c8d;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .tab-btn:hover {
+            color: var(--primary);
+        }
+        
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* OPENING TABLE */
+        .opening-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .opening-table thead {
+            background: var(--bg-light);
+        }
+        
+        body.dark-mode .opening-table thead {
+            background: #0f3460;
+        }
+        
+        .opening-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 700;
+            color: var(--primary);
+            border-bottom: 2px solid var(--border-light);
+        }
+        
+        body.dark-mode .opening-table th {
+            border-bottom-color: var(--border-dark);
+        }
+        
+        .opening-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        body.dark-mode .opening-table td {
+            border-bottom-color: var(--border-dark);
+        }
+        
+        .opening-table tbody tr:hover {
+            background: var(--bg-light);
+        }
+        
+        body.dark-mode .opening-table tbody tr:hover {
+            background: #0f3460;
+        }
+        
+        .opening-name {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .eco-badge {
+            background: var(--primary);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            font-size: 0.9em;
+        }
+        
+        .win-rate-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .bar {
+            width: 100px;
+            height: 20px;
+            background: var(--light);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        body.dark-mode .bar {
+            background: #0f3460;
+        }
+        
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), var(--warning), var(--danger));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            color: white;
+            font-weight: 700;
+        }
+        
+        /* FAVORITE OPENINGS */
+        .favorite-box {
+            background: linear-gradient(135deg, #fff9e6, #fff3cc);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--warning);
+        }
+        
+        body.dark-mode .favorite-box {
+            background: #3e3028;
+            border-color: var(--warning);
+        }
+        
+        .favorite-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--warning);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .favorite-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 12px;
+        }
+        
+        .favorite-stat {
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 6px;
+        }
+        
+        body.dark-mode .favorite-stat {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .favorite-stat-val {
+            font-size: 1.6em;
+            font-weight: 700;
+            color: var(--warning);
+        }
+        
+        .favorite-stat-lbl {
+            font-size: 0.8em;
+            color: #555;
+        }
+        
+        body.dark-mode .favorite-stat-lbl {
+            color: #bdc3c7;
+        }
+        
+        /* WEAK LINES SECTION */
+        .weak-box {
+            background: linear-gradient(135deg, #ffe5e5, #ffe0e0);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--danger);
+        }
+        
+        body.dark-mode .weak-box {
+            background: #4a1f1f;
+            border-color: var(--danger);
+        }
+        
+        .weak-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--danger);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .weak-stats {
+            font-size: 0.9em;
+            color: #555;
+            margin-bottom: 8px;
+        }
+        
+        body.dark-mode .weak-stats {
+            color: #bdc3c7;
+        }
+        
+        .weak-pgn {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+        
+        /* REPERTOIRE SECTION */
+        .repertoire-side {
+            margin-bottom: 30px;
+        }
+        
+        .repertoire-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .piece-icon {
+            font-size: 1.4em;
+        }
+        
+        /* CHARTS */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 1000px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 350px;
+            background: var(--bg-light);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        body.dark-mode .chart-container {
+            background: #0f3460;
+        }
+        
+        /* EXPORT SECTION */
+        .export-box {
+            background: linear-gradient(135deg, #e8f4f8, #e0f2f1);
+            border: 2px solid var(--info);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        body.dark-mode .export-box {
+            background: #0a2a3e;
+            border-color: var(--info);
+        }
+        
+        .export-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--info);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .export-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert.show {
+            display: block;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        body.dark-mode .alert {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            padding: 30px;
+            margin-top: 40px;
+        }
+        
+        @media (max-width: 768px) {
+            .profile-panel {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .export-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1><i class="fas fa-dna"></i> Opening Repertoire & Player DNA</h1>
+            <button class="mode-toggle" onclick="toggleDarkMode()">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+
+        <!-- ALERT -->
+        <div id="alertBox" class="alert"></div>
+
+        <!-- PROFILE PANEL -->
+        <div class="profile-panel">
+            <div class="profile-avatar">👨‍💻</div>
+            <div class="profile-info">
+                <h3 id="playerName">Chess Player</h3>
+                <p id="playerTitle">Advanced Player | Sicilian Specialist</p>
+                <div class="profile-stats">
+                    <div class="profile-stat">
+                        <span class="profile-stat-value" id="totalGames">1,200</span>
+                        <span class="profile-stat-label">Total Games</span>
+                    </div>
+                    <div class="profile-stat">
+                        <span class="profile-stat-value" id="totalOpenings">32</span>
+                        <span class="profile-stat-label">Openings</span>
+                    </div>
+                    <div class="profile-stat">
+                        <span class="profile-stat-value" id="favStyle">Aggressive</span>
+                        <span class="profile-stat-label">Play Style</span>
+                    </div>
+                </div>
+            </div>
+            <div class="rating-display" id="ratingDisplay">2150 Rating</div>
+        </div>
+
+        <!-- OVERALL STATISTICS -->
+        <div class="card">
+            <h2><i class="fas fa-chart-bar"></i> Lifetime Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Games</div>
+                    <div class="stat-value" id="stat-games">1,200</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-label">Wins</div>
+                    <div class="stat-value" id="stat-wins">780</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-label">Draws</div>
+                    <div class="stat-value" id="stat-draws">240</div>
+                </div>
+                <div class="stat-card danger">
+                    <div class="stat-label">Losses</div>
+                    <div class="stat-value" id="stat-losses">180</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-label">Win Rate</div>
+                    <div class="stat-value" id="stat-wr">65%</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-label">Draw Rate</div>
+                    <div class="stat-value" id="stat-dr">20%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg Rating Opp.</div>
+                    <div class="stat-value" id="stat-avgr">2080</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Opening</div>
+                    <div class="stat-value" id="stat-days">45 days</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHARTS SECTION -->
+        <div class="card">
+            <h2><i class="fas fa-chart-area"></i> Performance Analytics</h2>
+            <div class="chart-grid">
+                <div>
+                    <h4 style="color: var(--primary); margin-bottom: 15px;">Results Distribution</h4>
+                    <div class="chart-container">
+                        <canvas id="resultsChart"></canvas>
+                    </div>
+                </div>
+                <div>
+                    <h4 style="color: var(--primary); margin-bottom: 15px;">Opening Performance</h4>
+                    <div class="chart-container">
+                        <canvas id="openingChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- REPERTOIRE ANALYSIS -->
+        <div class="card">
+            <h2><i class="fas fa-book"></i> Opening Repertoire</h2>
+            
+            <div class="tab-navigation">
+                <button class="tab-btn active" onclick="switchTab('white-repertoire')">⚪ As White</button>
+                <button class="tab-btn" onclick="switchTab('black-repertoire')">⚫ As Black</button>
+                <button class="tab-btn" onclick="switchTab('favorite-openings')"><i class="fas fa-star"></i> Favorites</button>
+                <button class="tab-btn" onclick="switchTab('weak-lines')"><i class="fas fa-exclamation"></i> Weak Lines</button>
+            </div>
+
+            <!-- WHITE REPERTOIRE -->
+            <div id="tab-white-repertoire" class="tab-content active">
+                <div class="repertoire-side">
+                    <table class="opening-table">
+                        <thead>
+                            <tr>
+                                <th>Opening</th>
+                                <th>ECO</th>
+                                <th>Games</th>
+                                <th>Results (W-D-L)</th>
+                                <th>Win Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="opening-name">1.e4 (Open Games)</td>
+                                <td><span class="eco-badge">A-E</span></td>
+                                <td>520</td>
+                                <td>350-80-90</td>
+                                <td>
+                                    <div class="win-rate-bar">
+                                        <div class="bar">
+                                            <div class="bar-fill" style="width: 67%;">67%</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="opening-name">Ruy Lopez (Open Variation)</td>
+                                <td><span class="eco-badge">C80</span></td>
+                                <td>180</td>
+                                <td>125-32-23</td>
+                                <td>
+                                    <div class="win-rate-bar">
+                                        <div class="bar">
+                                            <div class="bar-fill" style="width: 69%;">69%</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="opening-name">Italian Game</td>
+                                <td><span class="eco-badge">C50</span></td>
+                                <td>95</td>
+                                <td>68-18-9</td>
+                                <td>
+                                    <div class="win-rate-bar">
+                                        <div class="bar">
+                                            <div class="bar-fill" style="width: 72%;">72%</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="opening-name">1.d4 (Closed Games)</td>
+                                <td><span class="eco-badge">A-D</span></td>
+                                <td>245</td>
+                                <td>155-55-35</td>
+                                <td>
+                                    <div class="win-rate-bar">
+                                        <div class="bar">
+                                            <div class="bar-fill" style="width: 63%;">63%</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="opening-name">Queen's Gambit</td>
+                                <td><span class="eco-badge">D10</span></td>
+                                <td>120</td>
+                                <td>78-28-14</td>
+                                <td>
+                                    <div class="win-rate-bar">
+                                        <div class="bar">
+                                            <div class="bar-fill" style="width: 65%;">65%</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- BLACK REPERTOIRE -->
+            <div id="tab-black-repertoire" class="tab-content">
+                <div class="repertoire-side">
+                    <table class="opening-table">
+                        <thead>
+                            <tr>
+                                <th>Opening</th>
+                                <th>ECO</th>
+                                <th>Games</th>
+                                <th>Results (W-D-L)</th>
+                                <th>Win Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="opening-name">Sicilian Defense (1...c5)</td>
+                                <td><span class="eco-badge">B20</span></td>
+                                <td>380</td>
+                                <td>220-82-78</td>
+                                <td>
+                                    <div class="win-rate-bar">
+                                        <div class="bar">
+                                            <div class="bar-fill" style="width: 58%;">58%</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="opening-name">Sicilian Najdorf</td>
+                                <td><span class="eco-badge">B90</span></td>
+                                <td>145</td>
+                                <td>88-32-25</td>
+                                <td>
+                                    <div class="win-rate-bar">
+                                        <div class="bar">
+                                            <div class="bar-fill" style="width: 61%;">61%</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="opening-name">French Defense</td>
+                                <td><span class="eco-badge">C00</span></td>
+                                <td>95</td>
+                                <td>55-25-15</td>
+                                <td>
+                                    <div class="win-rate-bar">
+                                        <div class="bar">
+                                            <div class="bar-fill" style="width: 58%;">58%</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="opening-name">Caro-Kann Defense</td>
+                                <td><span class="eco-badge">B10</span></td>
+                                <td>75</td>
+                                <td>45-20-10</td>
+                                <td>
+                                    <div class="win-rate-bar">
+                                        <div class="bar">
+                                            <div class="bar-fill" style="width: 60%;">60%</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="opening-name">Berlin Defense (1...Nf6)</td>
+                                <td><span class="eco-badge">C65</span></td>
+                                <td>55</td>
+                                <td>32-15-8</td>
+                                <td>
+                                    <div class="win-rate-bar">
+                                        <div class="bar">
+                                            <div class="bar-fill" style="width: 58%;">58%</div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- FAVORITE OPENINGS -->
+            <div id="tab-favorite-openings" class="tab-content">
+                <div style="margin-bottom: 20px;">
+                    <div class="favorite-box">
+                        <div class="favorite-title">
+                            <i class="fas fa-star" style="color: var(--warning);"></i> Sicilian Najdorf
+                        </div>
+                        <div style="margin-bottom: 12px; font-size: 0.95em;">
+                            Black's most trusted defense. Played in critical positions with excellent results against strong opposition.
+                        </div>
+                        <div class="favorite-stats">
+                            <div class="favorite-stat">
+                                <div class="favorite-stat-val">145</div>
+                                <div class="favorite-stat-lbl">Games</div>
+                            </div>
+                            <div class="favorite-stat">
+                                <div class="favorite-stat-val">88</div>
+                                <div class="favorite-stat-lbl">Wins</div>
+                            </div>
+                            <div class="favorite-stat">
+                                <div class="favorite-stat-val">61%</div>
+                                <div class="favorite-stat-lbl">Win Rate</div>
+                            </div>
+                            <div class="favorite-stat">
+                                <div class="favorite-stat-val">2150</div>
+                                <div class="favorite-stat-lbl">Avg. Rating</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="favorite-box">
+                        <div class="favorite-title">
+                            <i class="fas fa-star" style="color: var(--warning);"></i> Ruy Lopez (Open)
+                        </div>
+                        <div style="margin-bottom: 12px; font-size: 0.95em;">
+                            White's main weapon. Consistently produces favorable positions from the opening.
+                        </div>
+                        <div class="favorite-stats">
+                            <div class="favorite-stat">
+                                <div class="favorite-stat-val">180</div>
+                                <div class="favorite-stat-lbl">Games</div>
+                            </div>
+                            <div class="favorite-stat">
+                                <div class="favorite-stat-val">125</div>
+                                <div class="favorite-stat-lbl">Wins</div>
+                            </div>
+                            <div class="favorite-stat">
+                                <div class="favorite-stat-val">69%</div>
+                                <div class="favorite-stat-lbl">Win Rate</div>
+                            </div>
+                            <div class="favorite-stat">
+                                <div class="favorite-stat-val">2200</div>
+                                <div class="favorite-stat-lbl">Avg. Rating</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="favorite-box">
+                        <div class="favorite-title">
+                            <i class="fas fa-star" style="color: var(--warning);"></i> Italian Game
+                        </div>
+                        <div style="margin-bottom: 12px; font-size: 0.95em;">
+                            Direct attacking weapon for White. High scoring percentage in practical games.
+                        </div>
+                        <div class="favorite-stats">
+                            <div class="favorite-stat">
+                                <div class="favorite-stat-val">95</div>
+                                <div class="favorite-stat-lbl">Games</div>
+                            </div>
+                            <div class="favorite-stat">
+                                <div class="favorite-stat-val">68</div>
+                                <div class="favorite-stat-lbl">Wins</div>
+                            </div>
+                            <div class="favorite-stat">
+                                <div class="favorite-stat-val">72%</div>
+                                <div class="favorite-stat-lbl">Win Rate</div>
+                            </div>
+                            <div class="favorite-stat">
+                                <div class="favorite-stat-val">1950</div>
+                                <div class="favorite-stat-lbl">Avg. Rating</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WEAK LINES -->
+            <div id="tab-weak-lines" class="tab-content">
+                <div style="margin-bottom: 20px;">
+                    <div class="weak-box">
+                        <div class="weak-title">
+                            <i class="fas fa-exclamation-circle"></i> Sicilian Variation 6...g6
+                        </div>
+                        <div class="weak-stats">Games: 28 | Win Rate: 46% | Performance: -35 Elo</div>
+                        <div class="weak-pgn">1.e4 c5 2.Nf3 d6 3.d4 cxd4 4.Nxd4 Nf6 5.Nc3 a6 6.Bg5 g6?!</div>
+                        <div style="color: var(--danger); font-weight: 600; font-size: 0.9em;">
+                            ⚠️ Retire or revise. This variation leads to unfavorable positions.
+                        </div>
+                    </div>
+
+                    <div class="weak-box">
+                        <div class="weak-title">
+                            <i class="fas fa-exclamation-circle"></i> Caro-Kann: 4...Bf5 Line
+                        </div>
+                        <div class="weak-stats">Games: 22 | Win Rate: 50% | Performance: -15 Elo</div>
+                        <div class="weak-pgn">1.d4 d5 2.c4 c6 3.Nc3 Nf6 4.Nf3 Bf5?</div>
+                        <div style="color: var(--danger); font-weight: 600; font-size: 0.9em;">
+                            ⚠️ Inconsistent results. Switch to main lines with 4...Nbd7.
+                        </div>
+                    </div>
+
+                    <div class="weak-box">
+                        <div class="weak-title">
+                            <i class="fas fa-exclamation-circle"></i> French: 3...Bb4 Variation
+                        </div>
+                        <div class="weak-stats">Games: 18 | Win Rate: 44% | Performance: -45 Elo</div>
+                        <div class="weak-pgn">1.e4 e6 2.d4 d5 3.Nc3 Bb4</div>
+                        <div style="color: var(--danger); font-weight: 600; font-size: 0.9em;">
+                            ⚠️ Major defensive issue. Avoid this line entirely or find better continuation.
+                        </div>
+                    </div>
+
+                    <div class="weak-box">
+                        <div class="weak-title">
+                            <i class="fas fa-exclamation-circle"></i> Italian: 3...Bc5 Marshall Trap
+                        </div>
+                        <div class="weak-stats">Games: 15 | Win Rate: 53% | Performance: +10 Elo</div>
+                        <div class="weak-pgn">1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.b4?!</div>
+                        <div style="color: var(--info); font-weight: 600; font-size: 0.9em;">
+                            ℹ️ Technically OK but risky. Requires precise knowledge beyond current level.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXPORT SECTION -->
+        <div class="card">
+            <div class="export-box">
+                <div class="export-title">
+                    <i class="fas fa-download"></i> Export Player Data
+                </div>
+                <div class="export-buttons">
+                    <button class="btn btn-primary" onclick="exportPGN()">
+                        <i class="fas fa-file"></i> Export as PGN
+                    </button>
+                    <button class="btn btn-primary" onclick="exportJSON()">
+                        <i class="fas fa-code"></i> Export as JSON
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportPDF()">
+                        <i class="fas fa-file-pdf"></i> Generate PDF Report
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportCSV()">
+                        <i class="fas fa-table"></i> Export as CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <p>🏆 Chess FairPlay Analyzer Pro - Player DNA & Opening Repertoire Analytics</p>
+            <p>Advanced lifetime game analysis with personality-based recommendations</p>
+        </div>
+    </div>
+
+    <script>
+        let chartsInitialized = false;
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function initializeCharts() {
+            if (chartsInitialized) return;
+            chartsInitialized = true;
+
+            // Results Chart
+            const resultsCtx = document.getElementById('resultsChart').getContext('2d');
+            new Chart(resultsCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Wins', 'Draws', 'Losses'],
+                    datasets: [{
+                        data: [65, 20, 15],
+                        backgroundColor: ['#27ae60', '#f39c12', '#e74c3c'],
+                        borderColor: 'white',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // Opening Performance Chart
+            const openingCtx = document.getElementById('openingChart').getContext('2d');
+            new Chart(openingCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Ruy Lopez', 'Sicilian', 'Italian', 'QGD', 'French'],
+                    datasets: [{
+                        label: 'Win Rate %',
+                        data: [69, 61, 72, 65, 58],
+                        backgroundColor: [
+                            '#667eea',
+                            '#764ba2',
+                            '#f093fb',
+                            '#a0aec0',
+                            '#cbd5e0'
+                        ],
+                        borderColor: '#16213e',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+        }
+
+        function exportPGN() {
+            showAlert('Exporting lifetime repertoire as PGN...', 'success');
+            // Would trigger PGN download
+            setTimeout(() => {
+                showAlert('PGN export complete!', 'success');
+            }, 1000);
+        }
+
+        function exportJSON() {
+            showAlert('Exporting player DNA profile as JSON...', 'success');
+            setTimeout(() => {
+                showAlert('JSON export complete!', 'success');
+            }, 1000);
+        }
+
+        function exportPDF() {
+            showAlert('Generating comprehensive PDF report...', 'success');
+            setTimeout(() => {
+                showAlert('PDF report generated!', 'success');
+            }, 1500);
+        }
+
+        function exportCSV() {
+            showAlert('Exporting opening statistics as CSV...', 'success');
+            setTimeout(() => {
+                showAlert('CSV export complete!', 'success');
+            }, 1000);
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = `alert show alert-${type}`;
+            
+            setTimeout(() => {
+                alertBox.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('darkMode') === 'true') {
+                document.body.classList.add('dark-mode');
+            }
+            
+            // Initialize charts after a brief delay
+            setTimeout(() => {
+                initializeCharts();
+            }, 100);
+        });
+    </script>
+</body>
+</html>

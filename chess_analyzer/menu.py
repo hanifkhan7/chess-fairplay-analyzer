@@ -624,24 +624,37 @@ def _player_brain():
             input("Press Enter to continue...")
             return
         
-        # Use enhanced exploit analyzer
-        from .exploit import display_exploit_analysis
-        analysis_result = display_exploit_analysis(games, username)
+        # Use enhanced exploit analyzer (with real openings, FEN & PGN snapshots)
+        try:
+            from .exploit_enhanced import display_exploit_analysis_enhanced
+            analysis_result = display_exploit_analysis_enhanced(games, username)
+            is_enhanced = True
+        except ImportError:
+            print("⚠️  Enhanced exploit not available, using standard version...")
+            from .exploit import display_exploit_analysis
+            analysis_result = display_exploit_analysis(games, username)
+            is_enhanced = False
         
         # Generate professional HTML report
         print("\n[REPORT] Generating professional HTML report...")
         try:
-            from .feature_reporter import FeatureReporter
-            reporter = FeatureReporter()
+            if is_enhanced:
+                # Use enhanced report with FEN/PGN
+                from .exploit_report_generator import ExploitReportGenerator
+                reporter = ExploitReportGenerator()
+                html_content = reporter.generate_enhanced_exploit_report(analysis_result, username)
+            else:
+                # Fall back to standard reporter
+                from .feature_reporter import FeatureReporter
+                reporter_old = FeatureReporter()
+                exploit_data = {
+                    'openings': analysis_result.get('openings', {}) if analysis_result else {},
+                    'weaknesses': analysis_result.get('weaknesses', []) if analysis_result else [],
+                    'strengths': analysis_result.get('strengths', []) if analysis_result else []
+                }
+                html_content = reporter_old.generate_exploit_report(exploit_data, username)
+                reporter = reporter_old
             
-            # Prepare exploit analysis data
-            exploit_data = {
-                'openings': analysis_result.get('openings', {}) if analysis_result else {},
-                'weaknesses': analysis_result.get('weaknesses', []) if analysis_result else [],
-                'strengths': analysis_result.get('strengths', []) if analysis_result else []
-            }
-            
-            html_content = reporter.generate_exploit_report(exploit_data, username)
             report_path = reporter.save_report(html_content, username, "exploit_analysis")
             print(f"✓ Professional report saved: {report_path}")
             
