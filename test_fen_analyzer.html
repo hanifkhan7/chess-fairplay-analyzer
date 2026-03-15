@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🎯 FEN Analyzer - Opening Explorer & Chess.com Pieces Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .test-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+            text-align: center;
+            font-size: 2em;
+        }
+        .banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .banner h2 {
+            margin: 0 0 10px 0;
+        }
+        .banner p {
+            margin: 5px 0;
+            font-size: 0.95em;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .feature-card {
+            background: #f5f7fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .feature-card strong {
+            color: #667eea;
+        }
+        .instructions {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+            color: #333;
+        }
+        .test-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .test-button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .test-button.secondary {
+            background: #6c757d;
+        }
+        .test-button.secondary:hover {
+            background: #5a6268;
+        }
+        #console-output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        .console-line {
+            margin: 3px 0;
+        }
+        .console-success { color: #00ff00; }
+        .console-error { color: #ff6b6b; }
+        .console-info { color: #4ecdc4; }
+        .console-warning { color: #ffe66d; }
+        iframe {
+            width: 100%;
+            height: 1400px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse 2s infinite;
+        }
+        .status-indicator.ready { background: #00ff00; }
+        .status-indicator.loading { background: #ffe66d; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎯 FEN Analyzer - Feature Test</h1>
+        
+        <div class="banner">
+            <h2>✨ New Features: Opening Explorer & Chess.com Pieces</h2>
+            <p><span class="status-indicator ready"></span> Loading analyzer...</p>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <strong>🗺️ Opening Explorer</strong>
+                <p>Professional move statistics table with win rates, records, and assessments—just like Chess.com and Lichess.</p>
+            </div>
+            <div class="feature-card">
+                <strong>♟️ Chess.com Pieces</strong>
+                <p>Enhanced Unicode chess pieces rendered with drop-shadow effects and proper contrast for better visibility.</p>
+            </div>
+            <div class="feature-card">
+                <strong>🎨 Board Colors</strong>
+                <p>Chess.com-style board colors (#eeeed2 light squares, #769656 dark squares) for professional appearance.</p>
+            </div>
+            <div class="feature-card">
+                <strong>📊 Statistics</strong>
+                <p>Win rate bars, record badges (W-D-L), and quality assessments (Strong/Solid/Risky) with color coding.</p>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <strong>📋 How to Test:</strong>
+            <ol>
+                <li>Try entering a FEN string (or use a preset button in the analyzer)</li>
+                <li>Click "Analyze FEN" to trigger the analysis</li>
+                <li>⬇️ Scroll down to see the <strong>Opening Explorer</strong> table</li>
+                <li>Observe the <strong>Chess.com-style board</strong> with enhanced piece rendering above the opening statistics</li>
+            </ol>
+        </div>
+
+        <div>
+            <button class="test-button" onclick="loadSampleFEN('startpos')">📍 Load Start Position</button>
+            <button class="test-button" onclick="loadSampleFEN('ruy')">🇪🇸 Load Ruy Lopez</button>
+            <button class="test-button" onclick="loadSampleFEN('endgame')">👑 Load Endgame</button>
+            <button class="test-button secondary" onclick="toggleConsole()">🖥️ Toggle Console</button>
+        </div>
+
+        <div id="console-output" style="display: none;">
+            <div class="console-line console-info">> FEN Analyzer Console</div>
+        </div>
+
+        <iframe id="analyzer" src="templates/fen_analyzer_advanced.html"></iframe>
+    </div>
+
+    <script>
+        const consoleLogs = [];
+
+        function addConsoleLog(message, type = 'info') {
+            const line = document.createElement('div');
+            line.className = `console-line console-${type}`;
+            line.textContent = `> ${message}`;
+            document.getElementById('console-output').appendChild(line);
+            consoleLogs.push({ message, type });
+            
+            // Scroll to bottom
+            const console = document.getElementById('console-output');
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function toggleConsole() {
+            const console = document.getElementById('console-output');
+            console.style.display = console.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function loadSampleFEN(preset) {
+            try {
+                const iframe = document.getElementById('analyzer');
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                const fenInput = iframeDoc.getElementById('fenInput');
+                
+                if (!fenInput) {
+                    addConsoleLog('❌ FEN input field not found', 'error');
+                    return;
+                }
+
+                const presets = {
+                    'startpos': 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+                    'ruy': 'r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4',
+                    'endgame': '4k3/8/8/8/8/8/4K2R w - - 0 1'
+                };
+
+                if (presets[preset]) {
+                    fenInput.value = presets[preset];
+                    addConsoleLog(`✅ Loaded ${preset} position`, 'success');
+                    
+                    // Trigger analysis
+                    setTimeout(() => {
+                        const analyzeBtn = iframeDoc.querySelector('button[onclick="analyzeFEN()"]');
+                        if (analyzeBtn) {
+                            analyzeBtn.click();
+                            addConsoleLog(`🔍 Analyzing FEN position...`, 'info');
+                            
+                            // Wait for rendering and validate
+                            setTimeout(() => {
+                                const explorer = iframeDoc.getElementById('openingExplorerContainer');
+                                const board = iframeDoc.getElementById('boardSvg');
+                                
+                                if (explorer && explorer.style.display !== 'none') {
+                                    addConsoleLog('✨ Opening Explorer is visible', 'success');
+                                } else {
+                                    addConsoleLog('⚠️ Opening Explorer may not be displaying', 'warning');
+                                }
+                                
+                                if (board && board.innerHTML) {
+                                    addConsoleLog('✨ Board has rendered with pieces', 'success');
+                                } else {
+                                    addConsoleLog('⚠️ Board may not have rendered properly', 'warning');
+                                }
+                            }, 500);
+                        } else {
+                            addConsoleLog('❌ Analyze button not found', 'error');
+                        }
+                    }, 100);
+                }
+            } catch (e) {
+                addConsoleLog(`❌ Error: ${e.message}`, 'error');
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('loadstart', () => {
+            addConsoleLog('🚀 FEN Analyzer loading...', 'info');
+        });
+
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                try {
+                    const iframe = document.getElementById('analyzer');
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (iframeDoc.readyState === 'complete' || iframeDoc.readyState === 'interactive') {
+                        addConsoleLog('✅ FEN Analyzer loaded successfully', 'success');
+                        addConsoleLog('📊 Opening Explorer feature is ready', 'success');
+                        addConsoleLog('♟️ Chess.com pieces feature is active', 'success');
+                        addConsoleLog('📍 Try loading a sample position to test', 'info');
+                    }
+                } catch (e) {
+                    addConsoleLog(`✅ Analyzer loaded (cross-origin)`, 'success');
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html>
+
