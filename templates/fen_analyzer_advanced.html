@@ -1042,6 +1042,44 @@ Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
                         <i class="fas fa-image"></i> Export
                     </button>
                 </div>
+                
+                <!-- THEME SELECTOR -->
+                <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                    <div style="margin-bottom: 12px;">
+                        <strong style="color: white; font-size: 0.9em;">🎨 Piece Style:</strong>
+                        <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-small" data-piece-theme="unicode" onclick="setPieceTheme('unicode')" style="background: #667eea; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; transition: all 0.2s;">
+                                ♟️ Unicode
+                            </button>
+                            <button class="btn btn-small" data-piece-theme="letters" onclick="setPieceTheme('letters')" style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; transition: all 0.2s;">
+                                🔤 Letters
+                            </button>
+                            <button class="btn btn-small" data-piece-theme="figurine" onclick="setPieceTheme('figurine')" style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; transition: all 0.2s;">
+                                ♝ Figurine
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <strong style="color: white; font-size: 0.9em;">🎯 Board Colors:</strong>
+                        <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-small" data-board-theme="chesscom" onclick="setBoardTheme('chesscom')" style="background: #667eea; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; transition: all 0.2s;">
+                                ♟️ Chess.com
+                            </button>
+                            <button class="btn btn-small" data-board-theme="lichess" onclick="setBoardTheme('lichess')" style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; transition: all 0.2s;">
+                                ♟️ Lichess
+                            </button>
+                            <button class="btn btn-small" data-board-theme="chessbase" onclick="setBoardTheme('chessbase')" style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; transition: all 0.2s;">
+                                ♟️ ChessBase
+                            </button>
+                            <button class="btn btn-small" data-board-theme="blue" onclick="setBoardTheme('blue')" style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; transition: all 0.2s;">
+                                ♟️ Blue
+                            </button>
+                            <button class="btn btn-small" data-board-theme="green" onclick="setBoardTheme('green')" style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; transition: all 0.2s;">
+                                ♟️ Green
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1208,17 +1246,63 @@ Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
         let boardOrientation = 'white';
         const MAX_HISTORY = 10;
 
-        // Piece Unicode symbols (Chess.com style)
-        const pieces = {
-            'P': '♙', 'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔',
-            'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚'
+        // Multiple piece and board themes
+        const pieceThemes = {
+            'unicode': {
+                name: 'Unicode Chess',
+                pieces: {
+                    'P': '♙', 'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔',
+                    'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚'
+                }
+            },
+            'letters': {
+                name: 'Letters',
+                pieces: {
+                    'P': 'P', 'N': 'N', 'B': 'B', 'R': 'R', 'Q': 'Q', 'K': 'K',
+                    'p': 'p', 'n': 'n', 'b': 'b', 'r': 'r', 'q': 'q', 'k': 'k'
+                }
+            },
+            'figurine': {
+                name: 'Figurine',
+                pieces: {
+                    'P': '♙', 'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔',
+                    'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚'
+                }
+            }
         };
         
-        // Chess.com style piece symbols (alternative for better rendering)
-        const chesscomPieces = {
-            'P': 'P', 'N': 'N', 'B': 'B', 'R': 'R', 'Q': 'Q', 'K': 'K',
-            'p': 'p', 'n': 'n', 'b': 'b', 'r': 'r', 'q': 'q', 'k': 'k'
+        const boardThemes = {
+            'chesscom': {
+                name: 'Chess.com',
+                light: '#eeeed2',
+                dark: '#769656'
+            },
+            'lichess': {
+                name: 'Lichess',
+                light: '#f0d9b5',
+                dark: '#b58863'
+            },
+            'chessbase': {
+                name: 'ChessBase',
+                light: '#f0e6d2',
+                dark: '#a67c52'
+            },
+            'blue': {
+                name: 'Blue',
+                light: '#d4e3e8',
+                dark: '#5a8ebc'
+            },
+            'green': {
+                name: 'Green',
+                light: '#e8f0d0',
+                dark: '#6ba043'
+            }
         };
+        
+        // Current theme selection
+        let currentPieceTheme = localStorage.getItem('pieceTheme') || 'unicode';
+        let currentBoardTheme = localStorage.getItem('boardTheme') || 'chesscom';
+        let pieces = pieceThemes[currentPieceTheme].pieces;
 
         // Initialize board
         function initBoard() {
@@ -1226,7 +1310,7 @@ Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
             renderBoard();
         }
 
-        // Render SVG board with Chess.com colors and enhanced pieces
+        // Render SVG board with selected theme colors and enhanced pieces
         function renderBoard() {
             const svg = document.getElementById('boardSvg');
             svg.innerHTML = '';
@@ -1235,9 +1319,10 @@ Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
             const ranks = boardOrientation === 'white' ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
             const files = boardOrientation === 'white' ? [0, 1, 2, 3, 4, 5, 6, 7] : [7, 6, 5, 4, 3, 2, 1, 0];
 
-            // Chess.com style colors
-            const lightColor = '#eeeed2';
-            const darkColor = '#769656';
+            // Get board theme colors
+            const theme = boardThemes[currentBoardTheme];
+            const lightColor = theme.light;
+            const darkColor = theme.dark;
             
             let squareIndex = 0;
             
@@ -1246,7 +1331,7 @@ Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
                 for (let file of files) {
                     const x = files.indexOf(file) * squareSize;
                     const y = ranks.indexOf(rank) * squareSize;
-                    const isLight = (rank + file) % 2 === 0;
+                    const isLight = (rank + file) % 2 === 1;
                     const color = isLight ? lightColor : darkColor;
                     
                     // Draw square
@@ -1677,6 +1762,41 @@ Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
             showAlert('Board reset to current position', 'info');
         }
 
+        function setPieceTheme(theme) {
+            currentPieceTheme = theme;
+            pieces = pieceThemes[theme].pieces;
+            localStorage.setItem('pieceTheme', theme);
+            renderBoard();
+            updateThemeButtons();
+            showAlert('Piece theme changed to: ' + pieceThemes[theme].name, 'success');
+        }
+
+        function setBoardTheme(theme) {
+            currentBoardTheme = theme;
+            localStorage.setItem('boardTheme', theme);
+            renderBoard();
+            updateThemeButtons();
+            showAlert('Board theme changed to: ' + boardThemes[theme].name, 'success');
+        }
+
+        function updateThemeButtons() {
+            // Update piece theme buttons
+            document.querySelectorAll('[data-piece-theme]').forEach(btn => {
+                btn.style.borderBottom = btn.getAttribute('data-piece-theme') === currentPieceTheme 
+                    ? '3px solid #667eea' : 'none';
+                btn.style.fontWeight = btn.getAttribute('data-piece-theme') === currentPieceTheme 
+                    ? '600' : '400');
+            });
+            
+            // Update board theme buttons
+            document.querySelectorAll('[data-board-theme]').forEach(btn => {
+                btn.style.borderBottom = btn.getAttribute('data-board-theme') === currentBoardTheme 
+                    ? '3px solid #667eea' : 'none';
+                btn.style.fontWeight = btn.getAttribute('data-board-theme') === currentBoardTheme 
+                    ? '600' : '400');
+            });
+        }
+
         function clearInput() {
             document.getElementById('fenInput').value = '';
             document.getElementById('analysisSection').style.display = 'none';
@@ -1799,6 +1919,7 @@ Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
         window.addEventListener('DOMContentLoaded', () => {
             initBoard();
             handleURLParameters();
+            updateThemeButtons();
             
             // Restore dark mode preference
             if (localStorage.getItem('darkMode') === 'true') {
