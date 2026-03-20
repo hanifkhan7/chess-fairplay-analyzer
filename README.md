@@ -1,4 +1,4 @@
-# ♟️ Chess Fairplay Analyzer v3.3
+# ♟️ Chess Fairplay Analyzer v3.4
 
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -97,14 +97,14 @@ python run_menu.py
 ### Analysis Features
 1. **Analyze Player** - Detect suspicious activity patterns
 2. **Download & Analyze Games** - Export and analyze game history
-3. **Exploit Your Opponent** - Opening & style analysis
+3. **Exploit Your Opponent** - Opening & style analysis(modified)
 4. **Strength Profile** - Skill level assessment
 5. **Accuracy Report** - Move-by-move accuracy analysis
 6. **Account Metrics Dashboard** - Quick statistical overview
 7. **Multi-Player Comparison** - Compare multiple players side-by-side
 8. **Fatigue Detection** - Identify performance degradation patterns
 9. **Network Analysis** - Opponent network mapping
-10. **Opening Repertoire & Player DNA** ⭐ - Deep opening analysis + statistical DNA
+10. **Opening Repertoire & Player DNA** ⭐ - Deep opening analysis + statistical DNA(modified)
 11. **Tournament Inspector** - Head-to-Head Analysis
 12. **Head-to-Head Matchup** - Predict match outcomes with 5-factor analysis
 13. **View Reports** - Browse generated reports
@@ -429,4 +429,4 @@ MIT License - See [LICENSE](LICENSE) for details
 
 **Built with ♟️ for the chess community**
 
-*Last Updated: January 2026 | Version: 3.2*
+*v3.4 - Released March 2026*
