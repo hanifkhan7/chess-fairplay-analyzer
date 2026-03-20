@@ -39,36 +39,36 @@ class Colors:
 
 
 def print_header():
-    """Print professional ASCII header with DETECTIVE art"""
+    """Print professional ASCII header with GOD-LEVEL DETECTIVE art"""
     header = f"""{Colors.CYAN}{Colors.BOLD}
-╔════════════════════════════════════════════════════════════════════════════════════╗
-║                                                                                    ║
-║                          CHESS FAIRPLAY ANALYZER v3.3                             ║
-║                    Forensic Analysis & Fair-Play Investigation                    ║
-║                                                                                    ║
-║     ██████╗ ███████╗████████╗███████╗ ██████╗████████╗██╗██╗   ██╗███████╗     ║
-║     ██╔══██╗██╔════╝╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝██║██║   ██║██╔════╝     ║
-║     ██║  ██║█████╗     ██║   █████╗  ██║        ██║   ██║██║   ██║█████╗       ║
-║     ██║  ██║██╔══╝     ██║   ██╔══╝  ██║        ██║   ██║╚██╗ ██╔╝██╔══╝       ║
-║     ██████╔╝███████╗   ██║   ███████╗╚██████╗   ██║   ██║ ╚████╔╝ ███████╗     ║
-║     ╚═════╝ ╚══════╝   ╚═╝   ╚══════╝ ╚═════╝   ╚═╝   ╚═╝  ╚═══╝  ╚══════╝     ║
-║                                                                                    ║
-║  CAPABILITIES & ANALYSIS FEATURES:                                               ║
-║                                                                                    ║
-║  [1] Suspicious Activity Detection    [9] Network Analysis                        ║
-║  [2] Interactive Training Mode        [10] Opening Repertoire Inspector          ║
-║  [3] Exploit Analysis                 [11] Tournament Head-to-Head Analysis       ║
-║  [4] Strength Profile Assessment      [12] Head-to-Head Matchup Prediction       ║
-║  [5] Move Accuracy Reports            [13] Professional Report Viewer            ║
-║  [6] Account Metrics Dashboard        [14] System Settings & Configuration       ║
-║  [7] Multi-Player Comparison          [15] Exit Application                      ║
-║  [8] Fatigue Detection Analysis                                                  ║
-║                                                                                    ║
-║  FEATURES: Real-time Analysis | Dual Platform Support | Statistical Proof        ║
-║            Professional Reports | Fair-Play Enforcement | Tournament Ready       ║
-║                                                                                    ║
-║                                                                                    ║
-╚════════════════════════════════════════════════════════════════════════════════════╝
+╔════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                                        ║
+║                      ♔ CHESS FAIRPLAY ANALYZER v3.4                                                   ║
+║                 Ultra-Advanced Forensic Intelligence & Fair-Play Enforcement                         ║
+║                       Powered by GOD-LEVEL Player DNA v2                                             ║
+║                                                                                                        ║
+║    ██████╗ ███████╗████████╗███████╗ ██████╗████████╗██╗██╗   ██╗███████╗                            ║
+║    ██╔══██╗██╔════╝╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝██║██║   ██║██╔════╝                            ║
+║    ██║  ██║█████╗     ██║   █████╗  ██║        ██║   ██║██║   ██║███████╗                            ║
+║    ██║  ██║██╔══╝     ██║   ██╔══╝  ██║        ██║   ██║╚██╗ ██╔╝██║                                 ║
+║    ██████╔╝███████╗   ██║   ███████╗╚██████╗   ██║   ██║ ╚████╔╝ ███████║                            ║
+║    ╚═════╝ ╚══════╝   ╚═╝   ╚══════╝ ╚═════╝   ╚═╝   ╚═╝  ╚═══╝  ╚══════╝                            ║
+║                                                                                                        ║
+║  🎯 INVESTIGATION COMMANDS:                                                                          ║
+║                                                                                                        ║
+║  [1] Analyze Player               [9] Network Analysis                                                ║
+║  [2] Download & Analyze Games     [10] 💎 Player DNA v2 GODLY                                       ║
+║  [3] Exploit Opponent             [11] Tournament Inspector                                           ║
+║  [4] Strength Profile             [12] Head-to-Head Matchup                                           ║
+║  [5] Accuracy Report              [13] View Reports                                                   ║
+║  [6] Account Metrics              [14] Settings                                                       ║
+║  [7] Multi-Player Comparison      [15] Anti-Repertoire Builder                                        ║
+║  [8] Fatigue Detection            [16] Exit                                                           ║
+║                                                                                                        ║
+║  ⚡ FEATURED: Dual Platform | Engine Analysis | Real-Time Stats | Player DNA v2                     ║
+║              HTML Reports | JSON Export | Tournament Intelligence                                   ║
+║                                                                                                        ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 {Colors.END}"""
     print(header)
 
@@ -154,29 +154,29 @@ def main():
 
     # USCI/CLI mode: continue with existing menu
     while True:
-        print(f"\n{Colors.BOLD}{Colors.CYAN}╔══════════════════════════════════════════════════════════════╗{Colors.END}")
-        print(f"{Colors.BOLD}{Colors.CYAN}║            🔎 MAIN INVESTIGATION MENU 🔎                      ║{Colors.END}")
-        print(f"{Colors.BOLD}{Colors.CYAN}╚══════════════════════════════════════════════════════════════╝{Colors.END}")
+        print(f"\n{Colors.BOLD}{Colors.CYAN}╔════════════════════════════════════════════════════════════════════════════════════╗{Colors.END}")
+        print(f"{Colors.BOLD}{Colors.CYAN}║                    🔎 GODLY INVESTIGATION COMMAND CENTER 🔎                       ║{Colors.END}")
+        print(f"{Colors.BOLD}{Colors.CYAN}╚════════════════════════════════════════════════════════════════════════════════════╝{Colors.END}")
         
         print()
-        print_menu_item("1", "Analyze Player", "(Detect Suspicious Activity)")
-        print_menu_item("2", "Download & Analyze Games", "(Interactive Opponent Analysis)")
-        print_menu_item("3", "Exploit Your Opponent", "(Opening & Style Analysis)")
-        print_menu_item("4", "Strength Profile", "(Skill Level Analysis)")
-        print_menu_item("5", "Accuracy Report", "(Move Accuracy & Consistency)")
-        print_menu_item("6", "Account Metrics", "(Quick Statistical View)")
-        print_menu_item("7", "Multi-Player Comparison", "(Compare Multiple Players)")
-        print_menu_item("8", "Fatigue Detection", "(Endurance & Performance)")
-        print_menu_item("9", "Network Analysis", "(Connection Patterns)")
-        print_menu_item("10", "Opening Repertoire & DNA", "(Opening Analysis + Player DNA)")
-        print_menu_item("11", "Tournament Inspector", "(Head-to-Head Analysis)")
-        print_menu_item("12", "Head-to-Head Matchup", "(Detailed Matchup Report)")
-        print_menu_item("13", "View Reports", "(Generated Analysis Files)")
-        print_menu_item("14", "Settings", "(Configuration)")
-        print_menu_item("15", "Anti-Repertoire Builder", "(Opponent Weakness Exploit)")
+        print_menu_item("1", "Analyze Player", "(Deep Forensic Analysis: Engine Match, Timing, Accuracy)")
+        print_menu_item("2", "Download & Analyze Games", "(Fetch & Process All Games: Both Platforms)")
+        print_menu_item("3", "Exploit Your Opponent", "(Opening Analysis + Playing Style Detection)")
+        print_menu_item("4", "Strength Profile", "(Rating, Performance Metrics, Skill Assessment)")
+        print_menu_item("5", "Accuracy Report", "(Move Precision & Consistency Analysis)")
+        print_menu_item("6", "Account Metrics", "(Quick Stats Dashboard: Games, Ratings, Trends)")
+        print_menu_item("7", "Multi-Player Comparison", "(Head-to-Head Stats: Compare Any Players)")
+        print_menu_item("8", "Fatigue Detection", "(Endurance Analysis: Performance Degradation Patterns)")
+        print_menu_item("9", "Network Analysis", "(Opponent Connections & Rivalry Patterns)")
+        print_menu_item("10", "💎 Player DNA v2 GODLY", "(LIFETIME REPERTOIRE: ALL Openings, Weaknesses, Strategies)")
+        print_menu_item("11", "Tournament Inspector", "(Tournament Head-to-Head Analysis + Trends)")
+        print_menu_item("12", "Head-to-Head Matchup", "(Detailed Matchup Report: Win Rate, Performance)")
+        print_menu_item("13", "View Reports", "(Browse Previously Generated Analysis Reports)")
+        print_menu_item("14", "Settings", "(Configuration: Engines, APIs, Display Options)")
+        print_menu_item("15", "Anti-Repertoire Builder", "(Weakness Exploitation: Beat Their Weak Lines)")
         print_menu_item("16", "Exit", "(Close Application)")
         
-        print(f"\n{Colors.CYAN}{'─' * 65}{Colors.END}")
+        print(f"\n{Colors.CYAN}{'─' * 90}{Colors.END}")
 
         choice = input(f"{Colors.BOLD}🔍 Select investigation (1-16): {Colors.END}").strip()
 
