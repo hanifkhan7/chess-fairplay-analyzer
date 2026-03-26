@@ -7,7 +7,7 @@
 [![Stockfish](https://img.shields.io/badge/Engine-Stockfish%2016-red)](https://stockfishchess.org/)
 [![TensorFlow](https://img.shields.io/badge/ML-TensorFlow%202.13-orange)](https://www.tensorflow.org/)
 
-**Production-Ready Chess Analysis Platform with ML-Powered Cheat Detection, Forensic Analysis & Strategic Insights**
+**Production-Ready Chess Analysis Platform with ML-Powered Cheat Detection(not a default option), Forensic Analysis & Strategic Insights**
 
 A comprehensive, production-ready tool for analyzing player behavior, detecting suspicious activity patterns, and predicting match outcomes using AI-powered analysis similar to Chess.com's Fair Play detection system.
 
